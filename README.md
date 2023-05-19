@@ -1,1 +1,1 @@
-# percona-everest-cli
+# everest-cli
