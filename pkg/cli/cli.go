@@ -153,6 +153,8 @@ func (c *CLI) provisionPMM(account string) (string, error) {
 }
 func (c *CLI) ConnectDBaaS() error {
 	c.l.Info("Generating service account and connecting with DBaaS")
+	// TODO: Remove this after Percona Everest will be enabled
+	return nil
 	data, err := ioutil.ReadFile("/Users/gen1us2k/.kube/config")
 	if err != nil {
 		c.l.Error("failed generating kubeconfig")
