@@ -32,11 +32,10 @@ import (
 
 	"github.com/AlekSi/pointer"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/v1beta1"
-	"github.com/gen1us2k/everest-provisioner/data"
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	"github.com/percona/percona-everest-cli/data"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

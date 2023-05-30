@@ -1,4 +1,4 @@
-module github.com/gen1us2k/everest-provisioner
+module github.com/percona/percona-everest-cli
 
 go 1.20
 

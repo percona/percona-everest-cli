@@ -21,9 +21,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"

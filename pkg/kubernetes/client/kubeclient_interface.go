@@ -44,13 +44,7 @@ type KubeClientConnector interface {
 	ListSecrets(ctx context.Context) (*corev1.SecretList, error)
 	// DeleteObject deletes object from the k8s cluster
 	DeleteObject(obj runtime.Object) error
-	// GetClusterServiceVersion retrieve a CSV by namespaced name.
-	GetClusterServiceVersion(ctx context.Context, key types.NamespacedName) (*v1alpha1.ClusterServiceVersion, error)
-	// ListClusterServiceVersion list all CSVs for the given namespace.
-	ListClusterServiceVersion(ctx context.Context, namespace string) (*v1alpha1.ClusterServiceVersionList, error)
-	// DeleteFile accepts manifest file contents parses into []runtime.Object
-	// and deletes them from the cluster
-	DeleteFile(fileBytes []byte) error
+	ApplyObject(obj runtime.Object) error
 	// GetPersistentVolumes returns Persistent Volumes available in the cluster
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods
@@ -60,7 +54,6 @@ type KubeClientConnector interface {
 	// GetLogs returns logs for pod
 	GetLogs(ctx context.Context, pod, container string) (string, error)
 	GetEvents(ctx context.Context, name string) (string, error)
-	ApplyObject(obj runtime.Object) error
 	// ApplyFile accepts manifest file contents, parses into []runtime.Object
 	// and applies them against the cluster
 	ApplyFile(fileBytes []byte) error
@@ -88,6 +81,13 @@ type KubeClientConnector interface {
 	ListCRDs(ctx context.Context, labelSelector *metav1.LabelSelector) (*apiextv1.CustomResourceDefinitionList, error)
 	// ListCRs returns a list of CRs.
 	ListCRs(ctx context.Context, namespace string, gvr schema.GroupVersionResource, labelSelector *metav1.LabelSelector) (*unstructured.UnstructuredList, error)
+	// GetClusterServiceVersion retrieve a CSV by namespaced name.
+	GetClusterServiceVersion(ctx context.Context, key types.NamespacedName) (*v1alpha1.ClusterServiceVersion, error)
+	// ListClusterServiceVersion list all CSVs for the given namespace.
+	ListClusterServiceVersion(ctx context.Context, namespace string) (*v1alpha1.ClusterServiceVersionList, error)
+	// DeleteFile accepts manifest file contents parses into []runtime.Object
+	// and deletes them from the cluster
+	DeleteFile(fileBytes []byte) error
 	// ListVMAgents retrieves all VM agents for a namespace.
 	ListVMAgents(ctx context.Context, namespace string, labels map[string]string) (*vmv1beta1.VMAgentList, error)
 	// DeleteVMAgent deletes a Victoria Metrics agent instance.

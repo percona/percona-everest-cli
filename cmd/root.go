@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gen1us2k/everest-provisioner/config"
-	"github.com/gen1us2k/everest-provisioner/pkg/cli"
+	"github.com/percona/percona-everest-cli/config"
+	"github.com/percona/percona-everest-cli/pkg/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "everest-provisioner",
+	Use:   "everest-cli",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:

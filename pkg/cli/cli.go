@@ -13,9 +13,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gen1us2k/everest-provisioner/config"
-	"github.com/gen1us2k/everest-provisioner/kubernetes"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/percona/percona-everest-cli/config"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,6 +80,7 @@ func (c *CLI) ProvisionCluster() error {
 		channel = "stable-v1"
 	}
 
+	// TODO: Fix installation params
 	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
 		c.l.Error("failed installing PXC operator")
 		return err
@@ -130,6 +131,7 @@ func (c *CLI) ProvisionCluster() error {
 	}
 	return nil
 }
+
 func (c *CLI) provisionPMMMonitoring() error {
 	account := fmt.Sprintf("dbaas-service-account-%d", rand.Int63())
 	c.l.Info("Creating a new service account in PMM")
@@ -147,10 +149,12 @@ func (c *CLI) provisionPMMMonitoring() error {
 
 	return nil
 }
+
 func (c *CLI) provisionPMM(account string) (string, error) {
 	token, err := c.createAdminToken(account, "")
 	return token, err
 }
+
 func (c *CLI) ConnectDBaaS() error {
 	c.l.Info("Generating service account and connecting with DBaaS")
 	// TODO: Remove this after Percona Everest will be enabled
@@ -185,8 +189,8 @@ func (c *CLI) ConnectDBaaS() error {
 	}
 	c.l.Info("DBaaS has been connected")
 	return nil
-
 }
+
 func (c *CLI) createAdminToken(name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
@@ -224,5 +228,4 @@ func (c *CLI) createAdminToken(name string, token string) (string, error) {
 		return "", err
 	}
 	return m["key"].(string), nil
-
 }

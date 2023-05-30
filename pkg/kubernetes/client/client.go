@@ -33,12 +33,11 @@ import (
 
 	vmClient "github.com/VictoriaMetrics/operator/api/client/versioned"
 	vmv1beta1 "github.com/VictoriaMetrics/operator/api/victoriametrics/v1beta1"
-
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client/database"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/database"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -164,7 +163,6 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	home := os.Getenv("HOME")
 	path := strings.ReplaceAll(kubeconfig, "~", home)
 	fileData, err := ioutil.ReadFile(path)
-
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +194,6 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	}
 	err = c.setup()
 	return c, err
-
 }
 
 func (c *Client) setup() error {
