@@ -156,8 +156,8 @@ jobs:
       - name: Download Go modules
         run: go mod download
 
-      - name: Build and install
-        run: make install
+      - name: Build
+        run: make build
 
       - name: Run tests
         run: make test-cover
