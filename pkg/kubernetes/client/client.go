@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -33,13 +32,12 @@ import (
 
 	vmClient "github.com/VictoriaMetrics/operator/api/client/versioned"
 	vmv1beta1 "github.com/VictoriaMetrics/operator/api/victoriametrics/v1beta1"
-
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client/database"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -71,6 +69,8 @@ import (
 	deploymentutil "k8s.io/kubectl/pkg/util/deployment"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/database"
 )
 
 const (
@@ -88,15 +88,13 @@ const (
 	defaultAPIsURIPath = "/apis"
 )
 
-// Each level has 2 spaces for PrefixWriter
-//
-//nolint:stylecheck
+// Each level has 2 spaces for PrefixWriter.
 const (
-	LEVEL_0 = iota
-	LEVEL_1
-	LEVEL_2
-	LEVEL_3
-	LEVEL_4
+	LEVEL0 = iota
+	LEVEL1
+	LEVEL2
+	LEVEL3
+	LEVEL4
 )
 
 // Client is the internal client for Kubernetes.
@@ -104,13 +102,13 @@ type Client struct {
 	clientset        kubernetes.Interface
 	apiextClientset  apiextv1clientset.Interface
 	dynamicClientset dynamic.Interface
-	dbClusterClient  *database.DatabaseClusterClient
+	dbClusterClient  *database.DBClusterClient
 	rcLock           *sync.Mutex
 	restConfig       *rest.Config
 	namespace        string
 }
 
-// SortableEvents implements sort.Interface for []api.Event based on the Timestamp field
+// SortableEvents implements sort.Interface for []api.Event based on the Timestamp field.
 type SortableEvents []corev1.Event
 
 func (list SortableEvents) Len() int {
@@ -160,11 +158,11 @@ func (e podErrors) Error() string {
 	return sb.String()
 }
 
+// NewFromKubeConfig returns new Client from path to a kubeconfig.
 func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	home := os.Getenv("HOME")
 	path := strings.ReplaceAll(kubeconfig, "~", home)
-	fileData, err := ioutil.ReadFile(path)
-
+	fileData, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +194,6 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	}
 	err = c.setup()
 	return c, err
-
 }
 
 func (c *Client) setup() error {
@@ -206,12 +203,15 @@ func (c *Client) setup() error {
 	}
 	// Set PATH variable to make aws-iam-authenticator executable
 	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
-	os.Setenv("PATH", path)
+	if err := os.Setenv("PATH", path); err != nil {
+		return err
+	}
+
 	c.namespace = namespace
 	return c.initOperatorClients()
 }
 
-// Initializes clients for operators
+// Initializes clients for operators.
 func (c *Client) initOperatorClients() error {
 	dbClusterClient, err := database.NewForConfig(c.restConfig)
 	if err != nil {
@@ -222,7 +222,7 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
-// GetSecretsForServiceAccount returns secret by given service account name
+// GetSecretsForServiceAccount returns secret by given service account name.
 func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error) {
 	serviceAccount, err := c.clientset.CoreV1().ServiceAccounts(c.namespace).Get(ctx, accountName, metav1.GetOptions{})
 	if err != nil {
@@ -239,7 +239,7 @@ func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName st
 		metav1.GetOptions{})
 }
 
-// GenerateKubeConfig generates kubeconfig
+// GenerateKubeConfig generates kubeconfig.
 func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 	conf := &Config{
 		Kind:           configKind,
@@ -277,7 +277,7 @@ func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 	return c.marshalKubeConfig(conf)
 }
 
-// GetServerVersion returns server version
+// GetServerVersion returns server version.
 func (c *Client) GetServerVersion() (*version.Info, error) {
 	return c.clientset.Discovery().ServerVersion()
 }
@@ -296,27 +296,27 @@ func (c *Client) GetDatabaseCluster(ctx context.Context, name string) (*dbaasv1.
 	return cluster, nil
 }
 
-// GetStorageClasses returns all storage classes available in the cluster
+// GetStorageClasses returns all storage classes available in the cluster.
 func (c *Client) GetStorageClasses(ctx context.Context) (*storagev1.StorageClassList, error) {
 	return c.clientset.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 }
 
-// GetDeployment returns deployment by name
+// GetDeployment returns deployment by name.
 func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
 	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// GetSecret returns secret by name
+// GetSecret returns secret by name.
 func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// ListSecrets returns secrets
+// ListSecrets returns secrets.
 func (c *Client) ListSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	return c.clientset.CoreV1().Secrets(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
-// DeleteObject deletes object from the k8s cluster
+// DeleteObject deletes object from the k8s cluster.
 func (c *Client) DeleteObject(obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
@@ -353,6 +353,7 @@ func deleteObject(helper *resource.Helper, namespace, name string) error {
 	return nil
 }
 
+// ApplyObject applies object.
 func (c *Client) ApplyObject(obj runtime.Object) error {
 	groupResources, err := restmapper.GetAPIGroupResources(c.clientset.Discovery())
 	if err != nil {
@@ -393,22 +394,22 @@ func (c *Client) applyObject(helper *resource.Helper, namespace, name string, ob
 	return nil
 }
 
-func (c *Client) retrieveMetaFromObject(obj runtime.Object) (namespace, name string, err error) {
-	name, err = meta.NewAccessor().Name(obj)
+func (c *Client) retrieveMetaFromObject(obj runtime.Object) (string, string, error) {
+	name, err := meta.NewAccessor().Name(obj)
 	if err != nil {
-		return
+		return "", name, err
 	}
-	namespace, err = meta.NewAccessor().Namespace(obj)
+	namespace, err := meta.NewAccessor().Namespace(obj)
 	if err != nil {
-		return
+		return namespace, name, err
 	}
 	if namespace == "" {
 		namespace = c.namespace
 	}
-	return
+	return namespace, name, nil
 }
 
-func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) {
+func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) { //nolint:ireturn
 	cfg := c.restConfig
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
@@ -435,13 +436,17 @@ func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
 	return yaml.Marshal(jsonObj)
 }
 
-// GetPersistentVolumes returns Persistent Volumes available in the cluster
+// GetPersistentVolumes returns Persistent Volumes available in the cluster.
 func (c *Client) GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error) {
 	return c.clientset.CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
 }
 
-// GetPods returns list of pods
-func (c *Client) GetPods(ctx context.Context, namespace string, labelSelector *metav1.LabelSelector) (*corev1.PodList, error) {
+// GetPods returns list of pods.
+func (c *Client) GetPods(
+	ctx context.Context,
+	namespace string,
+	labelSelector *metav1.LabelSelector,
+) (*corev1.PodList, error) {
 	options := metav1.ListOptions{}
 	if labelSelector != nil && (labelSelector.MatchLabels != nil || labelSelector.MatchExpressions != nil) {
 		options.LabelSelector = metav1.FormatLabelSelector(labelSelector)
@@ -450,12 +455,12 @@ func (c *Client) GetPods(ctx context.Context, namespace string, labelSelector *m
 	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
 }
 
-// GetNodes returns list of nodes
+// GetNodes returns list of nodes.
 func (c *Client) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 	return c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 }
 
-// GetLogs returns logs for pod
+// GetLogs returns logs for pod.
 func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, error) {
 	defaultLogLines := int64(3000)
 	options := &corev1.PodLogOptions{}
@@ -480,6 +485,7 @@ func (c *Client) GetLogs(ctx context.Context, pod, container string) (string, er
 	return buf.String(), nil
 }
 
+// GetEvents retrieves events from a pod by a name.
 func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 	pod, err := c.clientset.CoreV1().Pods(c.namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -515,19 +521,19 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 
 	var events *corev1.EventList
 	if ref, err := reference.GetReference(scheme.Scheme, pod); err != nil {
-		fmt.Printf("Unable to construct reference to '%#v': %v", pod, err)
+		logrus.Warnf("Unable to construct reference to '%#v': %v", pod, err)
 	} else {
 		ref.Kind = ""
 		if _, isMirrorPod := pod.Annotations[corev1.MirrorPodAnnotationKey]; isMirrorPod {
 			ref.UID = types.UID(pod.Annotations[corev1.MirrorPodAnnotationKey])
 		}
 
-		events, _ = searchEvents(c.clientset.CoreV1(), ref, defaultChunkSize)
+		events, _ = searchEvents(ctx, c.clientset.CoreV1(), ref, defaultChunkSize)
 	}
 
 	return tabbedString(func(out io.Writer) error {
 		w := NewPrefixWriter(out)
-		w.Writef(LEVEL_0, name+" ")
+		w.Writef(LEVEL0, name+" ")
 		DescribeEvents(events, w)
 		return nil
 	})
@@ -538,26 +544,29 @@ func tabbedString(f func(io.Writer) error) (string, error) {
 	buf := &bytes.Buffer{}
 	out.Init(buf, 0, 8, 2, ' ', 0)
 
-	err := f(out)
-	if err != nil {
+	if err := f(out); err != nil {
 		return "", err
 	}
 
-	out.Flush()
+	if err := out.Flush(); err != nil {
+		return "", err
+	}
+
 	str := buf.String()
 	return str, nil
 }
 
+// DescribeEvents describes events.
 func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 	if len(el.Items) == 0 {
-		w.Writef(LEVEL_0, "Events:\t<none>\n")
+		w.Writef(LEVEL0, "Events:\t<none>\n")
 		return
 	}
 
 	w.Flush()
 	sort.Sort(SortableEvents(el.Items))
-	w.Writef(LEVEL_0, "Events:\n  Type\tReason\tAge\tFrom\tMessage\n")
-	w.Writef(LEVEL_1, "----\t------\t----\t----\t-------\n")
+	w.Writef(LEVEL0, "Events:\n  Type\tReason\tAge\tFrom\tMessage\n")
+	w.Writef(LEVEL1, "----\t------\t----\t----\t-------\n")
 	for _, e := range el.Items {
 		var interval string
 		firstTimestampSince := translateMicroTimestampSince(e.EventTime)
@@ -565,11 +574,17 @@ func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 			firstTimestampSince = translateTimestampSince(e.FirstTimestamp)
 		}
 
-		if e.Series != nil {
-			interval = fmt.Sprintf("%s (x%d over %s)", translateMicroTimestampSince(e.Series.LastObservedTime), e.Series.Count, firstTimestampSince)
-		} else if e.Count > 1 {
+		switch {
+		case e.Series != nil:
+			interval = fmt.Sprintf(
+				"%s (x%d over %s)",
+				translateMicroTimestampSince(e.Series.LastObservedTime),
+				e.Series.Count,
+				firstTimestampSince,
+			)
+		case e.Count > 1:
 			interval = fmt.Sprintf("%s (x%d over %s)", translateTimestampSince(e.LastTimestamp), e.Count, firstTimestampSince)
-		} else {
+		default:
 			interval = firstTimestampSince
 		}
 
@@ -578,7 +593,7 @@ func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 			source = e.ReportingController
 		}
 
-		w.Writef(LEVEL_1, "%v\t%v\t%s\t%v\t%v\n",
+		w.Writef(LEVEL1, "%v\t%v\t%s\t%v\t%v\n",
 			e.Type,
 			e.Reason,
 			interval,
@@ -589,15 +604,19 @@ func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 
 // searchEvents finds events about the specified object.
 // It is very similar to CoreV1.Events.Search, but supports the Limit parameter.
-func searchEvents(client corev1client.EventsGetter, objOrRef runtime.Object, limit int64) (*corev1.EventList, error) {
+func searchEvents(
+	ctx context.Context,
+	client corev1client.EventsGetter,
+	objOrRef runtime.Object,
+	limit int64,
+) (*corev1.EventList, error) {
 	ref, err := reference.GetReference(scheme.Scheme, objOrRef)
 	if err != nil {
 		return nil, err
 	}
 
-	stringRefKind := ref.Kind
 	var refKind *string
-	if len(stringRefKind) > 0 {
+	if stringRefKind := ref.Kind; len(stringRefKind) > 0 {
 		refKind = &stringRefKind
 	}
 
@@ -613,7 +632,7 @@ func searchEvents(client corev1client.EventsGetter, objOrRef runtime.Object, lim
 	eventList := &corev1.EventList{}
 	err = resource.FollowContinue(&initialOpts,
 		func(options metav1.ListOptions) (runtime.Object, error) {
-			newEvents, err := e.List(context.TODO(), options)
+			newEvents, err := e.List(ctx, options)
 			if err != nil {
 				return nil, resource.EnhanceListError(err, options, "events")
 			}
@@ -646,7 +665,7 @@ func translateTimestampSince(timestamp metav1.Time) string {
 }
 
 // ApplyFile accepts manifest file contents, parses into []runtime.Object
-// and applies them against the cluster
+// and applies them against the cluster.
 func (c *Client) ApplyFile(fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -689,15 +708,19 @@ func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 
 // DoCSVWait waits until for a CSV to be applied.
 func (c Client) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
-	var (
-		curPhase v1alpha1.ClusterServiceVersionPhase
-		newPhase v1alpha1.ClusterServiceVersionPhase
-	)
-
 	kubeclient, err := c.getKubeclient()
 	if err != nil {
 		return err
 	}
+
+	return c.pollCsvPhaseSucceeded(ctx, key, kubeclient)
+}
+
+func (c Client) pollCsvPhaseSucceeded(ctx context.Context, key types.NamespacedName, kubeclient client.Client) error {
+	var (
+		curPhase v1alpha1.ClusterServiceVersionPhase
+		newPhase v1alpha1.ClusterServiceVersionPhase
+	)
 
 	csv := v1alpha1.ClusterServiceVersion{}
 	csvPhaseSucceeded := func() (bool, error) {
@@ -713,9 +736,10 @@ func (c Client) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
 			curPhase = newPhase
 		}
 
+		//nolint:exhaustive
 		switch curPhase {
 		case v1alpha1.CSVPhaseFailed:
-			return false, fmt.Errorf("csv failed: reason: %q, message: %q", csv.Status.Reason, csv.Status.Message)
+			return false, errors.Errorf("csv failed: reason: %q, message: %q", csv.Status.Reason, csv.Status.Message)
 		case v1alpha1.CSVPhaseSucceeded:
 			return true, nil
 		default:
@@ -723,7 +747,7 @@ func (c Client) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
 		}
 	}
 
-	err = wait.PollImmediateUntil(time.Second, csvPhaseSucceeded, ctx.Done())
+	err := wait.PollImmediateUntil(time.Second, csvPhaseSucceeded, ctx.Done())
 	if err != nil && errors.Is(err, context.DeadlineExceeded) {
 		depCheckErr := c.checkDeploymentErrors(ctx, key, csv)
 		if depCheckErr != nil {
@@ -762,7 +786,7 @@ func (c Client) GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedN
 	return csvKey, wait.PollImmediateUntil(time.Second, subscriptionInstalledCSV, ctx.Done())
 }
 
-func (c *Client) getKubeclient() (client.Client, error) {
+func (c *Client) getKubeclient() (client.Client, error) { //nolint:ireturn
 	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create dynamic rest mapper")
@@ -780,10 +804,14 @@ func (c *Client) getKubeclient() (client.Client, error) {
 
 // checkDeploymentErrors function loops through deployment specs of a given CSV, and prints reason
 // in case of failures, based on deployment condition.
-func (c Client) checkDeploymentErrors(ctx context.Context, key types.NamespacedName, csv v1alpha1.ClusterServiceVersion) error {
+func (c Client) checkDeploymentErrors(
+	ctx context.Context,
+	key types.NamespacedName,
+	csv v1alpha1.ClusterServiceVersion,
+) error {
 	depErrs := deploymentErrors{}
 	if key.Namespace == "" {
-		return fmt.Errorf("no namespace provided to get deployment failures")
+		return errors.New("no namespace provided to get deployment failures")
 	}
 
 	kubeclient, err := c.getKubeclient()
@@ -831,7 +859,12 @@ func (c Client) checkDeploymentErrors(ctx context.Context, key types.NamespacedN
 }
 
 // checkPodErrors loops through pods, and returns pod errors if any.
-func (c Client) checkPodErrors(ctx context.Context, kubeclient client.Client, depSelectors *metav1.LabelSelector, key types.NamespacedName) error {
+func (c Client) checkPodErrors(
+	ctx context.Context,
+	kubeclient client.Client,
+	depSelectors *metav1.LabelSelector,
+	key types.NamespacedName,
+) error {
 	// loop through pods and return specific error message.
 	podErr := podErrors{}
 	podList := &corev1.PodList{}
@@ -870,6 +903,10 @@ func (c Client) DoRolloutWait(ctx context.Context, key types.NamespacedName) err
 		return err
 	}
 
+	return c.pollRolloutComplete(ctx, key, kubeclient)
+}
+
+func (c Client) pollRolloutComplete(ctx context.Context, key types.NamespacedName, kubeclient client.Client) error {
 	rolloutComplete := func() (bool, error) {
 		deployment := appsv1.Deployment{}
 		err := kubeclient.Get(ctx, key, &deployment)
@@ -976,7 +1013,10 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		},
 	}
 
-	sub, err := operatorClient.OperatorsV1alpha1().Subscriptions(namespace).Create(ctx, subscription, metav1.CreateOptions{})
+	sub, err := operatorClient.
+		OperatorsV1alpha1().
+		Subscriptions(namespace).
+		Create(ctx, subscription, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			return sub, nil
@@ -1026,7 +1066,11 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 }
 
 // UpdateInstallPlan updates the existing install plan in the specified namespace.
-func (c *Client) UpdateInstallPlan(ctx context.Context, namespace string, installPlan *v1alpha1.InstallPlan) (*v1alpha1.InstallPlan, error) {
+func (c *Client) UpdateInstallPlan(
+	ctx context.Context,
+	namespace string,
+	installPlan *v1alpha1.InstallPlan,
+) (*v1alpha1.InstallPlan, error) {
 	c.rcLock.Lock()
 	defer c.rcLock.Unlock()
 
@@ -1039,7 +1083,10 @@ func (c *Client) UpdateInstallPlan(ctx context.Context, namespace string, instal
 }
 
 // ListCRDs returns a list of CRDs.
-func (c *Client) ListCRDs(ctx context.Context, labelSelector *metav1.LabelSelector) (*apiextv1.CustomResourceDefinitionList, error) {
+func (c *Client) ListCRDs(
+	ctx context.Context,
+	labelSelector *metav1.LabelSelector,
+) (*apiextv1.CustomResourceDefinitionList, error) {
 	options := metav1.ListOptions{}
 	if labelSelector != nil && (labelSelector.MatchLabels != nil || labelSelector.MatchExpressions != nil) {
 		options.LabelSelector = metav1.FormatLabelSelector(labelSelector)
@@ -1064,7 +1111,10 @@ func (c *Client) ListCRs(
 }
 
 // GetClusterServiceVersion retrieve a CSV by namespaced name.
-func (c *Client) GetClusterServiceVersion(ctx context.Context, key types.NamespacedName) (*v1alpha1.ClusterServiceVersion, error) {
+func (c *Client) GetClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) (*v1alpha1.ClusterServiceVersion, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create an operator client instance")
@@ -1074,7 +1124,10 @@ func (c *Client) GetClusterServiceVersion(ctx context.Context, key types.Namespa
 }
 
 // ListClusterServiceVersion list all CSVs for the given namespace.
-func (c *Client) ListClusterServiceVersion(ctx context.Context, namespace string) (*v1alpha1.ClusterServiceVersionList, error) {
+func (c *Client) ListClusterServiceVersion(
+	ctx context.Context,
+	namespace string,
+) (*v1alpha1.ClusterServiceVersionList, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create an operator client instance")
@@ -1084,7 +1137,7 @@ func (c *Client) ListClusterServiceVersion(ctx context.Context, namespace string
 }
 
 // DeleteFile accepts manifest file contents parses into []runtime.Object
-// and deletes them from the cluster
+// and deletes them from the cluster.
 func (c *Client) DeleteFile(fileBytes []byte) error {
 	objs, err := c.getObjects(fileBytes)
 	if err != nil {
@@ -1100,7 +1153,11 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 }
 
 // ListVMAgents retrieves all VM agents for a namespace.
-func (c *Client) ListVMAgents(ctx context.Context, namespace string, labels map[string]string) (*vmv1beta1.VMAgentList, error) {
+func (c *Client) ListVMAgents(
+	ctx context.Context,
+	namespace string,
+	labels map[string]string,
+) (*vmv1beta1.VMAgentList, error) {
 	vmcli, err := vmClient.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, err

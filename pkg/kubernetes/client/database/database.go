@@ -28,48 +28,60 @@ import (
 )
 
 const (
+	// DBClusterKind defines kind for DB cluster.
 	DBClusterKind = "DatabaseCluster"
 	apiKind       = "databaseclusters"
 )
 
-type DatabaseClusterClientInterface interface {
-	DBClusters(namespace string) DatabaseClusterInterface
+// DBClusterClientInterface supports getting a database cluster client.
+type DBClusterClientInterface interface {
+	DBClusters(namespace string) DBClusterInterface
 }
 
-type DatabaseClusterClient struct {
+// DBClusterClient contains a rest client.
+type DBClusterClient struct {
 	restClient rest.Interface
 }
 
+//nolint:gochecknoglobals
 var addToScheme sync.Once
 
-func NewForConfig(c *rest.Config) (*DatabaseClusterClient, error) {
+// NewForConfig creates a new database cluster client based on config.
+func NewForConfig(c *rest.Config) (*DBClusterClient, error) {
 	config := *c
 	config.ContentConfig.GroupVersion = &dbaasv1.GroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
 
+	var err error
 	addToScheme.Do(func() {
-		dbaasv1.SchemeBuilder.AddToScheme(scheme.Scheme)
+		err = dbaasv1.SchemeBuilder.AddToScheme(scheme.Scheme)
 		metav1.AddToGroupVersion(scheme.Scheme, dbaasv1.GroupVersion)
 	})
+
+	if err != nil {
+		return nil, err
+	}
 
 	client, err := rest.RESTClientFor(&config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &DatabaseClusterClient{restClient: client}, nil
+	return &DBClusterClient{restClient: client}, nil
 }
 
-func (c *DatabaseClusterClient) DBClusters(namespace string) DatabaseClusterInterface {
+// DBClusters returns a db cluster client.
+func (c *DBClusterClient) DBClusters(namespace string) DBClusterInterface { //nolint:ireturn
 	return &dbClusterClient{
 		restClient: c.restClient,
 		namespace:  namespace,
 	}
 }
 
-type DatabaseClusterInterface interface {
+// DBClusterInterface supports list, get and watch methods.
+type DBClusterInterface interface {
 	List(ctx context.Context, opts metav1.ListOptions) (*dbaasv1.DatabaseClusterList, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*dbaasv1.DatabaseCluster, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
@@ -80,6 +92,7 @@ type dbClusterClient struct {
 	namespace  string
 }
 
+// List lists database clusters based on opts.
 func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*dbaasv1.DatabaseClusterList, error) {
 	result := &dbaasv1.DatabaseClusterList{}
 	err := c.restClient.
@@ -92,7 +105,12 @@ func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*d
 	return result, err
 }
 
-func (c *dbClusterClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*dbaasv1.DatabaseCluster, error) {
+// Get retrieves database cluster based on opts.
+func (c *dbClusterClient) Get(
+	ctx context.Context,
+	name string,
+	opts metav1.GetOptions,
+) (*dbaasv1.DatabaseCluster, error) {
 	result := &dbaasv1.DatabaseCluster{}
 	err := c.restClient.
 		Get().
@@ -105,7 +123,11 @@ func (c *dbClusterClient) Get(ctx context.Context, name string, opts metav1.GetO
 	return result, err
 }
 
-func (c *dbClusterClient) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
+// Watch starts a watch based on opts.
+func (c *dbClusterClient) Watch( //nolint:ireturn
+	ctx context.Context,
+	opts metav1.ListOptions,
+) (watch.Interface, error) {
 	opts.Watch = true
 	return c.restClient.
 		Get().

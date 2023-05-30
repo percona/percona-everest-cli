@@ -32,10 +32,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/v1beta1"
-	"github.com/gen1us2k/everest-provisioner/data"
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -50,27 +47,34 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/version"
+
+	"github.com/percona/percona-everest-cli/data"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
 )
 
+// ClusterType defines type of cluster.
 type ClusterType string
 
 const (
-	ClusterTypeUnknown         ClusterType = "unknown"
-	ClusterTypeMinikube        ClusterType = "minikube"
-	ClusterTypeEKS             ClusterType = "eks"
-	ClusterTypeGeneric         ClusterType = "generic"
-	pxcDeploymentName                      = "percona-xtradb-cluster-operator"
-	psmdbDeploymentName                    = "percona-server-mongodb-operator"
-	dbaasDeploymentName                    = "dbaas-operator-controller-manager"
-	psmdbOperatorContainerName             = "percona-server-mongodb-operator"
-	pxcOperatorContainerName               = "percona-xtradb-cluster-operator"
-	dbaasOperatorContainerName             = "manager"
-	databaseClusterKind                    = "DatabaseCluster"
-	databaseClusterAPIVersion              = "dbaas.percona.com/v1"
-	restartAnnotationKey                   = "dbaas.percona.com/restart"
-	managedByKey                           = "dbaas.percona.com/managed-by"
-	templateLabelKey                       = "dbaas.percona.com/template"
-	engineLabelKey                         = "dbaas.percona.com/engine"
+	// ClusterTypeUnknown is for unknown type.
+	ClusterTypeUnknown ClusterType = "unknown"
+	// ClusterTypeMinikube is for minikube.
+	ClusterTypeMinikube ClusterType = "minikube"
+	// ClusterTypeEKS is for EKS.
+	ClusterTypeEKS ClusterType = "eks"
+	// ClusterTypeGeneric is a generic type.
+	ClusterTypeGeneric ClusterType = "generic"
+
+	pxcDeploymentName          = "percona-xtradb-cluster-operator"
+	psmdbDeploymentName        = "percona-server-mongodb-operator"
+	dbaasDeploymentName        = "dbaas-operator-controller-manager"
+	psmdbOperatorContainerName = "percona-server-mongodb-operator"
+	pxcOperatorContainerName   = "percona-xtradb-cluster-operator"
+	dbaasOperatorContainerName = "manager"
+	databaseClusterKind        = "DatabaseCluster"
+	databaseClusterAPIVersion  = "dbaas.percona.com/v1"
+	restartAnnotationKey       = "dbaas.percona.com/restart"
+	managedByKey               = "dbaas.percona.com/managed-by"
 
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
@@ -79,10 +83,8 @@ const (
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 
-	// Max size of volume for AWS Elastic Block Storage service is 16TiB.
-	maxVolumeSizeEBS    uint64 = 16 * 1024 * 1024 * 1024 * 1024
-	olmNamespace               = "olm"
-	useDefaultNamespace        = ""
+	olmNamespace        = "olm"
+	useDefaultNamespace = ""
 
 	// APIVersionCoreosV1 constant for some API requests.
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
@@ -196,7 +198,7 @@ func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*dbaa
 	return k.client.GetDatabaseCluster(ctx, name)
 }
 
-// RestartDatabaseCluster restarts database cluster
+// RestartDatabaseCluster restarts database cluster.
 func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -220,7 +222,7 @@ func (k *Kubernetes) PatchDatabaseCluster(cluster *dbaasv1.DatabaseCluster) erro
 	return k.client.ApplyObject(cluster)
 }
 
-// CreateDatabaseCluster creates database cluster
+// CreateDatabaseCluster creates database cluster.
 func (k *Kubernetes) CreateDatabaseCluster(cluster *dbaasv1.DatabaseCluster) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -231,7 +233,7 @@ func (k *Kubernetes) CreateDatabaseCluster(cluster *dbaasv1.DatabaseCluster) err
 	return k.client.ApplyObject(cluster)
 }
 
-// DeleteDatabaseCluster deletes database cluster
+// DeleteDatabaseCluster deletes database cluster.
 func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -244,7 +246,7 @@ func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) err
 	return k.client.DeleteObject(cluster)
 }
 
-// GetDefaultStorageClassName returns first storageClassName from kubernetes cluster
+// GetDefaultStorageClassName returns first storageClassName from kubernetes cluster.
 func (k *Kubernetes) GetDefaultStorageClassName(ctx context.Context) (string, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
@@ -258,7 +260,7 @@ func (k *Kubernetes) GetDefaultStorageClassName(ctx context.Context) (string, er
 	return "", errors.New("no storage classes available")
 }
 
-// GetClusterType tries to guess the underlying kubernetes cluster based on storage class
+// GetClusterType tries to guess the underlying kubernetes cluster based on storage class.
 func (k *Kubernetes) GetClusterType(ctx context.Context) (ClusterType, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
@@ -279,7 +281,7 @@ func (k *Kubernetes) GetClusterType(ctx context.Context) (ClusterType, error) {
 	return ClusterTypeGeneric, nil
 }
 
-// getOperatorVersion parses operator version from operator deployment
+// getOperatorVersion parses operator version from operator deployment.
 func (k *Kubernetes) getOperatorVersion(ctx context.Context, deploymentName, containerName string) (string, error) {
 	deployment, err := k.client.GetDeployment(ctx, deploymentName)
 	if err != nil {
@@ -293,35 +295,35 @@ func (k *Kubernetes) getOperatorVersion(ctx context.Context, deploymentName, con
 	return "", errors.New("unknown version of operator")
 }
 
-// GetPSMDBOperatorVersion parses PSMDB operator version from operator deployment
+// GetPSMDBOperatorVersion parses PSMDB operator version from operator deployment.
 func (k *Kubernetes) GetPSMDBOperatorVersion(ctx context.Context) (string, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, psmdbDeploymentName, psmdbOperatorContainerName)
 }
 
-// GetPXCOperatorVersion parses PXC operator version from operator deployment
+// GetPXCOperatorVersion parses PXC operator version from operator deployment.
 func (k *Kubernetes) GetPXCOperatorVersion(ctx context.Context) (string, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, pxcDeploymentName, pxcOperatorContainerName)
 }
 
-// GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment
+// GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment.
 func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, dbaasDeploymentName, dbaasOperatorContainerName)
 }
 
-// GetSecret returns secret by name
+// GetSecret returns secret by name.
 func (k *Kubernetes) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.client.GetSecret(ctx, name)
 }
 
-// ListSecrets returns secret by name
+// ListSecrets returns secret by name.
 func (k *Kubernetes) ListSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
@@ -346,6 +348,7 @@ func (k *Kubernetes) CreatePMMSecret(secretName string, secrets map[string][]byt
 	return k.client.ApplyObject(secret)
 }
 
+// CreateRestore creates a restore.
 func (k *Kubernetes) CreateRestore(restore *dbaasv1.DatabaseClusterRestore) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
@@ -353,7 +356,11 @@ func (k *Kubernetes) CreateRestore(restore *dbaasv1.DatabaseClusterRestore) erro
 }
 
 // GetPods returns list of pods.
-func (k *Kubernetes) GetPods(ctx context.Context, namespace string, labelSelector *metav1.LabelSelector) (*corev1.PodList, error) {
+func (k *Kubernetes) GetPods(
+	ctx context.Context,
+	namespace string,
+	labelSelector *metav1.LabelSelector,
+) (*corev1.PodList, error) {
 	return k.client.GetPods(ctx, namespace, labelSelector)
 }
 
@@ -468,54 +475,27 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
 		return nil // already installed
 	}
 
-	var crdFile, olmFile, perconaCatalog []byte
-
-	crdFile, err = fs.ReadFile(data.OLMCRDs, "crds/olm/crds.yaml")
+	resources, err := k.applyResources()
 	if err != nil {
-		return errors.Wrapf(err, "failed to read OLM CRDs file")
+		return err
 	}
 
-	if err := k.client.ApplyFile(crdFile); err != nil {
-		return errors.Wrapf(err, "cannot apply %q file", crdFile)
+	if err := k.waitForDeploymentRollout(ctx); err != nil {
+		return err
 	}
 
-	olmFile, err = fs.ReadFile(data.OLMCRDs, "crds/olm/olm.yaml")
-	if err != nil {
-		return errors.Wrapf(err, "failed to read OLM file")
+	if err := k.applyCSVs(ctx, resources); err != nil {
+		return err
 	}
 
-	if err := k.client.ApplyFile(olmFile); err != nil {
-		return errors.Wrapf(err, "cannot apply %q file", crdFile)
-	}
-
-	perconaCatalog, err = fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
-	if err != nil {
-		return errors.Wrapf(err, "failed to read percona catalog yaml file")
-	}
-
-	if err := k.client.ApplyFile(perconaCatalog); err != nil {
-		return errors.Wrapf(err, "cannot apply %q file", crdFile)
-	}
-
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: olmNamespace, Name: "olm-operator"}); err != nil {
-		return errors.Wrap(err, "error while waiting for deployment rollout")
-	}
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "catalog-operator"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "packageserver"}); err != nil {
 		return errors.Wrap(err, "error while waiting for deployment rollout")
 	}
 
-	crdResources, err := decodeResources(crdFile)
-	if err != nil {
-		return errors.Wrap(err, "cannot decode crd resources")
-	}
+	return nil
+}
 
-	olmResources, err := decodeResources(olmFile)
-	if err != nil {
-		return errors.Wrap(err, "cannot decode olm resources")
-	}
-
-	resources := append(crdResources, olmResources...)
-
+func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Unstructured) error {
 	subscriptions := filterResources(resources, func(r unstructured.Unstructured) bool {
 		return r.GroupVersionKind() == schema.GroupVersionKind{
 			Group:   v1alpha1.GroupName,
@@ -529,27 +509,72 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
 		log.Printf("Waiting for subscription/%s to install CSV", subscriptionKey.Name)
 		csvKey, err := k.client.GetSubscriptionCSV(ctx, subscriptionKey)
 		if err != nil {
-			return fmt.Errorf("subscription/%s failed to install CSV: %v", subscriptionKey.Name, err)
+			return errors.Errorf("subscription/%s failed to install CSV: %v", subscriptionKey.Name, err)
 		}
 		log.Printf("Waiting for clusterserviceversion/%s to reach 'Succeeded' phase", csvKey.Name)
 		if err := k.client.DoCSVWait(ctx, csvKey); err != nil {
-			return fmt.Errorf("clusterserviceversion/%s failed to reach 'Succeeded' phase", csvKey.Name)
+			return errors.Errorf("clusterserviceversion/%s failed to reach 'Succeeded' phase", csvKey.Name)
 		}
 	}
 
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "packageserver"}); err != nil {
+	return nil
+}
+
+func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
+	files := []struct {
+		path           string
+		addToResources bool
+	}{
+		{"crds/olm/crds.yaml", true},
+		{"crds/olm/olm.yaml", true},
+		{"crds/olm/percona-dbaas-catalog.yaml", false},
+	}
+
+	resources := make([]unstructured.Unstructured, 0)
+	for _, f := range files {
+		data, err := fs.ReadFile(data.OLMCRDs, f.path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read %q file", f.path)
+		}
+
+		if err := k.client.ApplyFile(data); err != nil {
+			return nil, errors.Wrapf(err, "cannot apply %q file", f.path)
+		}
+
+		if f.addToResources {
+			r, err := decodeResources(data)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot decode resources in %q", f.path)
+			}
+			resources = append(resources, r...)
+		}
+	}
+
+	return resources, nil
+}
+
+func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{
+		Namespace: olmNamespace,
+		Name:      "olm-operator",
+	}); err != nil {
+		return errors.Wrap(err, "error while waiting for deployment rollout")
+	}
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "catalog-operator"}); err != nil {
 		return errors.Wrap(err, "error while waiting for deployment rollout")
 	}
 
 	return nil
 }
 
-func decodeResources(f []byte) (objs []unstructured.Unstructured, err error) {
+func decodeResources(f []byte) ([]unstructured.Unstructured, error) {
+	var err error
+	objs := make([]unstructured.Unstructured, 0)
 	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(f), 8)
 	for {
 		var u unstructured.Unstructured
 		err = dec.Decode(&u)
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return nil, err
@@ -562,7 +587,8 @@ func decodeResources(f []byte) (objs []unstructured.Unstructured, err error) {
 
 func filterResources(resources []unstructured.Unstructured, filter func(unstructured.
 	Unstructured) bool,
-) (filtered []unstructured.Unstructured) {
+) []unstructured.Unstructured {
+	filtered := make([]unstructured.Unstructured, 0, len(resources))
 	for _, r := range resources {
 		if filter(r) {
 			filtered = append(filtered, r)
@@ -611,7 +637,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		return err
 	}
 	if subs == nil {
-		return fmt.Errorf("cannot get an install plan for the operator subscription: %q", req.Name)
+		return errors.Errorf("cannot get an install plan for the operator subscription: %q", req.Name)
 	}
 
 	ip, err := k.client.GetInstallPlan(ctx, req.Namespace, subs.Status.Install.Name)
@@ -643,6 +669,23 @@ func (k *Kubernetes) ListSubscriptions(ctx context.Context, namespace string) (*
 
 // UpgradeOperator upgrades an operator to the next available version.
 func (k *Kubernetes) UpgradeOperator(ctx context.Context, namespace, name string) error {
+	ip, err := k.getInstallPlan(ctx, namespace, name)
+	if err != nil {
+		return err
+	}
+
+	if ip.Spec.Approved {
+		return nil // There are no upgrades.
+	}
+
+	ip.Spec.Approved = true
+
+	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
+
+	return err
+}
+
+func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string) (*v1alpha1.InstallPlan, error) {
 	var subs *v1alpha1.Subscription
 
 	// If the subscription was recently created, the install plan might not be ready yet.
@@ -659,42 +702,40 @@ func (k *Kubernetes) UpgradeOperator(ctx context.Context, namespace, name string
 		return true, nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if subs == nil || subs.Status.Install == nil || subs.Status.Install.Name == "" {
-		return fmt.Errorf("cannot get subscription for %q operator", name)
+		return nil, errors.Errorf("cannot get subscription for %q operator", name)
 	}
 
 	ip, err := k.client.GetInstallPlan(ctx, namespace, subs.Status.Install.Name)
 	if err != nil {
-		return errors.Wrapf(err, "cannot get install plan to upgrade %q", name)
+		return nil, errors.Wrapf(err, "cannot get install plan to upgrade %q", name)
 	}
 
-	if ip.Spec.Approved == true {
-		return nil // There are no upgrades.
-	}
-
-	ip.Spec.Approved = true
-
-	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
-
-	return err
+	return ip, err
 }
 
-// GetServerVersion returns server version
+// GetServerVersion returns server version.
 func (k *Kubernetes) GetServerVersion() (*version.Info, error) {
 	return k.client.GetServerVersion()
 }
 
 // GetClusterServiceVersion retrieves a ClusterServiceVersion by namespaced name.
-func (k *Kubernetes) GetClusterServiceVersion(ctx context.Context, key types.NamespacedName) (*v1alpha1.ClusterServiceVersion, error) {
+func (k *Kubernetes) GetClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) (*v1alpha1.ClusterServiceVersion, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.client.GetClusterServiceVersion(ctx, key)
 }
 
 // ListClusterServiceVersion list all CSVs for the given namespace.
-func (k *Kubernetes) ListClusterServiceVersion(ctx context.Context, namespace string) (*v1alpha1.ClusterServiceVersionList, error) {
+func (k *Kubernetes) ListClusterServiceVersion(
+	ctx context.Context,
+	namespace string,
+) (*v1alpha1.ClusterServiceVersionList, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 	return k.client.ListClusterServiceVersion(ctx, namespace)
@@ -707,7 +748,7 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 	return k.client.DeleteObject(obj)
 }
 
-// and creates a VM Agent instance.
+// ProvisionMonitoring provisions monitoring and creates a VM Agent instance.
 func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress string) error {
 	randomCrypto, err := rand.Prime(rand.Reader, 64)
 	if err != nil {

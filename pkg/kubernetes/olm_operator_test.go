@@ -21,22 +21,26 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gen1us2k/everest-provisioner/kubernetes/client"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
 )
 
 func TestInstallOlmOperator(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	k8sclient := &client.MockKubeClientConnector{}
 
 	olms := NewEmpty()
 	olms.client = k8sclient
 
+	//nolint:paralleltest
 	t.Run("Install OLM Operator", func(t *testing.T) {
 		k8sclient.On("CreateSubscriptionForCatalog", mock.Anything, mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -51,6 +55,8 @@ func TestInstallOlmOperator(t *testing.T) {
 	})
 
 	t.Run("Install PSMDB Operator", func(t *testing.T) {
+		t.Parallel()
+
 		// Install PSMDB Operator
 		subscriptionNamespace := "default"
 		operatorGroup := "percona-operators-group"
@@ -76,7 +82,10 @@ func TestInstallOlmOperator(t *testing.T) {
 		}
 		k8sclient.On("GetSubscription", ctx, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
 		mockInstallPlan := &v1alpha1.InstallPlan{}
-		k8sclient.On("GetInstallPlan", ctx, subscriptionNamespace, mockSubscription.Status.Install.Name).Return(mockInstallPlan, nil)
+		k8sclient.On(
+			"GetInstallPlan", ctx,
+			subscriptionNamespace, mockSubscription.Status.Install.Name,
+		).Return(mockInstallPlan, nil)
 		k8sclient.On("UpdateInstallPlan", ctx, subscriptionNamespace, mockInstallPlan).Return(mockInstallPlan, nil)
 		err := olms.InstallOperator(ctx, params)
 		assert.NoError(t, err)
