@@ -8,6 +8,8 @@ require (
 	github.com/golangci/golangci-lint v1.52.2
 	github.com/quasilyte/go-consistent v0.0.0-20220429160651-4e46040fbc82
 	github.com/reviewdog/reviewdog v0.14.1
+	github.com/vburenin/ifacemaker v1.2.1
+	github.com/vektra/mockery v1.1.2
 	golang.org/x/tools v0.9.1
 	mvdan.cc/gofumpt v0.5.0
 )
@@ -196,8 +198,6 @@ require (
 	github.com/uudashr/gocognit v1.0.6 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/vburenin/ifacemaker v1.2.1 // indirect
-	github.com/vektra/mockery v1.1.2 // indirect
 	github.com/vvakame/sdlog v1.1.2 // indirect
 	github.com/xanzy/go-gitlab v0.83.0 // indirect
 	github.com/yagipy/maintidx v1.0.0 // indirect
