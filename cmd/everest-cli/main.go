@@ -3,8 +3,15 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
-import "github.com/percona/percona-everest-cli/cmd"
+import (
+	"os"
+
+	"github.com/percona/percona-everest-cli/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	rootCmd := cmd.NewRootCmd()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

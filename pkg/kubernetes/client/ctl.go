@@ -18,7 +18,7 @@ package client
 type (
 	// Cluster contains information about how to communicate with a kubernetes cluster.
 	Cluster struct {
-		CertificateAuthorityData []byte `json:"certificate-authority-data"`
+		CertificateAuthorityData []byte `json:"certificate-authority-data"` //nolint:tagliatelle
 		Server                   string `json:"server"`
 	}
 	// ClusterInfo is a struct used to parse Cluster config from kubeconfig.
@@ -26,7 +26,8 @@ type (
 		Name    string  `json:"name"`
 		Cluster Cluster `json:"cluster"`
 	}
-	// User contains information that describes identity information.  This is use to tell the kubernetes cluster who you are.
+	// User contains information that describes identity information.
+	// This is use to tell the kubernetes cluster who you are.
 	User struct {
 		Token string `json:"token"`
 	}
@@ -60,6 +61,6 @@ type (
 		// Contexts is a map of referencable names to context configs
 		Contexts []ContextInfo `json:"contexts"`
 		// CurrentContext is the name of the context that you would like to use by default
-		CurrentContext string `json:"current-context"`
+		CurrentContext string `json:"current-context"` //nolint:tagliatelle
 	}
 )

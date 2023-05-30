@@ -1,3 +1,4 @@
+// Package cli holds the main logic for commands.
 package cli
 
 import (
@@ -5,20 +6,21 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"math/rand"
 	"net/http"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+
 	"github.com/percona/percona-everest-cli/config"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
-	"github.com/sirupsen/logrus"
 )
 
+// CLI implements the main logic for commands.
 type CLI struct {
 	config     *config.AppConfig
 	kubeClient *kubernetes.Kubernetes
@@ -32,9 +34,10 @@ const (
 	catalogSource          = "percona-dbaas-catalog"
 )
 
+// New returns a new CLI struct.
 func New(c *config.AppConfig) (*CLI, error) {
 	cli := &CLI{config: c}
-	k, err := kubernetes.New(c.Kubeconfig)
+	k, err := kubernetes.New(c.KubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +46,31 @@ func New(c *config.AppConfig) (*CLI, error) {
 	return cli, nil
 }
 
+// ProvisionCluster provisions a new dbaas operator to k8s cluster.
 func (c *CLI) ProvisionCluster() error {
-	c.l.Info("started provisioning the cluster")
+	c.l.Info("Started provisioning the cluster")
 	ctx := context.TODO()
+
+	if err := c.provisionOLM(ctx); err != nil {
+		return err
+	}
+
+	if err := c.provisionOperators(ctx); err != nil {
+		return err
+	}
+
+	if c.config.Monitoring.Enabled {
+		c.l.Info("Started setting up monitoring")
+		// if err := c.provisionPMMMonitoring(); err != nil {
+		// 	return err
+		// }
+		c.l.Info("Monitoring using PMM has been provisioned")
+	}
+
+	return nil
+}
+
+func (c *CLI) provisionOLM(ctx context.Context) error {
 	if c.config.InstallOLM {
 		c.l.Info("Installing Operator Lifecycle Manager")
 		if err := c.kubeClient.InstallOLMOperator(ctx); err != nil {
@@ -54,14 +79,73 @@ func (c *CLI) ProvisionCluster() error {
 		}
 	}
 	c.l.Info("OLM has been installed")
-	c.l.Info("installing Victoria Metrics operator")
-	channel, ok := os.LookupEnv("DBAAS_VM_OP_CHANNEL")
+
+	return nil
+}
+
+func (c *CLI) provisionOperators(ctx context.Context) error {
+	if err := c.installOperator(ctx,
+		"DBAAS_VM_OP_CHANNEL",
+		"victoriametrics-operator",
+		"stable-v0",
+	); err != nil {
+		return err
+	}
+
+	// TODO: Fix operator name
+	//nolint:godox
+	if err := c.installOperator(
+		ctx,
+		"DBAAS_PXC_OP_CHANNEL",
+		"victoriametrics-operator",
+		"stable-v1",
+	); err != nil {
+		return err
+	}
+
+	if err := c.installOperator(
+		ctx,
+		"DBAAS_PSMDB_OP_CHANNEL",
+		"percona-server-mongodb-operator",
+		"stable-v1",
+	); err != nil {
+		return err
+	}
+
+	if err := c.installOperator(ctx,
+		"DBAAS_DBAAS_OP_CHANNEL",
+		"dbaas-operator",
+		"stable-v0",
+	); err != nil {
+		return err
+	}
+
+	// c.l.Info("Installing PG operator")
+	// channel, ok = os.LookupEnv("DBAAS_PG_OP_CHANNEL")
+	// if !ok || channel == "" {
+	// 	channel = "stable-v2"
+	// }
+	// params.Name = "percona-postgresql-operator"
+	// params.Channel = channel
+	// if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
+	// 	c.l.Error("failed installing PG operator")
+	// 	return err
+	// }
+	// c.l.Info("PG operator has been installed")
+
+	return nil
+}
+
+func (c *CLI) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) error {
+	c.l.Infof("Installing %s operator", operatorName)
+
+	channel, ok := os.LookupEnv(envName)
 	if !ok || channel == "" {
-		channel = "stable-v0"
+		channel = defaultChannel
 	}
 	params := kubernetes.InstallOperatorRequest{
 		Namespace:              namespace,
-		Name:                   "victoriametrics-operator",
+		Name:                   operatorName,
 		OperatorGroup:          operatorGroup,
 		CatalogSource:          catalogSource,
 		CatalogSourceNamespace: catalogSourceNamespace,
@@ -70,72 +154,19 @@ func (c *CLI) ProvisionCluster() error {
 	}
 
 	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Error("failed installing victoria metrics operator")
+		c.l.Errorf("failed installing %s operator", operatorName)
 		return err
 	}
-	c.l.Info("Victoria metrics operator has been installed")
-	c.l.Info("Installing PXC operator")
-	channel, ok = os.LookupEnv("DBAAS_PXC_OP_CHANNEL")
-	if !ok || channel == "" {
-		channel = "stable-v1"
-	}
+	c.l.Infof("%s operator has been installed", operatorName)
 
-	// TODO: Fix installation params
-	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Error("failed installing PXC operator")
-		return err
-	}
-	c.l.Info("PXC operator has been installed")
-	c.l.Info("Installing PSMDB operator")
-	channel, ok = os.LookupEnv("DBAAS_PSMDB_OP_CHANNEL")
-	if !ok || channel == "" {
-		channel = "stable-v1"
-	}
-	params.Name = "percona-server-mongodb-operator"
-	params.Channel = channel
-	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Error("failed installing PSMDB operator")
-		return err
-	}
-	c.l.Info("PSMDB operator has been installed")
-	c.l.Info("Installing DBaaS operator")
-	channel, ok = os.LookupEnv("DBAAS_DBAAS_OP_CHANNEL")
-	if !ok || channel == "" {
-		channel = "stable-v0"
-	}
-	params.Name = "dbaas-operator"
-	params.Channel = channel
-	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Error("failed installing DBaaS operator")
-		return err
-	}
-	c.l.Info("DBaaS operator has been installed")
-	//c.l.Info("Installing PG operator")
-	//channel, ok = os.LookupEnv("DBAAS_PG_OP_CHANNEL")
-	//if !ok || channel == "" {
-	//	channel = "stable-v2"
-	//}
-	//params.Name = "percona-postgresql-operator"
-	//params.Channel = channel
-	//if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-	//	c.l.Error("failed installing PG operator")
-	//	return err
-	//}
-	//c.l.Info("PG operator has been installed")
-	if c.config.Monitoring.Enabled {
-		c.l.Info("Started setting up monitoring")
-		//if err := c.provisionPMMMonitoring(); err != nil {
-		//	return err
-		//}
-		c.l.Info("Monitoring using PMM has been provisioned")
-	}
 	return nil
 }
 
-func (c *CLI) provisionPMMMonitoring() error {
-	account := fmt.Sprintf("dbaas-service-account-%d", rand.Int63())
+//nolint:unused
+func (c *CLI) provisionPMMMonitoring(ctx context.Context) error {
+	account := fmt.Sprintf("everest-service-account-%s", uuid.NewString())
 	c.l.Info("Creating a new service account in PMM")
-	token, err := c.provisionPMM(account)
+	token, err := c.provisionPMM(ctx, account)
 	if err != nil {
 		return err
 	}
@@ -150,16 +181,22 @@ func (c *CLI) provisionPMMMonitoring() error {
 	return nil
 }
 
-func (c *CLI) provisionPMM(account string) (string, error) {
-	token, err := c.createAdminToken(account, "")
+//nolint:unused
+func (c *CLI) provisionPMM(ctx context.Context, account string) (string, error) {
+	token, err := c.createAdminToken(ctx, account, "")
 	return token, err
 }
 
-func (c *CLI) ConnectDBaaS() error {
+// ConnectToEverest connects the k8s cluster to Everest.
+//
+//nolint:unparam
+func (c *CLI) ConnectToEverest() error {
 	c.l.Info("Generating service account and connecting with DBaaS")
 	// TODO: Remove this after Percona Everest will be enabled
+	//nolint:godox,revive
 	return nil
-	data, err := ioutil.ReadFile("/Users/gen1us2k/.kube/config")
+	//nolint:govet
+	data, err := os.ReadFile("/Users/gen1us2k/.kube/config")
 	if err != nil {
 		c.l.Error("failed generating kubeconfig")
 		return err
@@ -191,7 +228,8 @@ func (c *CLI) ConnectDBaaS() error {
 	return nil
 }
 
-func (c *CLI) createAdminToken(name string, token string) (string, error) {
+//nolint:unused
+func (c *CLI) createAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
@@ -200,8 +238,13 @@ func (c *CLI) createAdminToken(name string, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(string(b))
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/graph/api/auth/keys", c.config.Monitoring.PMM.Endpoint), bytes.NewReader(b))
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		fmt.Sprintf("%s/graph/api/auth/keys", c.config.Monitoring.PMM.Endpoint),
+		bytes.NewReader(b),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -216,10 +259,9 @@ func (c *CLI) createAdminToken(name string, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(resp.StatusCode)
-	defer resp.Body.Close()
+
+	defer resp.Body.Close() //nolint:errcheck,gosec
 	data, err := io.ReadAll(resp.Body)
-	fmt.Println(string(data))
 	if err != nil {
 		return "", err
 	}
@@ -227,5 +269,10 @@ func (c *CLI) createAdminToken(name string, token string) (string, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return "", err
 	}
-	return m["key"].(string), nil
+	key, ok := m["key"].(string)
+	if !ok {
+		return "", errors.New("cannot unmarshal key in createAdminToken")
+	}
+
+	return key, nil
 }

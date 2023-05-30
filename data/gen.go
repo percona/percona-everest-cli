@@ -18,5 +18,7 @@ package data
 
 import "embed"
 
+// OLMCRDs stores CRDs in an embedded filesystem.
+//
 //go:embed crds/*
 var OLMCRDs embed.FS

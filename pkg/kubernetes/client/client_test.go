@@ -37,6 +37,7 @@ import (
 )
 
 func TestGetSecretsForServiceAccount(t *testing.T) {
+	t.Parallel()
 	clientset := fake.NewSimpleClientset(
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -73,6 +74,7 @@ func TestGetSecretsForServiceAccount(t *testing.T) {
 }
 
 func TestGetSecretsForServiceAccountNoSecrets(t *testing.T) {
+	t.Parallel()
 	clientset := fake.NewSimpleClientset(
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,6 +91,7 @@ func TestGetSecretsForServiceAccountNoSecrets(t *testing.T) {
 }
 
 func TestGetServerVersion(t *testing.T) {
+	t.Parallel()
 	clientset := fake.NewSimpleClientset()
 	client := &Client{clientset: clientset, namespace: "default"}
 	ver, err := client.GetServerVersion()
@@ -146,6 +149,7 @@ func TestGetPods(t *testing.T) {
 		},
 	}
 
+	//nolint:paralleltest
 	for _, test := range data {
 		t.Run("", func(test struct {
 			clientset         kubernetes.Interface
@@ -155,6 +159,7 @@ func TestGetPods(t *testing.T) {
 		},
 		) func(t *testing.T) {
 			return func(t *testing.T) {
+				t.Parallel()
 				clientset := test.clientset
 				client := &Client{clientset: clientset, namespace: "default"}
 
@@ -291,6 +296,7 @@ func TestListCRDs(t *testing.T) {
 		},
 	}
 
+	//nolint:paralleltest
 	for _, test := range data {
 		t.Run("", func(test struct {
 			clientset          apiextv1clientset.Interface
@@ -300,6 +306,7 @@ func TestListCRDs(t *testing.T) {
 		},
 		) func(t *testing.T) {
 			return func(t *testing.T) {
+				t.Parallel()
 				clientset := test.clientset
 				client := &Client{apiextClientset: clientset, namespace: "default"}
 
@@ -316,6 +323,7 @@ func TestListCRDs(t *testing.T) {
 	}
 }
 
+//nolint:maintidx
 func TestListCRs(t *testing.T) {
 	t.Parallel()
 
@@ -490,6 +498,7 @@ func TestListCRs(t *testing.T) {
 		},
 		// two CRs match label selector
 		{
+			//nolint:dupl
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
 					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
@@ -546,6 +555,7 @@ func TestListCRs(t *testing.T) {
 		},
 		// one CR matches label selector with multiple labels
 		{
+			//nolint:dupl
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
 					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
@@ -603,6 +613,7 @@ func TestListCRs(t *testing.T) {
 		},
 	}
 
+	//nolint:paralleltest
 	for _, test := range data {
 		t.Run("", func(test struct {
 			clientset          dynamic.Interface
@@ -614,6 +625,7 @@ func TestListCRs(t *testing.T) {
 		},
 		) func(t *testing.T) {
 			return func(t *testing.T) {
+				t.Parallel()
 				clientset := test.clientset
 				client := &Client{dynamicClientset: clientset, namespace: "default"}
 
