@@ -8,8 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/percona/percona-everest-cli/config"
-	"github.com/percona/percona-everest-cli/pkg/cli"
+	"github.com/percona/percona-everest-cli/pkg/install"
 )
 
 // NewOperatorsCmd returns a new operators command.
@@ -19,20 +18,20 @@ func NewOperatorsCmd() *cobra.Command {
 		Short: "TODO: Operators help",
 		Long:  `TODO: Operators help`,
 		Run: func(cmd *cobra.Command, args []string) {
-			c, err := config.ParseConfig()
+			c, err := parseConfig()
 			if err != nil {
 				os.Exit(1)
 			}
-			cli, err := cli.New(c)
+			op, err := install.NewOperators(c)
 			if err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}
-			if err := cli.ProvisionCluster(); err != nil {
+			if err := op.ProvisionCluster(); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}
-			if err := cli.ConnectToEverest(); err != nil {
+			if err := op.ConnectToEverest(); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}
@@ -62,4 +61,10 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	viper.BindPFlag("enable_backup", cmd.Flags().Lookup("enable_backup"))                     //nolint:errcheck,gosec
 	viper.BindPFlag("install_olm", cmd.Flags().Lookup("install_olm"))                         //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))                           //nolint:errcheck,gosec
+}
+
+func parseConfig() (*install.OperatorsConfig, error) {
+	c := &install.OperatorsConfig{}
+	err := viper.Unmarshal(c)
+	return c, err
 }
