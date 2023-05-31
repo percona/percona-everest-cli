@@ -529,7 +529,7 @@ func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 		{"crds/olm/percona-dbaas-catalog.yaml", false},
 	}
 
-	resources := make([]unstructured.Unstructured, 0)
+	resources := []unstructured.Unstructured{}
 	for _, f := range files {
 		data, err := fs.ReadFile(data.OLMCRDs, f.path)
 		if err != nil {
@@ -568,7 +568,7 @@ func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
 
 func decodeResources(f []byte) ([]unstructured.Unstructured, error) {
 	var err error
-	objs := make([]unstructured.Unstructured, 0)
+	objs := []unstructured.Unstructured{}
 	dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(f), 8)
 	for {
 		var u unstructured.Unstructured
@@ -614,8 +614,10 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		return err
 	}
 
-	subs, err := k.client.CreateSubscriptionForCatalog(ctx, req.Namespace, req.Name, "olm", req.CatalogSource,
-		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual)
+	subs, err := k.client.CreateSubscriptionForCatalog(
+		ctx, req.Namespace, req.Name, "olm", req.CatalogSource,
+		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual,
+	)
 	if err != nil {
 		return errors.Wrap(err, "cannot create a subscription to install the operator")
 	}

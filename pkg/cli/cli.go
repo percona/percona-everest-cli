@@ -95,91 +95,44 @@ func (c *CLI) provisionOperators(ctx context.Context) error {
 	// The limit can be removed after it's refactored.
 	g.SetLimit(1)
 
-	g.Go(func() error {
-		return c.installOperator(
-			gCtx,
-			"DBAAS_VM_OP_CHANNEL",
-			"victoriametrics-operator",
-			"stable-v0",
-		)
-	})
-
-	g.Go(func() error {
-		return c.installOperator(
-			gCtx,
-			"DBAAS_VM_OP_CHANNEL",
-			"victoriametrics-operator",
-			"stable-v0",
-		)
-	})
-
-	g.Go(func() error {
-		return c.installOperator(
-			gCtx,
-			"DBAAS_PXC_OP_CHANNEL",
-			"percona-xtradb-cluster-operator",
-			"stable-v1",
-		)
-	})
-
-	g.Go(func() error {
-		return c.installOperator(
-			gCtx,
-			"DBAAS_PSMDB_OP_CHANNEL",
-			"percona-server-mongodb-operator",
-			"stable-v1",
-		)
-	})
-
-	g.Go(func() error {
-		return c.installOperator(
-			gCtx,
-			"DBAAS_PG_OP_CHANNEL",
-			"percona-postgresql-operator",
-			"fast-v2",
-		)
-	})
+	g.Go(c.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
 
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	if err := c.installOperator(
-		ctx,
-		"DBAAS_DBAAS_OP_CHANNEL",
-		"dbaas-operator",
-		"stable-v0",
-	); err != nil {
-		return err
-	}
-
-	return nil
+	return c.installOperator(ctx, "DBAAS_DBAAS_OP_CHANNEL", "dbaas-operator", "stable-v0")()
 }
 
-func (c *CLI) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) error {
-	c.l.Infof("Installing %s operator", operatorName)
+func (c *CLI) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) func() error {
+	return func() error {
+		c.l.Infof("Installing %s operator", operatorName)
 
-	channel, ok := os.LookupEnv(envName)
-	if !ok || channel == "" {
-		channel = defaultChannel
-	}
-	params := kubernetes.InstallOperatorRequest{
-		Namespace:              namespace,
-		Name:                   operatorName,
-		OperatorGroup:          operatorGroup,
-		CatalogSource:          catalogSource,
-		CatalogSourceNamespace: catalogSourceNamespace,
-		Channel:                channel,
-		InstallPlanApproval:    v1alpha1.ApprovalManual,
-	}
+		channel, ok := os.LookupEnv(envName)
+		if !ok || channel == "" {
+			channel = defaultChannel
+		}
+		params := kubernetes.InstallOperatorRequest{
+			Namespace:              namespace,
+			Name:                   operatorName,
+			OperatorGroup:          operatorGroup,
+			CatalogSource:          catalogSource,
+			CatalogSourceNamespace: catalogSourceNamespace,
+			Channel:                channel,
+			InstallPlanApproval:    v1alpha1.ApprovalManual,
+		}
 
-	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Errorf("failed installing %s operator", operatorName)
-		return err
-	}
-	c.l.Infof("%s operator has been installed", operatorName)
+		if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
+			c.l.Errorf("failed installing %s operator", operatorName)
+			return err
+		}
+		c.l.Infof("%s operator has been installed", operatorName)
 
-	return nil
+		return nil
+	}
 }
 
 //nolint:unused

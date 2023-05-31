@@ -12,6 +12,7 @@ import (
 	"github.com/percona/percona-everest-cli/pkg/cli"
 )
 
+// NewOperatorsCmd returns a new operators command.
 func NewOperatorsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "operators",
