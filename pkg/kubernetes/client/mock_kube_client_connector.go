@@ -240,13 +240,13 @@ func (_m *MockKubeClientConnector) GetDatabaseCluster(ctx context.Context, name 
 	return r0, r1
 }
 
-// GetDeployment provides a mock function with given fields: ctx, name
-func (_m *MockKubeClientConnector) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
-	ret := _m.Called(ctx, name)
+// GetDeployment provides a mock function with given fields: ctx, name, namespace
+func (_m *MockKubeClientConnector) GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error) {
+	ret := _m.Called(ctx, name, namespace)
 
 	var r0 *appsv1.Deployment
-	if rf, ok := ret.Get(0).(func(context.Context, string) *appsv1.Deployment); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *appsv1.Deployment); ok {
+		r0 = rf(ctx, name, namespace)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*appsv1.Deployment)
@@ -254,8 +254,8 @@ func (_m *MockKubeClientConnector) GetDeployment(ctx context.Context, name strin
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, name, namespace)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -45,7 +45,7 @@ func TestInstallOlmOperator(t *testing.T) {
 		k8sclient.On("CreateSubscriptionForCatalog", mock.Anything, mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(&v1alpha1.Subscription{}, nil)
-		k8sclient.On("GetDeployment", ctx, mock.Anything).Return(&appsv1.Deployment{}, nil)
+		k8sclient.On("GetDeployment", ctx, mock.Anything, "olm").Return(&appsv1.Deployment{}, nil)
 		k8sclient.On("ApplyFile", mock.Anything).Return(nil)
 		k8sclient.On("DoRolloutWait", ctx, mock.Anything).Return(nil)
 		k8sclient.On("GetSubscriptionCSV", ctx, mock.Anything).Return(types.NamespacedName{}, nil)
@@ -80,7 +80,7 @@ func TestInstallOlmOperator(t *testing.T) {
 				},
 			},
 		}
-		k8sclient.On("GetSubscription", ctx, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
+		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
 		mockInstallPlan := &v1alpha1.InstallPlan{}
 		k8sclient.On(
 			"GetInstallPlan", ctx,

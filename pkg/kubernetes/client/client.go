@@ -302,8 +302,11 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*storagev1.StorageClass
 }
 
 // GetDeployment returns deployment by name.
-func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
-	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
+func (c *Client) GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error) {
+	if namespace == "" {
+		namespace = c.namespace
+	}
+	return c.clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetSecret returns secret by name.

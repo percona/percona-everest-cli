@@ -15,6 +15,7 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/percona/percona-everest-cli/config"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
@@ -36,13 +37,16 @@ const (
 
 // New returns a new CLI struct.
 func New(c *config.AppConfig) (*CLI, error) {
-	cli := &CLI{config: c}
-	k, err := kubernetes.New(c.KubeconfigPath)
+	cli := &CLI{
+		config: c,
+		l:      logrus.WithField("component", "install/operators"),
+	}
+
+	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
 	if err != nil {
 		return nil, err
 	}
 	cli.kubeClient = k
-	cli.l = logrus.WithField("component", "cli")
 	return cli, nil
 }
 
@@ -84,54 +88,70 @@ func (c *CLI) provisionOLM(ctx context.Context) error {
 }
 
 func (c *CLI) provisionOperators(ctx context.Context) error {
-	if err := c.installOperator(ctx,
-		"DBAAS_VM_OP_CHANNEL",
-		"victoriametrics-operator",
-		"stable-v0",
-	); err != nil {
+	g, gCtx := errgroup.WithContext(ctx)
+	// We set the limit to 1 since operator installation
+	// requires an update to the same installation plan which
+	// results in race-conditions with a higher limit.
+	// The limit can be removed after it's refactored.
+	g.SetLimit(1)
+
+	g.Go(func() error {
+		return c.installOperator(
+			gCtx,
+			"DBAAS_VM_OP_CHANNEL",
+			"victoriametrics-operator",
+			"stable-v0",
+		)
+	})
+
+	g.Go(func() error {
+		return c.installOperator(
+			gCtx,
+			"DBAAS_VM_OP_CHANNEL",
+			"victoriametrics-operator",
+			"stable-v0",
+		)
+	})
+
+	g.Go(func() error {
+		return c.installOperator(
+			gCtx,
+			"DBAAS_PXC_OP_CHANNEL",
+			"percona-xtradb-cluster-operator",
+			"stable-v1",
+		)
+	})
+
+	g.Go(func() error {
+		return c.installOperator(
+			gCtx,
+			"DBAAS_PSMDB_OP_CHANNEL",
+			"percona-server-mongodb-operator",
+			"stable-v1",
+		)
+	})
+
+	g.Go(func() error {
+		return c.installOperator(
+			gCtx,
+			"DBAAS_PG_OP_CHANNEL",
+			"percona-postgresql-operator",
+			"fast-v2",
+		)
+	})
+
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	// TODO: Fix operator name
-	//nolint:godox
 	if err := c.installOperator(
 		ctx,
-		"DBAAS_PXC_OP_CHANNEL",
-		"victoriametrics-operator",
-		"stable-v1",
-	); err != nil {
-		return err
-	}
-
-	if err := c.installOperator(
-		ctx,
-		"DBAAS_PSMDB_OP_CHANNEL",
-		"percona-server-mongodb-operator",
-		"stable-v1",
-	); err != nil {
-		return err
-	}
-
-	if err := c.installOperator(ctx,
 		"DBAAS_DBAAS_OP_CHANNEL",
 		"dbaas-operator",
 		"stable-v0",
 	); err != nil {
 		return err
 	}
-
-	// c.l.Info("Installing PG operator")
-	// channel, ok = os.LookupEnv("DBAAS_PG_OP_CHANNEL")
-	// if !ok || channel == "" {
-	// 	channel = "stable-v2"
-	// }
-	// params.Name = "percona-postgresql-operator"
-	// params.Channel = channel
-	// if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-	// 	c.l.Error("failed installing PG operator")
-	// 	return err
-	// }
-	// c.l.Info("PG operator has been installed")
 
 	return nil
 }
@@ -191,7 +211,7 @@ func (c *CLI) provisionPMM(ctx context.Context, account string) (string, error) 
 //
 //nolint:unparam
 func (c *CLI) ConnectToEverest() error {
-	c.l.Info("Generating service account and connecting with DBaaS")
+	c.l.Info("Generating service account and connecting with Everest")
 	// TODO: Remove this after Percona Everest will be enabled
 	//nolint:godox,revive
 	return nil

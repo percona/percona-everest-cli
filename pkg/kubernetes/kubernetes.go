@@ -126,9 +126,7 @@ type NodeFileSystemSummary struct {
 }
 
 // New returns new Kubernetes object.
-func New(kubeconfig string) (*Kubernetes, error) {
-	l := logrus.WithField("component", "kubernetes")
-
+func New(kubeconfig string, l *logrus.Entry) (*Kubernetes, error) {
 	client, err := client.NewFromKubeConfig(kubeconfig)
 	if err != nil {
 		return nil, err
@@ -136,7 +134,7 @@ func New(kubeconfig string) (*Kubernetes, error) {
 
 	return &Kubernetes{
 		client: client,
-		l:      l,
+		l:      l.WithField("component", "kubernetes"),
 		lock:   &sync.RWMutex{},
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
@@ -283,7 +281,7 @@ func (k *Kubernetes) GetClusterType(ctx context.Context) (ClusterType, error) {
 
 // getOperatorVersion parses operator version from operator deployment.
 func (k *Kubernetes) getOperatorVersion(ctx context.Context, deploymentName, containerName string) (string, error) {
-	deployment, err := k.client.GetDeployment(ctx, deploymentName)
+	deployment, err := k.client.GetDeployment(ctx, deploymentName, "")
 	if err != nil {
 		return "", err
 	}
@@ -470,8 +468,9 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
 func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
-	deployment, err := k.client.GetDeployment(ctx, "olm-operator")
+	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
 	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" {
+		k.l.Info("OLM operator is already installed")
 		return nil // already installed
 	}
 
@@ -618,15 +617,15 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	subs, err := k.client.CreateSubscriptionForCatalog(ctx, req.Namespace, req.Name, "olm", req.CatalogSource,
 		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual)
 	if err != nil {
-		return errors.Wrap(err, "cannot create a susbcription to install the operator")
+		return errors.Wrap(err, "cannot create a subscription to install the operator")
 	}
 
-	err = wait.Poll(pollInterval, pollDuration, func() (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
 		k.lock.Lock()
 		defer k.lock.Unlock()
 
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
-		if err != nil || subs == nil || (subs != nil && subs.Status.Install == nil) {
+		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
 			return false, err
 		}
 
@@ -640,7 +639,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		return errors.Errorf("cannot get an install plan for the operator subscription: %q", req.Name)
 	}
 
-	ip, err := k.client.GetInstallPlan(ctx, req.Namespace, subs.Status.Install.Name)
+	ip, err := k.client.GetInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
 	if err != nil {
 		return err
 	}
@@ -689,7 +688,7 @@ func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string)
 	var subs *v1alpha1.Subscription
 
 	// If the subscription was recently created, the install plan might not be ready yet.
-	err := wait.Poll(pollInterval, pollDuration, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
 		var err error
 		subs, err = k.client.GetSubscription(ctx, namespace, name)
 		if err != nil {
