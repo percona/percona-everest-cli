@@ -1,3 +1,4 @@
+// Package main is the main file for everest cli.
 package main
 
 import (
