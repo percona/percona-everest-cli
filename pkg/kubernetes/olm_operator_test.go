@@ -26,14 +26,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
 )
 
+//nolint:paralleltest
 func TestInstallOlmOperator(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	k8sclient := &client.MockKubeClientConnector{}
 
@@ -42,10 +42,11 @@ func TestInstallOlmOperator(t *testing.T) {
 
 	//nolint:paralleltest
 	t.Run("Install OLM Operator", func(t *testing.T) {
-		k8sclient.On("CreateSubscriptionForCatalog", mock.Anything, mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(&v1alpha1.Subscription{}, nil)
-		k8sclient.On("GetDeployment", ctx, mock.Anything).Return(&appsv1.Deployment{}, nil)
+		k8sclient.On(
+			"CreateSubscriptionForCatalog", mock.Anything, mock.Anything, mock.Anything,
+			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		).Return(&v1alpha1.Subscription{}, nil)
+		k8sclient.On("GetDeployment", ctx, mock.Anything, "olm").Return(&appsv1.Deployment{}, nil)
 		k8sclient.On("ApplyFile", mock.Anything).Return(nil)
 		k8sclient.On("DoRolloutWait", ctx, mock.Anything).Return(nil)
 		k8sclient.On("GetSubscriptionCSV", ctx, mock.Anything).Return(types.NamespacedName{}, nil)
@@ -54,20 +55,20 @@ func TestInstallOlmOperator(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	//nolint:paralleltest
 	t.Run("Install PSMDB Operator", func(t *testing.T) {
-		t.Parallel()
-
 		// Install PSMDB Operator
 		subscriptionNamespace := "default"
 		operatorGroup := "percona-operators-group"
-		catalosSourceNamespace := "olm"
+		catalogSource := "operatorhubio-catalog"
+		catalogSourceNamespace := "olm"
 		operatorName := "percona-server-mongodb-operator"
 		params := InstallOperatorRequest{
 			Namespace:              subscriptionNamespace,
 			Name:                   operatorName,
 			OperatorGroup:          operatorGroup,
-			CatalogSource:          "operatorhubio-catalog",
-			CatalogSourceNamespace: catalosSourceNamespace,
+			CatalogSource:          catalogSource,
+			CatalogSourceNamespace: catalogSourceNamespace,
 			Channel:                "stable",
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
@@ -75,16 +76,21 @@ func TestInstallOlmOperator(t *testing.T) {
 		k8sclient.On("GetOperatorGroup", ctx, "", operatorGroup).Return(&v1.OperatorGroup{}, nil)
 		mockSubscription := &v1alpha1.Subscription{
 			Status: v1alpha1.SubscriptionStatus{
-				Install: &v1alpha1.InstallPlanReference{
+				InstallPlanRef: &corev1.ObjectReference{
 					Name: "abcd1234",
 				},
 			},
 		}
-		k8sclient.On("GetSubscription", ctx, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
+		k8sclient.On(
+			"CreateSubscriptionForCatalog",
+			mock.Anything, subscriptionNamespace, operatorName, "olm",
+			catalogSource, operatorName, "stable", "", v1alpha1.ApprovalManual,
+		).Return(mockSubscription, nil)
+		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
 		mockInstallPlan := &v1alpha1.InstallPlan{}
 		k8sclient.On(
 			"GetInstallPlan", ctx,
-			subscriptionNamespace, mockSubscription.Status.Install.Name,
+			subscriptionNamespace, mockSubscription.Status.InstallPlanRef.Name,
 		).Return(mockInstallPlan, nil)
 		k8sclient.On("UpdateInstallPlan", ctx, subscriptionNamespace, mockInstallPlan).Return(mockInstallPlan, nil)
 		err := olms.InstallOperator(ctx, params)

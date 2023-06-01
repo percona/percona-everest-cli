@@ -236,7 +236,8 @@ func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName st
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(
 		ctx,
 		serviceAccount.Secrets[0].Name,
-		metav1.GetOptions{})
+		metav1.GetOptions{},
+	)
 }
 
 // GenerateKubeConfig generates kubeconfig.
@@ -302,8 +303,11 @@ func (c *Client) GetStorageClasses(ctx context.Context) (*storagev1.StorageClass
 }
 
 // GetDeployment returns deployment by name.
-func (c *Client) GetDeployment(ctx context.Context, name string) (*appsv1.Deployment, error) {
-	return c.clientset.AppsV1().Deployments(c.namespace).Get(ctx, name, metav1.GetOptions{})
+func (c *Client) GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error) {
+	if namespace == "" {
+		namespace = c.namespace
+	}
+	return c.clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetSecret returns secret by name.
@@ -409,7 +413,9 @@ func (c *Client) retrieveMetaFromObject(obj runtime.Object) (string, string, err
 	return namespace, name, nil
 }
 
-func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) { //nolint:ireturn
+func (c *Client) resourceClient( //nolint:ireturn
+	gv schema.GroupVersion,
+) (rest.Interface, error) {
 	cfg := c.restConfig
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
@@ -598,7 +604,8 @@ func DescribeEvents(el *corev1.EventList, w PrefixWriter) {
 			e.Reason,
 			interval,
 			source,
-			strings.TrimSpace(e.Message))
+			strings.TrimSpace(e.Message),
+		)
 	}
 }
 
@@ -723,7 +730,7 @@ func (c Client) pollCsvPhaseSucceeded(ctx context.Context, key types.NamespacedN
 	)
 
 	csv := v1alpha1.ClusterServiceVersion{}
-	csvPhaseSucceeded := func() (bool, error) {
+	csvPhaseSucceeded := func(ctx context.Context) (bool, error) {
 		err := kubeclient.Get(ctx, key, &csv)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
@@ -747,7 +754,7 @@ func (c Client) pollCsvPhaseSucceeded(ctx context.Context, key types.NamespacedN
 		}
 	}
 
-	err := wait.PollImmediateUntil(time.Second, csvPhaseSucceeded, ctx.Done())
+	err := wait.PollUntilContextCancel(ctx, time.Second, true, csvPhaseSucceeded)
 	if err != nil && errors.Is(err, context.DeadlineExceeded) {
 		depCheckErr := c.checkDeploymentErrors(ctx, key, csv)
 		if depCheckErr != nil {
@@ -766,7 +773,7 @@ func (c Client) GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedN
 		return csvKey, err
 	}
 
-	subscriptionInstalledCSV := func() (bool, error) {
+	subscriptionInstalledCSV := func(ctx context.Context) (bool, error) {
 		sub := v1alpha1.Subscription{}
 		err := kubeclient.Get(ctx, subKey, &sub)
 		if err != nil {
@@ -783,7 +790,7 @@ func (c Client) GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedN
 		log.Printf("  Found installed CSV %q", installedCSV)
 		return true, nil
 	}
-	return csvKey, wait.PollImmediateUntil(time.Second, subscriptionInstalledCSV, ctx.Done())
+	return csvKey, wait.PollUntilContextCancel(ctx, time.Second, true, subscriptionInstalledCSV)
 }
 
 func (c *Client) getKubeclient() (client.Client, error) { //nolint:ireturn
@@ -907,7 +914,7 @@ func (c Client) DoRolloutWait(ctx context.Context, key types.NamespacedName) err
 }
 
 func (c Client) pollRolloutComplete(ctx context.Context, key types.NamespacedName, kubeclient client.Client) error {
-	rolloutComplete := func() (bool, error) {
+	rolloutComplete := func(ctx context.Context) (bool, error) {
 		deployment := appsv1.Deployment{}
 		err := kubeclient.Get(ctx, key, &deployment)
 		if err != nil {
@@ -940,7 +947,7 @@ func (c Client) pollRolloutComplete(ctx context.Context, key types.NamespacedNam
 		// Waiting for Deployment to rollout: waiting for deployment spec update to be observed
 		return false, nil
 	}
-	return wait.PollImmediateUntil(time.Second, rolloutComplete, ctx.Done())
+	return wait.PollUntilContextCancel(ctx, time.Second, true, rolloutComplete)
 }
 
 // GetOperatorGroup retrieves an operator group details by namespace and name.

@@ -1,5 +1,5 @@
-// Package cli holds the main logic for commands.
-package cli
+// Package install holds the main logic for installation commands.
+package install
 
 import (
 	"bytes"
@@ -15,14 +15,14 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/percona/percona-everest-cli/config"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
-// CLI implements the main logic for commands.
-type CLI struct {
-	config     *config.AppConfig
+// Operators implements the main logic for commands.
+type Operators struct {
+	config     *OperatorsConfig
 	kubeClient *kubernetes.Kubernetes
 	l          *logrus.Entry
 }
@@ -34,20 +34,60 @@ const (
 	catalogSource          = "percona-dbaas-catalog"
 )
 
-// New returns a new CLI struct.
-func New(c *config.AppConfig) (*CLI, error) {
-	cli := &CLI{config: c}
-	k, err := kubernetes.New(c.KubeconfigPath)
+type (
+	// MonitoringType identifies type of monitoring to be used.
+	MonitoringType string
+
+	// OperatorsConfig stores configuration for the operators.
+	OperatorsConfig struct {
+		// Monitoring stores config for monitoring.
+		Monitoring MonitoringConfig `mapstructure:"monitoring"`
+		// KubeconfigPath stores path to a kube config.
+		KubeconfigPath string `mapstructure:"kubeconfig"`
+		// EnableBackup is true if backup shall be enabled.
+		EnableBackup bool `mapstructure:"enable_backup"`
+		// InstallOLM is true if OLM shall be installed.
+		InstallOLM bool `mapstructure:"install_olm"`
+	}
+
+	// MonitoringConfig stores configuration for monitoring.
+	MonitoringConfig struct {
+		// Enabled is true if monitoring shall be enabled.
+		Enabled bool `mapstructure:"enabled"`
+		// Type stores the type of monitoring to be used.
+		Type MonitoringType `mapstructure:"type"`
+		// PMM stores configuration for PMM monitoring type.
+		PMM *PMMConfig `mapstructure:"pmm"`
+	}
+
+	// PMMConfig stores configuration for PMM monitoring type.
+	PMMConfig struct {
+		// Endpoint stores URL to PMM.
+		Endpoint string `mapstructure:"endpoint"`
+		// Username stores username for authentication against PMM.
+		Username string `mapstructure:"username"`
+		// Password stores password for authentication against PMM.
+		Password string `mapstructure:"password"`
+	}
+)
+
+// NewOperators returns a new Operators struct.
+func NewOperators(c *OperatorsConfig) (*Operators, error) {
+	cli := &Operators{
+		config: c,
+		l:      logrus.WithField("component", "install/operators"),
+	}
+
+	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
 	if err != nil {
 		return nil, err
 	}
 	cli.kubeClient = k
-	cli.l = logrus.WithField("component", "cli")
 	return cli, nil
 }
 
 // ProvisionCluster provisions a new dbaas operator to k8s cluster.
-func (c *CLI) ProvisionCluster() error {
+func (c *Operators) ProvisionCluster() error {
 	c.l.Info("Started provisioning the cluster")
 	ctx := context.TODO()
 
@@ -70,7 +110,7 @@ func (c *CLI) ProvisionCluster() error {
 	return nil
 }
 
-func (c *CLI) provisionOLM(ctx context.Context) error {
+func (c *Operators) provisionOLM(ctx context.Context) error {
 	if c.config.InstallOLM {
 		c.l.Info("Installing Operator Lifecycle Manager")
 		if err := c.kubeClient.InstallOLMOperator(ctx); err != nil {
@@ -83,87 +123,56 @@ func (c *CLI) provisionOLM(ctx context.Context) error {
 	return nil
 }
 
-func (c *CLI) provisionOperators(ctx context.Context) error {
-	if err := c.installOperator(ctx,
-		"DBAAS_VM_OP_CHANNEL",
-		"victoriametrics-operator",
-		"stable-v0",
-	); err != nil {
+func (c *Operators) provisionOperators(ctx context.Context) error {
+	g, gCtx := errgroup.WithContext(ctx)
+	// We set the limit to 1 since operator installation
+	// requires an update to the same installation plan which
+	// results in race-conditions with a higher limit.
+	// The limit can be removed after it's refactored.
+	g.SetLimit(1)
+
+	g.Go(c.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
+	g.Go(c.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
+
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	// TODO: Fix operator name
-	//nolint:godox
-	if err := c.installOperator(
-		ctx,
-		"DBAAS_PXC_OP_CHANNEL",
-		"victoriametrics-operator",
-		"stable-v1",
-	); err != nil {
-		return err
-	}
-
-	if err := c.installOperator(
-		ctx,
-		"DBAAS_PSMDB_OP_CHANNEL",
-		"percona-server-mongodb-operator",
-		"stable-v1",
-	); err != nil {
-		return err
-	}
-
-	if err := c.installOperator(ctx,
-		"DBAAS_DBAAS_OP_CHANNEL",
-		"dbaas-operator",
-		"stable-v0",
-	); err != nil {
-		return err
-	}
-
-	// c.l.Info("Installing PG operator")
-	// channel, ok = os.LookupEnv("DBAAS_PG_OP_CHANNEL")
-	// if !ok || channel == "" {
-	// 	channel = "stable-v2"
-	// }
-	// params.Name = "percona-postgresql-operator"
-	// params.Channel = channel
-	// if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-	// 	c.l.Error("failed installing PG operator")
-	// 	return err
-	// }
-	// c.l.Info("PG operator has been installed")
-
-	return nil
+	return c.installOperator(ctx, "DBAAS_DBAAS_OP_CHANNEL", "dbaas-operator", "stable-v0")()
 }
 
-func (c *CLI) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) error {
-	c.l.Infof("Installing %s operator", operatorName)
+func (c *Operators) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) func() error {
+	return func() error {
+		c.l.Infof("Installing %s operator", operatorName)
 
-	channel, ok := os.LookupEnv(envName)
-	if !ok || channel == "" {
-		channel = defaultChannel
-	}
-	params := kubernetes.InstallOperatorRequest{
-		Namespace:              namespace,
-		Name:                   operatorName,
-		OperatorGroup:          operatorGroup,
-		CatalogSource:          catalogSource,
-		CatalogSourceNamespace: catalogSourceNamespace,
-		Channel:                channel,
-		InstallPlanApproval:    v1alpha1.ApprovalManual,
-	}
+		channel, ok := os.LookupEnv(envName)
+		if !ok || channel == "" {
+			channel = defaultChannel
+		}
+		params := kubernetes.InstallOperatorRequest{
+			Namespace:              namespace,
+			Name:                   operatorName,
+			OperatorGroup:          operatorGroup,
+			CatalogSource:          catalogSource,
+			CatalogSourceNamespace: catalogSourceNamespace,
+			Channel:                channel,
+			InstallPlanApproval:    v1alpha1.ApprovalManual,
+		}
 
-	if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-		c.l.Errorf("failed installing %s operator", operatorName)
-		return err
-	}
-	c.l.Infof("%s operator has been installed", operatorName)
+		if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
+			c.l.Errorf("failed installing %s operator", operatorName)
+			return err
+		}
+		c.l.Infof("%s operator has been installed", operatorName)
 
-	return nil
+		return nil
+	}
 }
 
 //nolint:unused
-func (c *CLI) provisionPMMMonitoring(ctx context.Context) error {
+func (c *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	account := fmt.Sprintf("everest-service-account-%s", uuid.NewString())
 	c.l.Info("Creating a new service account in PMM")
 	token, err := c.provisionPMM(ctx, account)
@@ -182,7 +191,7 @@ func (c *CLI) provisionPMMMonitoring(ctx context.Context) error {
 }
 
 //nolint:unused
-func (c *CLI) provisionPMM(ctx context.Context, account string) (string, error) {
+func (c *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
 	token, err := c.createAdminToken(ctx, account, "")
 	return token, err
 }
@@ -190,8 +199,8 @@ func (c *CLI) provisionPMM(ctx context.Context, account string) (string, error) 
 // ConnectToEverest connects the k8s cluster to Everest.
 //
 //nolint:unparam
-func (c *CLI) ConnectToEverest() error {
-	c.l.Info("Generating service account and connecting with DBaaS")
+func (c *Operators) ConnectToEverest() error {
+	c.l.Info("Generating service account and connecting with Everest")
 	// TODO: Remove this after Percona Everest will be enabled
 	//nolint:godox,revive
 	return nil
@@ -229,7 +238,7 @@ func (c *CLI) ConnectToEverest() error {
 }
 
 //nolint:unused
-func (c *CLI) createAdminToken(ctx context.Context, name string, token string) (string, error) {
+func (c *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
