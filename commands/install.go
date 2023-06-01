@@ -8,9 +8,7 @@ import (
 
 func newInstallCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "install",
-		Short: "TODO: Install help",
-		Long:  `TODO: Install help`,
+		Use: "install",
 	}
 
 	cmd.AddCommand(install.NewOperatorsCmd())

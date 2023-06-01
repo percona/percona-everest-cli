@@ -14,9 +14,7 @@ import (
 // NewOperatorsCmd returns a new operators command.
 func NewOperatorsCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "operators",
-		Short: "TODO: Operators help",
-		Long:  `TODO: Operators help`,
+		Use: "operators",
 		Run: func(cmd *cobra.Command, args []string) {
 			c, err := parseConfig()
 			if err != nil {
