@@ -11,7 +11,7 @@ init:                   ## Install development tools
 	cd tools && go generate -x -tags=tools
 
 build:                  ## Build binaries
-	go build -race -o bin/everest-cli ./cmd/everest-cli
+	go build -race -o bin/everest ./cmd/everest
 
 gen:                    ## Generate code
 	go generate ./...
