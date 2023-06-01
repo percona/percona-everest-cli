@@ -25,7 +25,7 @@ func NewOperatorsCmd() *cobra.Command {
 				logrus.Error(err)
 				os.Exit(1)
 			}
-			if err := op.ProvisionCluster(); err != nil {
+			if err := op.ProvisionOperators(); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}
