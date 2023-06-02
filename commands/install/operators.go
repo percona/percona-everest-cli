@@ -29,7 +29,7 @@ func NewOperatorsCmd() *cobra.Command {
 				logrus.Error(err)
 				os.Exit(1)
 			}
-			if err := op.ConnectToEverest(); err != nil {
+			if err := op.ConnectToEverest(cmd.Context()); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}

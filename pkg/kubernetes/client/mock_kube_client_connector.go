@@ -171,13 +171,13 @@ func (_m *MockKubeClientConnector) DoRolloutWait(ctx context.Context, key types.
 	return r0
 }
 
-// GenerateKubeConfig provides a mock function with given fields: secret
-func (_m *MockKubeClientConnector) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
-	ret := _m.Called(secret)
+// GenerateKubeConfigWithToken provides a mock function with given fields: user, secret
+func (_m *MockKubeClientConnector) GenerateKubeConfigWithToken(user string, secret *corev1.Secret) ([]byte, error) {
+	ret := _m.Called(user, secret)
 
 	var r0 []byte
-	if rf, ok := ret.Get(0).(func(*corev1.Secret) []byte); ok {
-		r0 = rf(secret)
+	if rf, ok := ret.Get(0).(func(string, *corev1.Secret) []byte); ok {
+		r0 = rf(user, secret)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]byte)
@@ -185,8 +185,8 @@ func (_m *MockKubeClientConnector) GenerateKubeConfig(secret *corev1.Secret) ([]
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(*corev1.Secret) error); ok {
-		r1 = rf(secret)
+	if rf, ok := ret.Get(1).(func(string, *corev1.Secret) error); ok {
+		r1 = rf(user, secret)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -26,8 +26,8 @@ import (
 type KubeClientConnector interface {
 	// GetSecretsForServiceAccount returns secret by given service account name.
 	GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error)
-	// GenerateKubeConfig generates kubeconfig.
-	GenerateKubeConfig(secret *corev1.Secret) ([]byte, error)
+	// GenerateKubeConfigWithToken generates kubeconfig with a user and token provided as a secret.
+	GenerateKubeConfigWithToken(user string, secret *corev1.Secret) ([]byte, error)
 	// GetServerVersion returns server version.
 	GetServerVersion() (*version.Info, error)
 	// ListDatabaseClusters returns list of managed PCX clusters.

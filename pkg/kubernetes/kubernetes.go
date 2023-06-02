@@ -159,23 +159,6 @@ func NewEmpty() *Kubernetes {
 	}
 }
 
-// GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
-func (k *Kubernetes) GetKubeconfig(ctx context.Context) (string, error) {
-	secret, err := k.client.GetSecretsForServiceAccount(ctx, "pmm-service-account")
-	if err != nil {
-		k.l.Errorf("failed getting service account: %v", err)
-		return "", err
-	}
-
-	kubeConfig, err := k.client.GenerateKubeConfig(secret)
-	if err != nil {
-		k.l.Errorf("failed generating kubeconfig: %v", err)
-		return "", err
-	}
-
-	return string(kubeConfig), nil
-}
-
 // ListDatabaseClusters returns list of managed PCX clusters.
 func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error) {
 	return k.client.ListDatabaseClusters(ctx)

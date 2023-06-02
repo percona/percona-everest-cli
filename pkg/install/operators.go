@@ -4,18 +4,21 @@ package install
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
@@ -28,10 +31,14 @@ type Operators struct {
 }
 
 const (
-	namespace              = "default"
-	catalogSourceNamespace = "olm"
-	operatorGroup          = "percona-operators-group"
-	catalogSource          = "percona-dbaas-catalog"
+	namespace                        = "default"
+	catalogSourceNamespace           = "olm"
+	operatorGroup                    = "percona-operators-group"
+	catalogSource                    = "percona-dbaas-catalog"
+	everestServiceAccount            = "everest-admin"
+	everestServiceAccountRole        = "everest-admin-role"
+	everestServiceAccountRoleBinding = "everest-admin-role-binding"
+	everestServiceAccountTokenSecret = "everest-admin-token"
 )
 
 type (
@@ -200,44 +207,96 @@ func (o *Operators) provisionPMM(ctx context.Context, account string) (string, e
 }
 
 // ConnectToEverest connects the k8s cluster to Everest.
-//
-//nolint:unparam
-func (o *Operators) ConnectToEverest() error {
-	o.l.Info("Generating service account and connecting with Everest")
-	// TODO: Remove this after Percona Everest will be enabled
-	//nolint:godox,revive
+func (o *Operators) ConnectToEverest(ctx context.Context) error {
+	if err := o.prepareServiceAccount(namespace); err != nil {
+		return errors.Wrap(err, "could not prepare a service account")
+	}
+
+	o.l.Info("Creating kubeconfig file")
+	_, err := o.getServiceAccountKubeConfig(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get a new kubeconfig file for a service account")
+	}
+
+	o.l.Info("Connecting to Kubernetes cluster to Everest")
+
 	return nil
-	//nolint:govet
-	data, err := os.ReadFile("/Users/gen1us2k/.kube/config")
+}
+
+func (o *Operators) prepareServiceAccount(namespace string) error {
+	o.l.Info("Creating service account for Everest")
+	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount); err != nil {
+		return errors.Wrap(err, "could not create service account")
+	}
+
+	o.l.Info("Creating role for Everest service account")
+	err := o.kubeClient.CreateRole(everestServiceAccountRole, []v1.PolicyRule{
+		{
+			APIGroups: []string{"dbaas.percona.com"},
+			Resources: []string{"databaseclusters", "databaseclusterrestores"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"dbaas.percona.com"},
+			Resources: []string{"databaseengines"},
+			Verbs:     []string{"get", "list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"create", "get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"get", "list"},
+		},
+	})
 	if err != nil {
-		o.l.Error("failed generating kubeconfig")
-		return err
+		return errors.Wrap(err, "could not create role")
 	}
-	enc := base64.StdEncoding.EncodeToString(data)
-	payload := map[string]string{
-		"name":       "minikube",
-		"kubeconfig": enc,
-	}
-	b, err := json.Marshal(payload)
+
+	o.l.Info("Binding role to Everest Service account")
+	err = o.kubeClient.CreateClusterRoleBinding(
+		namespace,
+		everestServiceAccountRoleBinding,
+		everestServiceAccountRole,
+		everestServiceAccount,
+	)
+
+	return errors.Wrap(err, "could not create cluster role binding")
+}
+
+func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
+	// Create token secret
+	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret)
 	if err != nil {
-		o.l.Error("failed marshaling JSON")
-		return err
+		return "", err
 	}
-	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/kubernetes", bytes.NewReader(b))
+
+	var secret *corev1.Secret
+	checkSecretData := func(ctx context.Context) (bool, error) {
+		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
+		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret)
+		if err != nil {
+			return false, err
+		}
+
+		if _, ok := s.Data["token"]; !ok {
+			return false, nil
+		}
+
+		secret = s
+
+		return true, nil
+	}
+	// We poll for the secret as it's created asynchronously
+	err = wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, checkSecretData)
 	if err != nil {
-		return err
+		return "", errors.Wrap(err, "could not get token from secret for a service account")
 	}
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return errors.New("non 200 status code")
-	}
-	o.l.Info("DBaaS has been connected")
-	return nil
+
+	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
 }
 
 //nolint:unused
