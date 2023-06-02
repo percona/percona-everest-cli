@@ -241,7 +241,7 @@ func (o *Operators) ConnectToEverest() error {
 }
 
 //nolint:unused
-func (c *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
+func (o *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
@@ -254,7 +254,7 @@ func (c *Operators) createAdminToken(ctx context.Context, name string, token str
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf("%s/graph/api/auth/keys", c.config.Monitoring.PMM.Endpoint),
+		fmt.Sprintf("%s/graph/api/auth/keys", o.config.Monitoring.PMM.Endpoint),
 		bytes.NewReader(b),
 	)
 	if err != nil {
@@ -262,7 +262,7 @@ func (c *Operators) createAdminToken(ctx context.Context, name string, token str
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	if token == "" {
-		req.SetBasicAuth(c.config.Monitoring.PMM.Username, c.config.Monitoring.PMM.Password)
+		req.SetBasicAuth(o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password)
 	} else {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
