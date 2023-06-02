@@ -87,43 +87,43 @@ func NewOperators(c *OperatorsConfig) (*Operators, error) {
 }
 
 // ProvisionOperators provisions all configured operators to a k8s cluster.
-func (c *Operators) ProvisionOperators() error {
-	c.l.Info("Started provisioning the cluster")
+func (o *Operators) ProvisionOperators() error {
+	o.l.Info("Started provisioning the cluster")
 	ctx := context.TODO()
 
-	if err := c.provisionOLM(ctx); err != nil {
+	if err := o.provisionOLM(ctx); err != nil {
 		return err
 	}
 
-	if err := c.provisionOperators(ctx); err != nil {
+	if err := o.provisionOperators(ctx); err != nil {
 		return err
 	}
 
-	if c.config.Monitoring.Enabled {
-		c.l.Info("Started setting up monitoring")
+	if o.config.Monitoring.Enabled {
+		o.l.Info("Started setting up monitoring")
 		// if err := c.provisionPMMMonitoring(); err != nil {
 		// 	return err
 		// }
-		c.l.Info("Monitoring using PMM has been provisioned")
+		o.l.Info("Monitoring using PMM has been provisioned")
 	}
 
 	return nil
 }
 
-func (c *Operators) provisionOLM(ctx context.Context) error {
-	if c.config.InstallOLM {
-		c.l.Info("Installing Operator Lifecycle Manager")
-		if err := c.kubeClient.InstallOLMOperator(ctx); err != nil {
-			c.l.Error("failed installing OLM")
+func (o *Operators) provisionOLM(ctx context.Context) error {
+	if o.config.InstallOLM {
+		o.l.Info("Installing Operator Lifecycle Manager")
+		if err := o.kubeClient.InstallOLMOperator(ctx); err != nil {
+			o.l.Error("failed installing OLM")
 			return err
 		}
 	}
-	c.l.Info("OLM has been installed")
+	o.l.Info("OLM has been installed")
 
 	return nil
 }
 
-func (c *Operators) provisionOperators(ctx context.Context) error {
+func (o *Operators) provisionOperators(ctx context.Context) error {
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -131,24 +131,24 @@ func (c *Operators) provisionOperators(ctx context.Context) error {
 	// The limit can be removed after it's refactored.
 	g.SetLimit(1)
 
-	if c.config.Monitoring.Enabled {
-		g.Go(c.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+	if o.config.Monitoring.Enabled {
+		g.Go(o.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
 	}
 
-	g.Go(c.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
-	g.Go(c.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
-	g.Go(c.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
+	g.Go(o.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
+	g.Go(o.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
+	g.Go(o.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
 
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	return c.installOperator(ctx, "DBAAS_DBAAS_OP_CHANNEL", "dbaas-operator", "stable-v0")()
+	return o.installOperator(ctx, "DBAAS_DBAAS_OP_CHANNEL", "dbaas-operator", "stable-v0")()
 }
 
-func (c *Operators) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) func() error {
+func (o *Operators) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) func() error {
 	return func() error {
-		c.l.Infof("Installing %s operator", operatorName)
+		o.l.Infof("Installing %s operator", operatorName)
 
 		channel, ok := os.LookupEnv(envName)
 		if !ok || channel == "" {
@@ -164,29 +164,29 @@ func (c *Operators) installOperator(ctx context.Context, envName, operatorName, 
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
 
-		if err := c.kubeClient.InstallOperator(ctx, params); err != nil {
-			c.l.Errorf("failed installing %s operator", operatorName)
+		if err := o.kubeClient.InstallOperator(ctx, params); err != nil {
+			o.l.Errorf("failed installing %s operator", operatorName)
 			return err
 		}
-		c.l.Infof("%s operator has been installed", operatorName)
+		o.l.Infof("%s operator has been installed", operatorName)
 
 		return nil
 	}
 }
 
 //nolint:unused
-func (c *Operators) provisionPMMMonitoring(ctx context.Context) error {
+func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	account := fmt.Sprintf("everest-service-account-%s", uuid.NewString())
-	c.l.Info("Creating a new service account in PMM")
-	token, err := c.provisionPMM(ctx, account)
+	o.l.Info("Creating a new service account in PMM")
+	token, err := o.provisionPMM(ctx, account)
 	if err != nil {
 		return err
 	}
-	c.l.Info("New token has been generated")
-	c.l.Info("Started provisioning monitoring in k8s cluster")
-	err = c.kubeClient.ProvisionMonitoring(account, token, c.config.Monitoring.PMM.Endpoint)
+	o.l.Info("New token has been generated")
+	o.l.Info("Started provisioning monitoring in k8s cluster")
+	err = o.kubeClient.ProvisionMonitoring(account, token, o.config.Monitoring.PMM.Endpoint)
 	if err != nil {
-		c.l.Error("failed provisioning monitoring")
+		o.l.Error("failed provisioning monitoring")
 		return err
 	}
 
@@ -194,23 +194,23 @@ func (c *Operators) provisionPMMMonitoring(ctx context.Context) error {
 }
 
 //nolint:unused
-func (c *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
-	token, err := c.createAdminToken(ctx, account, "")
+func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
+	token, err := o.createAdminToken(ctx, account, "")
 	return token, err
 }
 
 // ConnectToEverest connects the k8s cluster to Everest.
 //
 //nolint:unparam
-func (c *Operators) ConnectToEverest() error {
-	c.l.Info("Generating service account and connecting with Everest")
+func (o *Operators) ConnectToEverest() error {
+	o.l.Info("Generating service account and connecting with Everest")
 	// TODO: Remove this after Percona Everest will be enabled
 	//nolint:godox,revive
 	return nil
 	//nolint:govet
 	data, err := os.ReadFile("/Users/gen1us2k/.kube/config")
 	if err != nil {
-		c.l.Error("failed generating kubeconfig")
+		o.l.Error("failed generating kubeconfig")
 		return err
 	}
 	enc := base64.StdEncoding.EncodeToString(data)
@@ -220,7 +220,7 @@ func (c *Operators) ConnectToEverest() error {
 	}
 	b, err := json.Marshal(payload)
 	if err != nil {
-		c.l.Error("failed marshaling JSON")
+		o.l.Error("failed marshaling JSON")
 		return err
 	}
 	req, err := http.NewRequest(http.MethodPost, "http://localhost:8080/kubernetes", bytes.NewReader(b))
@@ -236,12 +236,12 @@ func (c *Operators) ConnectToEverest() error {
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("non 200 status code")
 	}
-	c.l.Info("DBaaS has been connected")
+	o.l.Info("DBaaS has been connected")
 	return nil
 }
 
 //nolint:unused
-func (c *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
+func (o *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
@@ -254,7 +254,7 @@ func (c *Operators) createAdminToken(ctx context.Context, name string, token str
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		fmt.Sprintf("%s/graph/api/auth/keys", c.config.Monitoring.PMM.Endpoint),
+		fmt.Sprintf("%s/graph/api/auth/keys", o.config.Monitoring.PMM.Endpoint),
 		bytes.NewReader(b),
 	)
 	if err != nil {
@@ -262,7 +262,7 @@ func (c *Operators) createAdminToken(ctx context.Context, name string, token str
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	if token == "" {
-		req.SetBasicAuth(c.config.Monitoring.PMM.Username, c.config.Monitoring.PMM.Password)
+		req.SetBasicAuth(o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password)
 	} else {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}

@@ -6,7 +6,7 @@ import "github.com/spf13/cobra"
 // NewRootCmd creates a new root command for the cli.
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use: "everest-cli",
+		Use: "everest",
 	}
 
 	rootCmd.AddCommand(newInstallCmd())
