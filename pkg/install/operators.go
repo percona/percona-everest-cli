@@ -86,8 +86,8 @@ func NewOperators(c *OperatorsConfig) (*Operators, error) {
 	return cli, nil
 }
 
-// ProvisionCluster provisions a new dbaas operator to k8s cluster.
-func (c *Operators) ProvisionCluster() error {
+// ProvisionOperators provisions all configured operators to a k8s cluster.
+func (c *Operators) ProvisionOperators() error {
 	c.l.Info("Started provisioning the cluster")
 	ctx := context.TODO()
 
@@ -131,7 +131,10 @@ func (c *Operators) provisionOperators(ctx context.Context) error {
 	// The limit can be removed after it's refactored.
 	g.SetLimit(1)
 
-	g.Go(c.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+	if c.config.Monitoring.Enabled {
+		g.Go(c.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+	}
+
 	g.Go(c.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
 	g.Go(c.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
 	g.Go(c.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
