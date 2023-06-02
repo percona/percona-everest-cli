@@ -27,7 +27,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -98,7 +97,6 @@ var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github"
 
 // Kubernetes is a client for Kubernetes.
 type Kubernetes struct {
-	lock       *sync.RWMutex
 	client     client.KubeClientConnector
 	l          *logrus.Entry
 	httpClient *http.Client
@@ -135,7 +133,6 @@ func New(kubeconfig string, l *logrus.Entry) (*Kubernetes, error) {
 	return &Kubernetes{
 		client: client,
 		l:      l.WithField("component", "kubernetes"),
-		lock:   &sync.RWMutex{},
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 			Transport: &http.Transport{
@@ -151,7 +148,6 @@ func New(kubeconfig string, l *logrus.Entry) (*Kubernetes, error) {
 func NewEmpty() *Kubernetes {
 	return &Kubernetes{
 		client: &client.Client{},
-		lock:   &sync.RWMutex{},
 		l:      logrus.WithField("component", "kubernetes"),
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
@@ -165,8 +161,6 @@ func NewEmpty() *Kubernetes {
 
 // GetKubeconfig generates kubeconfig compatible with kubectl for incluster created clients.
 func (k *Kubernetes) GetKubeconfig(ctx context.Context) (string, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	secret, err := k.client.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	if err != nil {
 		k.l.Errorf("failed getting service account: %v", err)
@@ -184,22 +178,16 @@ func (k *Kubernetes) GetKubeconfig(ctx context.Context) (string, error) {
 
 // ListDatabaseClusters returns list of managed PCX clusters.
 func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.ListDatabaseClusters(ctx)
 }
 
 // GetDatabaseCluster returns PXC clusters by provided name.
 func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*dbaasv1.DatabaseCluster, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.GetDatabaseCluster(ctx, name)
 }
 
 // RestartDatabaseCluster restarts database cluster.
 func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	cluster, err := k.client.GetDatabaseCluster(ctx, name)
 	if err != nil {
 		return err
@@ -215,15 +203,11 @@ func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) er
 
 // PatchDatabaseCluster patches CR of managed Database cluster.
 func (k *Kubernetes) PatchDatabaseCluster(cluster *dbaasv1.DatabaseCluster) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	return k.client.ApplyObject(cluster)
 }
 
 // CreateDatabaseCluster creates database cluster.
 func (k *Kubernetes) CreateDatabaseCluster(cluster *dbaasv1.DatabaseCluster) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	if cluster.ObjectMeta.Annotations == nil {
 		cluster.ObjectMeta.Annotations = make(map[string]string)
 	}
@@ -233,8 +217,6 @@ func (k *Kubernetes) CreateDatabaseCluster(cluster *dbaasv1.DatabaseCluster) err
 
 // DeleteDatabaseCluster deletes database cluster.
 func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	cluster, err := k.client.GetDatabaseCluster(ctx, name)
 	if err != nil {
 		return err
@@ -246,8 +228,6 @@ func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) err
 
 // GetDefaultStorageClassName returns first storageClassName from kubernetes cluster.
 func (k *Kubernetes) GetDefaultStorageClassName(ctx context.Context) (string, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	storageClasses, err := k.client.GetStorageClasses(ctx)
 	if err != nil {
 		return "", err
@@ -260,8 +240,6 @@ func (k *Kubernetes) GetDefaultStorageClassName(ctx context.Context) (string, er
 
 // GetClusterType tries to guess the underlying kubernetes cluster based on storage class.
 func (k *Kubernetes) GetClusterType(ctx context.Context) (ClusterType, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	storageClasses, err := k.client.GetStorageClasses(ctx)
 	if err != nil {
 		return ClusterTypeUnknown, err
@@ -295,43 +273,31 @@ func (k *Kubernetes) getOperatorVersion(ctx context.Context, deploymentName, con
 
 // GetPSMDBOperatorVersion parses PSMDB operator version from operator deployment.
 func (k *Kubernetes) GetPSMDBOperatorVersion(ctx context.Context) (string, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, psmdbDeploymentName, psmdbOperatorContainerName)
 }
 
 // GetPXCOperatorVersion parses PXC operator version from operator deployment.
 func (k *Kubernetes) GetPXCOperatorVersion(ctx context.Context) (string, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, pxcDeploymentName, pxcOperatorContainerName)
 }
 
 // GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment.
 func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.getOperatorVersion(ctx, dbaasDeploymentName, dbaasOperatorContainerName)
 }
 
 // GetSecret returns secret by name.
 func (k *Kubernetes) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.GetSecret(ctx, name)
 }
 
 // ListSecrets returns secret by name.
 func (k *Kubernetes) ListSecrets(ctx context.Context) (*corev1.SecretList, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.ListSecrets(ctx)
 }
 
 // CreatePMMSecret creates pmm secret in kubernetes.
 func (k *Kubernetes) CreatePMMSecret(secretName string, secrets map[string][]byte) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	secret := &corev1.Secret{ //nolint: exhaustruct
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -348,8 +314,6 @@ func (k *Kubernetes) CreatePMMSecret(secretName string, secrets map[string][]byt
 
 // CreateRestore creates a restore.
 func (k *Kubernetes) CreateRestore(restore *dbaasv1.DatabaseClusterRestore) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
 	return k.client.ApplyObject(restore)
 }
 
@@ -623,9 +587,6 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	}
 
 	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
-		k.lock.Lock()
-		defer k.lock.Unlock()
-
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
 		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
 			return false, err
@@ -727,8 +688,6 @@ func (k *Kubernetes) GetClusterServiceVersion(
 	ctx context.Context,
 	key types.NamespacedName,
 ) (*v1alpha1.ClusterServiceVersion, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.GetClusterServiceVersion(ctx, key)
 }
 
@@ -737,15 +696,11 @@ func (k *Kubernetes) ListClusterServiceVersion(
 	ctx context.Context,
 	namespace string,
 ) (*v1alpha1.ClusterServiceVersionList, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.ListClusterServiceVersion(ctx, namespace)
 }
 
 // DeleteObject deletes an object.
 func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
 	return k.client.DeleteObject(obj)
 }
 
