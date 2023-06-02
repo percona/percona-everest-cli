@@ -48,6 +48,8 @@ type (
 		EnableBackup bool `mapstructure:"enable_backup"`
 		// InstallOLM is true if OLM shall be installed.
 		InstallOLM bool `mapstructure:"install_olm"`
+		// Channel stores configuration for operator channels.
+		Channel ChannelConfig `mapstructure:"channel"`
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -68,6 +70,20 @@ type (
 		Username string `mapstructure:"username"`
 		// Password stores password for authentication against PMM.
 		Password string `mapstructure:"password"`
+	}
+
+	// ChannelConfig stores configuration for operator channels.
+	ChannelConfig struct {
+		// Everest stores channge for Everest.
+		Everest string `mapstructure:"everest"`
+		// PG stores channel for PostgreSQL.
+		PG string `mapstructure:"postgresql"`
+		// PSMDB stores channel for MongoDB.
+		PSMDB string `mapstructure:"mongodb"`
+		// PXC stores channel for xtradb cluster.
+		PXC string `mapstructure:"xtradb_cluster"`
+		// VictoriaMetrics stores channel for VictoriaMetrics.
+		VictoriaMetrics string `mapstructure:"victoria_metrics"`
 	}
 )
 
@@ -132,28 +148,24 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 	g.SetLimit(1)
 
 	if o.config.Monitoring.Enabled {
-		g.Go(o.installOperator(gCtx, "DBAAS_VM_OP_CHANNEL", "victoriametrics-operator", "stable-v0"))
+		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, "victoriametrics-operator"))
 	}
 
-	g.Go(o.installOperator(gCtx, "DBAAS_PXC_OP_CHANNEL", "percona-xtradb-cluster-operator", "stable-v1"))
-	g.Go(o.installOperator(gCtx, "DBAAS_PSMDB_OP_CHANNEL", "percona-server-mongodb-operator", "stable-v1"))
-	g.Go(o.installOperator(gCtx, "DBAAS_PG_OP_CHANNEL", "percona-postgresql-operator", "fast-v2"))
+	g.Go(o.installOperator(gCtx, o.config.Channel.PXC, "percona-xtradb-cluster-operator"))
+	g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, "percona-server-mongodb-operator"))
+	g.Go(o.installOperator(gCtx, o.config.Channel.PG, "percona-postgresql-operator"))
 
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	return o.installOperator(ctx, "DBAAS_DBAAS_OP_CHANNEL", "dbaas-operator", "stable-v0")()
+	return o.installOperator(ctx, o.config.Channel.Everest, "dbaas-operator")()
 }
 
-func (o *Operators) installOperator(ctx context.Context, envName, operatorName, defaultChannel string) func() error {
+func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
 	return func() error {
 		o.l.Infof("Installing %s operator", operatorName)
 
-		channel, ok := os.LookupEnv(envName)
-		if !ok || channel == "" {
-			channel = defaultChannel
-		}
 		params := kubernetes.InstallOperatorRequest{
 			Namespace:              namespace,
 			Name:                   operatorName,
