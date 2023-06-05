@@ -10,7 +10,7 @@ require (
 	github.com/reviewdog/reviewdog v0.14.1
 	github.com/vburenin/ifacemaker v1.2.1
 	github.com/vektra/mockery v1.1.2
-	golang.org/x/tools v0.9.1
+	golang.org/x/tools v0.9.3
 	mvdan.cc/gofumpt v0.5.0
 )
 
