@@ -4,13 +4,13 @@ go 1.20
 
 require (
 	github.com/daixiang0/gci v0.10.1
-	github.com/deepmap/oapi-codegen v1.12.4
+	github.com/deepmap/oapi-codegen v1.13.0
 	github.com/golangci/golangci-lint v1.52.2
 	github.com/quasilyte/go-consistent v0.0.0-20220429160651-4e46040fbc82
 	github.com/reviewdog/reviewdog v0.14.1
 	github.com/vburenin/ifacemaker v1.2.1
 	github.com/vektra/mockery v1.1.2
-	golang.org/x/tools v0.9.1
+	golang.org/x/tools v0.9.2
 	mvdan.cc/gofumpt v0.5.0
 )
 
@@ -56,7 +56,7 @@ require (
 	github.com/firefart/nonamedreturns v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/getkin/kin-openapi v0.107.0 // indirect
+	github.com/getkin/kin-openapi v0.117.0 // indirect
 	github.com/go-critic/go-critic v0.8.1 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/swag v0.21.1 // indirect
@@ -119,7 +119,7 @@ require (
 	github.com/kulti/thelper v0.6.3 // indirect
 	github.com/kunwardeep/paralleltest v1.0.6 // indirect
 	github.com/kyoh86/exportloopref v0.1.11 // indirect
-	github.com/labstack/echo/v4 v4.9.1 // indirect
+	github.com/labstack/echo/v4 v4.10.2 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/ldez/gomoddirectives v0.2.3 // indirect
 	github.com/ldez/tagliatelle v0.5.0 // indirect
@@ -148,6 +148,7 @@ require (
 	github.com/nunnatsa/ginkgolinter v0.12.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
+	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/polyfloyd/go-errorlint v1.4.2 // indirect
 	github.com/prometheus/client_golang v1.15.1 // indirect
