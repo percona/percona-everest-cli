@@ -40,6 +40,7 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
+		Operator OperatorConfig `mapstructure:"operator"`
 		// Monitoring stores config for monitoring.
 		Monitoring MonitoringConfig `mapstructure:"monitoring"`
 		// KubeconfigPath stores path to a kube config.
@@ -60,6 +61,16 @@ type (
 		Type MonitoringType `mapstructure:"type"`
 		// PMM stores configuration for PMM monitoring type.
 		PMM *PMMConfig `mapstructure:"pmm"`
+	}
+
+	// OperatorConfig identifies which operators shall be installed
+	OperatorConfig struct {
+		// PG stores if PostgresSQL shall be installed
+		PG bool `mapstructure:"postgresql"`
+		// PSMDB stores if MongoDB shall be installed
+		PSMDB bool `mapstructure:"mongodb"`
+		// PXC stores if XtraDB Cluster shall be installed
+		PXC bool `mapstructure:"xtradb_cluster"`
 	}
 
 	// PMMConfig stores configuration for PMM monitoring type.
@@ -151,10 +162,15 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, "victoriametrics-operator"))
 	}
 
-	g.Go(o.installOperator(gCtx, o.config.Channel.PXC, "percona-xtradb-cluster-operator"))
-	g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, "percona-server-mongodb-operator"))
-	g.Go(o.installOperator(gCtx, o.config.Channel.PG, "percona-postgresql-operator"))
-
+	if o.config.Operator.PXC {
+		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, "percona-xtradb-cluster-operator"))
+	}
+	if o.config.Operator.PSMDB {
+		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, "percona-server-mongodb-operator"))
+	}
+	if o.config.Operator.PG {
+		g.Go(o.installOperator(gCtx, o.config.Channel.PG, "percona-postgresql-operator"))
+	}
 	if err := g.Wait(); err != nil {
 		return err
 	}

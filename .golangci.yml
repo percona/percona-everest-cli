@@ -3,14 +3,15 @@
 
 linters-settings:
   depguard:
-    list-type: blacklist
-    include-go-root: true
-    packages:
-      # use "github.com/pkg/errors" instead
-      - errors
-      # use "github.com/golang/protobuf/proto" instead
-      - github.com/gogo/protobuf/proto
-
+    rules:
+      main:
+        files: 
+        - $all
+        - "!$test"
+        deny:
+          - pkg: errors
+            desc: use "github.com/pkg/errors" instead
+            
   goimports:
     local-prefixes: github.com/percona/percona-everest-cli
 
