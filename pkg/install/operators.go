@@ -342,7 +342,7 @@ func (o *Operators) createAdminToken(ctx context.Context, name string, token str
 		return "", err
 	}
 
-	defer resp.Body.Close() //nolint:errcheck,gosec
+	defer resp.Body.Close() //nolint:errcheck
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
