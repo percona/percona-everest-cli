@@ -74,7 +74,7 @@ type (
 
 	// ChannelConfig stores configuration for operator channels.
 	ChannelConfig struct {
-		// Everest stores channge for Everest.
+		// Everest stores channel for Everest.
 		Everest string `mapstructure:"everest"`
 		// PG stores channel for PostgreSQL.
 		PG string `mapstructure:"postgresql"`
