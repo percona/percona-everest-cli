@@ -44,19 +44,19 @@ func NewOperatorsCmd() *cobra.Command {
 func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("monitoring.enabled", "m", true, "Enable monitoring")
 	cmd.Flags().StringP("monitoring.type", "", "pmm", "Monitoring type")
-	cmd.Flags().StringP("monitoring.pmm.endpoint", "", "http://127.0.0.1", "PMM endpoint URL")
-	cmd.Flags().StringP("monitoring.pmm.username", "", "admin", "PMM username")
-	cmd.Flags().StringP("monitoring.pmm.password", "", "password", "PMM password")
+	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
+	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
+	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
 
 	cmd.Flags().BoolP("enable_backup", "b", false, "Enable backups")
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "specify kubeconfig")
 
-	cmd.Flags().StringP("channel.everest", "", "stable-v0", "Channel for Everest operator")
-	cmd.Flags().StringP("channel.victoria_metrics", "", "stable-v0", "Channel for VictoriaMetrics operator")
-	cmd.Flags().StringP("channel.xtradb_cluster", "", "stable-v1", "Channel for XtraDB Cluster operator")
-	cmd.Flags().StringP("channel.mongodb", "", "stable-v1", "Channel for MongoDB operator")
-	cmd.Flags().StringP("channel.postgresql", "", "fast-v2", "Channel for PostgreSQL operator")
+	cmd.Flags().String("channel.everest", "stable-v0", "Channel for Everest operator")
+	cmd.Flags().String("channel.victoria_metrics", "stable-v0", "Channel for VictoriaMetrics operator")
+	cmd.Flags().String("channel.xtradb_cluster", "stable-v1", "Channel for XtraDB Cluster operator")
+	cmd.Flags().String("channel.mongodb", "stable-v1", "Channel for MongoDB operator")
+	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 
 	viper.BindPFlag("monitoring.enabled", cmd.Flags().Lookup("monitoring.enabled"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                 //nolint:errcheck,gosec
@@ -73,7 +73,6 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	viper.BindPFlag("channel.mongodb", cmd.Flags().Lookup("channel.mongodb"))                   //nolint:errcheck,gosec
 	viper.BindPFlag("channel.postgresql", cmd.Flags().Lookup("channel.postgresql"))             //nolint:errcheck,gosec
 	viper.BindPFlag("channel.everest", cmd.Flags().Lookup("channel.everest"))                   //nolint:errcheck,gosec
-
 }
 
 func parseConfig() (*install.OperatorsConfig, error) {
