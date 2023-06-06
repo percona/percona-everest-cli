@@ -5,8 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CreateRoleRole creates a new role.
-func (k *Kubernetes) CreateRoleRole(namespace, name string, rules []rbac.PolicyRule) error {
+// CreateRole creates a new role.
+func (k *Kubernetes) CreateRole(namespace, name string, rules []rbac.PolicyRule) error {
 	m := &rbac.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
