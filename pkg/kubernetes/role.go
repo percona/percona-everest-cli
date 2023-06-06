@@ -5,8 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CreateRole creates a new cluster role.
-func (k *Kubernetes) CreateRole(name string, rules []rbac.PolicyRule) error {
+// CreateClusterRole creates a new cluster role.
+func (k *Kubernetes) CreateClusterRole(name string, rules []rbac.PolicyRule) error {
 	m := &rbac.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",

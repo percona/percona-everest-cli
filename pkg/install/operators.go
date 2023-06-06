@@ -223,13 +223,13 @@ func (o *Operators) ConnectToEverest(ctx context.Context) error {
 		return errors.Wrap(err, "could not prepare a service account")
 	}
 
-	o.l.Info("Creating kubeconfig file")
+	o.l.Info("Generating kubeconfig")
 	_, err := o.getServiceAccountKubeConfig(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get a new kubeconfig file for a service account")
 	}
 
-	o.l.Info("Connecting to Kubernetes cluster to Everest")
+	o.l.Info("Connecting your Kubernetes cluster to Everest")
 
 	return nil
 }
@@ -241,7 +241,7 @@ func (o *Operators) prepareServiceAccount(namespace string) error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(everestServiceAccountRole, []v1.PolicyRule{
+	err := o.kubeClient.CreateClusterRole(everestServiceAccountRole, []v1.PolicyRule{
 		{
 			APIGroups: []string{"dbaas.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
