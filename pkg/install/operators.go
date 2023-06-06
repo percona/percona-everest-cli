@@ -41,17 +41,12 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Operator OperatorConfig `mapstructure:"operator"`
-		// Monitoring stores config for monitoring.
-		Monitoring MonitoringConfig `mapstructure:"monitoring"`
-		// KubeconfigPath stores path to a kube config.
-		KubeconfigPath string `mapstructure:"kubeconfig"`
-		// EnableBackup is true if backup shall be enabled.
-		EnableBackup bool `mapstructure:"enable_backup"`
-		// InstallOLM is true if OLM shall be installed.
-		InstallOLM bool `mapstructure:"install_olm"`
-		// Channel stores configuration for operator channels.
-		Channel ChannelConfig `mapstructure:"channel"`
+		Channel        ChannelConfig    `mapstructure:"channel"`
+		EnableBackup   bool             `mapstructure:"enable_backup"`
+		InstallOLM     bool             `mapstructure:"install_olm"`
+		KubeconfigPath string           `mapstructure:"kubeconfig"`
+		Monitoring     MonitoringConfig `mapstructure:"monitoring"`
+		Operator       OperatorConfig   `mapstructure:"operator"`
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -64,13 +59,13 @@ type (
 		PMM *PMMConfig `mapstructure:"pmm"`
 	}
 
-	// OperatorConfig identifies which operators shall be installed
+	// OperatorConfig identifies which operators shall be installed.
 	OperatorConfig struct {
-		// PG stores if PostgresSQL shall be installed
+		// PG stores if PostgresSQL shall be installed.
 		PG bool `mapstructure:"postgresql"`
-		// PSMDB stores if MongoDB shall be installed
+		// PSMDB stores if MongoDB shall be installed.
 		PSMDB bool `mapstructure:"mongodb"`
-		// PXC stores if XtraDB Cluster shall be installed
+		// PXC stores if XtraDB Cluster shall be installed.
 		PXC bool `mapstructure:"xtradb_cluster"`
 	}
 
@@ -124,11 +119,7 @@ func (o *Operators) RunWizard() error {
 		return err
 	}
 
-	if err := o.runOperatorsWizard(); err != nil {
-		return err
-	}
-
-	return nil
+	return o.runOperatorsWizard()
 }
 
 func (o *Operators) runMonitoringWizard() error {
@@ -184,11 +175,7 @@ func (o *Operators) runBackupWizard() error {
 		Message: "Do you want to enable backups?",
 		Default: o.config.EnableBackup,
 	}
-	if err := survey.AskOne(pBackup, &o.config.EnableBackup); err != nil {
-		return err
-	}
-
-	return nil
+	return survey.AskOne(pBackup, &o.config.EnableBackup)
 }
 
 func (o *Operators) runOperatorsWizard() error {
@@ -424,7 +411,7 @@ func (o *Operators) createAdminToken(ctx context.Context, name string, token str
 		return "", err
 	}
 
-	defer resp.Body.Close() //nolint:errcheck,gosec
+	defer resp.Body.Close() //nolint:errcheck
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
