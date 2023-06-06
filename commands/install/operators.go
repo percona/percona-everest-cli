@@ -25,6 +25,12 @@ func NewOperatorsCmd() *cobra.Command {
 				logrus.Error(err)
 				os.Exit(1)
 			}
+
+			if err := op.RunWizard(); err != nil {
+				logrus.Error("Installation wizard exited")
+				logrus.Error(err)
+				os.Exit(1)
+			}
 			if err := op.ProvisionOperators(); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
@@ -48,7 +54,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
 	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
 
-	cmd.Flags().BoolP("enable_backup", "b", false, "Enable backups")
+	cmd.Flags().BoolP("enable_backup", "b", true, "Enable backups")
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "specify kubeconfig")
 
