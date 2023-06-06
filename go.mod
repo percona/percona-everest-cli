@@ -8,7 +8,7 @@ require (
 	github.com/VictoriaMetrics/operator/api v0.0.0-20230410150012-7b0737fa22fa
 	github.com/google/uuid v1.3.0
 	github.com/operator-framework/api v0.17.3
-	github.com/operator-framework/operator-lifecycle-manager v0.24.0
+	github.com/operator-framework/operator-lifecycle-manager v3.11.0+incompatible
 	github.com/percona/dbaas-operator v0.1.15
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -35,6 +35,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
