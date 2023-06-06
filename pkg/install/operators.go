@@ -16,7 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/rbac/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
@@ -241,7 +241,7 @@ func (o *Operators) prepareServiceAccount(namespace string) error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateClusterRole(everestServiceAccountRole, []v1.PolicyRule{
+	err := o.kubeClient.CreateClusterRole(everestServiceAccountRole, []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"dbaas.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
