@@ -52,6 +52,10 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "specify kubeconfig")
 
+	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
+	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
+	cmd.Flags().Bool("operator.xtradb_cluster", true, "Install XtraDB Cluster operator")
+
 	cmd.Flags().String("channel.everest", "stable-v0", "Channel for Everest operator")
 	cmd.Flags().String("channel.victoria_metrics", "stable-v0", "Channel for VictoriaMetrics operator")
 	cmd.Flags().String("channel.xtradb_cluster", "stable-v1", "Channel for XtraDB Cluster operator")
@@ -67,6 +71,10 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	viper.BindPFlag("enable_backup", cmd.Flags().Lookup("enable_backup")) //nolint:errcheck,gosec
 	viper.BindPFlag("install_olm", cmd.Flags().Lookup("install_olm"))     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))       //nolint:errcheck,gosec
+
+	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
+	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
+	viper.BindPFlag("operator.xtradb_cluster", cmd.Flags().Lookup("operator.xtradb_cluster")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("channel.victoria_metrics", cmd.Flags().Lookup("channel.victoria_metrics")) //nolint:errcheck,gosec
 	viper.BindPFlag("channel.xtradb_cluster", cmd.Flags().Lookup("channel.xtradb_cluster"))     //nolint:errcheck,gosec
