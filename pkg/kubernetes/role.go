@@ -5,15 +5,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CreateClusterRole creates a new cluster role.
-func (k *Kubernetes) CreateClusterRole(name string, rules []rbac.PolicyRule) error {
-	m := &rbac.ClusterRole{
+// CreateRoleRole creates a new role.
+func (k *Kubernetes) CreateRoleRole(namespace, name string, rules []rbac.PolicyRule) error {
+	m := &rbac.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRole",
+			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 		},
 		Rules: rules,
 	}
@@ -21,25 +22,25 @@ func (k *Kubernetes) CreateClusterRole(name string, rules []rbac.PolicyRule) err
 	return k.client.ApplyObject(m)
 }
 
-// CreateClusterRoleBinding binds a cluster role to a service account.
-func (k *Kubernetes) CreateClusterRoleBinding(namespace, name, roleName, serviceAccountName string) error {
-	m := &rbac.ClusterRoleBinding{
+// CreateRoleBinding binds a role to a service account.
+func (k *Kubernetes) CreateRoleBinding(namespace, name, roleName, serviceAccountName string) error {
+	m := &rbac.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
+			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 		},
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
+			Kind:     "Role",
 			Name:     roleName,
 		},
 		Subjects: []rbac.Subject{{
-			Kind:      "ServiceAccount",
-			Name:      serviceAccountName,
-			Namespace: namespace,
+			Kind: "ServiceAccount",
+			Name: serviceAccountName,
 		}},
 	}
 

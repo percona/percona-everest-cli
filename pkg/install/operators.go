@@ -241,7 +241,7 @@ func (o *Operators) prepareServiceAccount(namespace string) error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateClusterRole(everestServiceAccountRole, []rbacv1.PolicyRule{
+	err := o.kubeClient.CreateRoleRole(namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"dbaas.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
@@ -268,7 +268,7 @@ func (o *Operators) prepareServiceAccount(namespace string) error {
 	}
 
 	o.l.Info("Binding role to Everest Service account")
-	err = o.kubeClient.CreateClusterRoleBinding(
+	err = o.kubeClient.CreateRoleBinding(
 		namespace,
 		everestServiceAccountRoleBinding,
 		everestServiceAccountRole,
