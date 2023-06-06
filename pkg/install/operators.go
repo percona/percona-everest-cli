@@ -100,6 +100,10 @@ type (
 
 // NewOperators returns a new Operators struct.
 func NewOperators(c *OperatorsConfig) (*Operators, error) {
+	if c == nil {
+		panic("OperatorsConfig is required")
+	}
+
 	cli := &Operators{
 		config: c,
 		l:      logrus.WithField("component", "install/operators"),
