@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/pkg/errors"
@@ -40,17 +41,12 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Operator OperatorConfig `mapstructure:"operator"`
-		// Monitoring stores config for monitoring.
-		Monitoring MonitoringConfig `mapstructure:"monitoring"`
-		// KubeconfigPath stores path to a kube config.
-		KubeconfigPath string `mapstructure:"kubeconfig"`
-		// EnableBackup is true if backup shall be enabled.
-		EnableBackup bool `mapstructure:"enable_backup"`
-		// InstallOLM is true if OLM shall be installed.
-		InstallOLM bool `mapstructure:"install_olm"`
-		// Channel stores configuration for operator channels.
-		Channel ChannelConfig `mapstructure:"channel"`
+		Channel        ChannelConfig    `mapstructure:"channel"`
+		EnableBackup   bool             `mapstructure:"enable_backup"`
+		InstallOLM     bool             `mapstructure:"install_olm"`
+		KubeconfigPath string           `mapstructure:"kubeconfig"`
+		Monitoring     MonitoringConfig `mapstructure:"monitoring"`
+		Operator       OperatorConfig   `mapstructure:"operator"`
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -63,13 +59,13 @@ type (
 		PMM *PMMConfig `mapstructure:"pmm"`
 	}
 
-	// OperatorConfig identifies which operators shall be installed
+	// OperatorConfig identifies which operators shall be installed.
 	OperatorConfig struct {
-		// PG stores if PostgresSQL shall be installed
+		// PG stores if PostgresSQL shall be installed.
 		PG bool `mapstructure:"postgresql"`
-		// PSMDB stores if MongoDB shall be installed
+		// PSMDB stores if MongoDB shall be installed.
 		PSMDB bool `mapstructure:"mongodb"`
-		// PXC stores if XtraDB Cluster shall be installed
+		// PXC stores if XtraDB Cluster shall be installed.
 		PXC bool `mapstructure:"xtradb_cluster"`
 	}
 
@@ -115,6 +111,121 @@ func NewOperators(c *OperatorsConfig) (*Operators, error) {
 	}
 	cli.kubeClient = k
 	return cli, nil
+}
+
+// RunWizard runs installation wizard.
+func (o *Operators) RunWizard() error {
+	if err := o.runMonitoringWizard(); err != nil {
+		return err
+	}
+
+	if err := o.runBackupWizard(); err != nil {
+		return err
+	}
+
+	return o.runOperatorsWizard()
+}
+
+func (o *Operators) runMonitoringWizard() error {
+	pMonitor := &survey.Confirm{
+		Message: "Do you want to enable monitoring?",
+		Default: o.config.Monitoring.Enabled,
+	}
+	err := survey.AskOne(pMonitor, &o.config.Monitoring.Enabled)
+	if err != nil {
+		return err
+	}
+
+	if o.config.Monitoring.Enabled {
+		pURL := &survey.Input{
+			Message: "URL Endpoint",
+			Default: o.config.Monitoring.PMM.Endpoint,
+		}
+		if err := survey.AskOne(
+			pURL,
+			&o.config.Monitoring.PMM.Endpoint,
+			survey.WithValidator(survey.Required),
+		); err != nil {
+			return err
+		}
+
+		pUser := &survey.Input{
+			Message: "Username",
+			Default: o.config.Monitoring.PMM.Username,
+		}
+		if err := survey.AskOne(
+			pUser,
+			&o.config.Monitoring.PMM.Username,
+			survey.WithValidator(survey.Required),
+		); err != nil {
+			return err
+		}
+
+		pPass := &survey.Password{Message: "Password"}
+		if err := survey.AskOne(
+			pPass,
+			&o.config.Monitoring.PMM.Password,
+			survey.WithValidator(survey.Required),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (o *Operators) runBackupWizard() error {
+	pBackup := &survey.Confirm{
+		Message: "Do you want to enable backups?",
+		Default: o.config.EnableBackup,
+	}
+	return survey.AskOne(pBackup, &o.config.EnableBackup)
+}
+
+func (o *Operators) runOperatorsWizard() error {
+	operatorOpts := []struct {
+		label    string
+		boolFlag *bool
+	}{
+		{"MySQL", &o.config.Operator.PXC},
+		{"MongoDB", &o.config.Operator.PSMDB},
+		{"PostgreSQL", &o.config.Operator.PG},
+	}
+	operatorLabels := make([]string, 0, len(operatorOpts))
+	for _, v := range operatorOpts {
+		operatorLabels = append(operatorLabels, v.label)
+	}
+	operatorDefaults := make([]string, 0, len(operatorOpts))
+	for _, v := range operatorOpts {
+		if *v.boolFlag {
+			operatorDefaults = append(operatorDefaults, v.label)
+		}
+	}
+
+	pOps := &survey.MultiSelect{
+		Message: "What operators do you want to install?",
+		Default: operatorDefaults,
+		Options: operatorLabels,
+	}
+	opIndexes := []int{}
+	if err := survey.AskOne(
+		pOps,
+		&opIndexes,
+		survey.WithValidator(survey.MinItems(1)),
+	); err != nil {
+		return err
+	}
+
+	if len(opIndexes) == 0 {
+		return errors.New("at least one operator needs to be selected")
+	}
+
+	for _, i := range opIndexes {
+		o.l.Debugf("Enabling %s operator", operatorOpts[i].label)
+		*operatorOpts[i].boolFlag = true
+	}
+
+	return nil
 }
 
 // ProvisionOperators provisions all configured operators to a k8s cluster.
@@ -304,7 +415,7 @@ func (o *Operators) createAdminToken(ctx context.Context, name string, token str
 		return "", err
 	}
 
-	defer resp.Body.Close() //nolint:errcheck,gosec
+	defer resp.Body.Close() //nolint:errcheck
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err

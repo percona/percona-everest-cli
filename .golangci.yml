@@ -34,6 +34,7 @@ linters:
     - exhaustruct      # not useful
     - exhaustivestruct # annoying and duplicates exhaustruct
     - gomnd            # not useful
+    - maligned         # deprecated, replaced by fieldalignment. We're ok wasting a couple bytes now
     - nlreturn         # too many empty lines makes methods too long
     - varnamelen       # it's useful sometime to have a one-letter name
     - wsl              # too many empty lines makes methods too long
