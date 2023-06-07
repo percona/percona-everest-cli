@@ -11,7 +11,7 @@ linters-settings:
         deny:
           - pkg: errors
             desc: use "github.com/pkg/errors" instead
-            
+
   goimports:
     local-prefixes: github.com/percona/percona-everest-cli
 

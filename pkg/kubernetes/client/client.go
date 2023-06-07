@@ -240,8 +240,8 @@ func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName st
 	)
 }
 
-// GenerateKubeConfig generates kubeconfig.
-func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
+// GenerateKubeConfigWithToken generates kubeconfig with a user and token provided as a secret.
+func (c *Client) GenerateKubeConfigWithToken(user string, secret *corev1.Secret) ([]byte, error) {
 	conf := &Config{
 		Kind:           configKind,
 		APIVersion:     apiVersion,
@@ -261,14 +261,14 @@ func (c *Client) GenerateKubeConfig(secret *corev1.Secret) ([]byte, error) {
 			Name: defaultName,
 			Context: Context{
 				Cluster:   defaultName,
-				User:      "pmm-service-account",
+				User:      user,
 				Namespace: defaultName,
 			},
 		},
 	}
 	conf.Users = []UserInfo{
 		{
-			Name: "pmm-service-account",
+			Name: user,
 			User: User{
 				Token: string(secret.Data["token"]),
 			},
