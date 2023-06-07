@@ -35,10 +35,16 @@ const (
 	catalogSourceNamespace           = "olm"
 	operatorGroup                    = "percona-operators-group"
 	catalogSource                    = "percona-dbaas-catalog"
+	dbaasOperatorName                = "dbaas-operator"
+	pxcOperatorName                  = "percona-xtradb-cluster-operator"
+	psmdbOperatorName                = "percona-server-mongodb-operator"
+	pgOperatorName                   = "percona-postgresql-operator"
+	vmOperatorName                   = "victoriametrics-operator"
 	everestServiceAccount            = "everest-admin"
 	everestServiceAccountRole        = "everest-admin-role"
 	everestServiceAccountRoleBinding = "everest-admin-role-binding"
 	everestServiceAccountTokenSecret = "everest-admin-token"
+	operatorInstallThreads           = 1
 )
 
 type (
@@ -277,26 +283,26 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 	// requires an update to the same installation plan which
 	// results in race-conditions with a higher limit.
 	// The limit can be removed after it's refactored.
-	g.SetLimit(1)
+	g.SetLimit(operatorInstallThreads)
 
 	if o.config.Monitoring.Enabled {
-		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, "victoriametrics-operator"))
+		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName))
 	}
 
 	if o.config.Operator.PXC {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, "percona-xtradb-cluster-operator"))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName))
 	}
 	if o.config.Operator.PSMDB {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, "percona-server-mongodb-operator"))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName))
 	}
 	if o.config.Operator.PG {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PG, "percona-postgresql-operator"))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName))
 	}
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	return o.installOperator(ctx, o.config.Channel.Everest, "dbaas-operator")()
+	return o.installOperator(ctx, o.config.Channel.Everest, dbaasOperatorName)()
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
