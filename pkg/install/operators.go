@@ -232,6 +232,12 @@ func (o *Operators) runOperatorsWizard() error {
 		return errors.New("at least one operator needs to be selected")
 	}
 
+	// We reset all flags to false so we select only
+	// the ones which the user selected in the multiselect.
+	for _, op := range operatorOpts {
+		*op.boolFlag = false
+	}
+
 	for _, i := range opIndexes {
 		o.l.Debugf("Enabling %s operator", operatorOpts[i].label)
 		*operatorOpts[i].boolFlag = true
