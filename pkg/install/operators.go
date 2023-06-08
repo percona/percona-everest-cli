@@ -4,6 +4,7 @@ package install
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -25,9 +27,10 @@ import (
 
 // Operators implements the main logic for commands.
 type Operators struct {
-	config     *OperatorsConfig
-	kubeClient *kubernetes.Kubernetes
-	l          *logrus.Entry
+	config        *OperatorsConfig
+	everestClient everestClientConnector
+	kubeClient    *kubernetes.Kubernetes
+	l             *logrus.Entry
 }
 
 const (
@@ -53,12 +56,24 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Channel        ChannelConfig    `mapstructure:"channel"`
-		EnableBackup   bool             `mapstructure:"enable_backup"`
-		InstallOLM     bool             `mapstructure:"install_olm"`
+		Channel ChannelConfig `mapstructure:"channel"`
+		// EnableBackup is true if backup shall be enabled.
+		EnableBackup bool          `mapstructure:"enable_backup"`
+		Everest      EverestConfig `mapstructure:"everest"`
+		// InstallOLM is true if OLM shall be installed.
+		InstallOLM bool `mapstructure:"install_olm"`
+		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string           `mapstructure:"kubeconfig"`
 		Monitoring     MonitoringConfig `mapstructure:"monitoring"`
-		Operator       OperatorConfig   `mapstructure:"operator"`
+		// Name of the Kubernetes Cluster
+		Name     string         `mapstructure:"name"`
+		Operator OperatorConfig `mapstructure:"operator"`
+	}
+
+	// EverestConfig stores config for Everest.
+	EverestConfig struct {
+		// Endpoint stores URL to Everest.
+		Endpoint string `mapstructure:"endpoint"`
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -107,14 +122,15 @@ type (
 )
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c *OperatorsConfig) (*Operators, error) {
+func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
 	if c == nil {
 		panic("OperatorsConfig is required")
 	}
 
 	cli := &Operators{
-		config: c,
-		l:      logrus.WithField("component", "install/operators"),
+		config:        c,
+		everestClient: everestClient,
+		l:             logrus.WithField("component", "install/operators"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
@@ -127,6 +143,10 @@ func NewOperators(c *OperatorsConfig) (*Operators, error) {
 
 // RunWizard runs installation wizard.
 func (o *Operators) RunWizard() error {
+	if err := o.runEverestWizard(); err != nil {
+		return err
+	}
+
 	if err := o.runMonitoringWizard(); err != nil {
 		return err
 	}
@@ -136,6 +156,23 @@ func (o *Operators) RunWizard() error {
 	}
 
 	return o.runOperatorsWizard()
+}
+
+func (o *Operators) runEverestWizard() error {
+	pEndpoint := &survey.Input{
+		Message: "Everest URL",
+		Default: o.config.Everest.Endpoint,
+	}
+	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
+		return err
+	}
+
+	pName := &survey.Input{
+		Message: "Choose your Kubernetes Cluster name",
+		Default: o.config.Name,
+	}
+
+	return survey.AskOne(pName, &o.config.Name)
 }
 
 func (o *Operators) runMonitoringWizard() error {
@@ -230,6 +267,12 @@ func (o *Operators) runOperatorsWizard() error {
 
 	if len(opIndexes) == 0 {
 		return errors.New("at least one operator needs to be selected")
+	}
+
+	// We reset all flags to false so we select only
+	// the ones which the user selected in the multiselect.
+	for _, op := range operatorOpts {
+		*op.boolFlag = false
 	}
 
 	for _, i := range opIndexes {
@@ -361,12 +404,20 @@ func (o *Operators) ConnectToEverest(ctx context.Context) error {
 	}
 
 	o.l.Info("Generating kubeconfig")
-	_, err := o.getServiceAccountKubeConfig(ctx)
+	kubeconfig, err := o.getServiceAccountKubeConfig(ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get a new kubeconfig file for a service account")
 	}
 
 	o.l.Info("Connecting your Kubernetes cluster to Everest")
+
+	_, err = o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
+		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
+		Name:       o.config.Name,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
+	}
 
 	return nil
 }

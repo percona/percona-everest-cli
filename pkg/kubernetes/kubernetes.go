@@ -29,15 +29,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlekSi/pointer"
-	victoriametricsv1beta1 "github.com/VictoriaMetrics/operator/api/v1beta1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -768,61 +765,79 @@ func (k *Kubernetes) CleanupMonitoring() error {
 	return nil
 }
 
-func vmAgentSpec(secretName, address string) *victoriametricsv1beta1.VMAgent {
-	return &victoriametricsv1beta1.VMAgent{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "VMAgent",
-			APIVersion: "operator.victoriametrics.com/v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "pmm-vmagent-" + secretName,
-		},
-		Spec: victoriametricsv1beta1.VMAgentSpec{
-			ServiceScrapeNamespaceSelector: &metav1.LabelSelector{},
-			ServiceScrapeSelector:          &metav1.LabelSelector{},
-			PodScrapeNamespaceSelector:     &metav1.LabelSelector{},
-			PodScrapeSelector:              &metav1.LabelSelector{},
-			ProbeSelector:                  &metav1.LabelSelector{},
-			ProbeNamespaceSelector:         &metav1.LabelSelector{},
-			StaticScrapeSelector:           &metav1.LabelSelector{},
-			StaticScrapeNamespaceSelector:  &metav1.LabelSelector{},
-			ReplicaCount:                   pointer.ToInt32(1),
-			SelectAllByDefault:             true,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("250m"),
-					corev1.ResourceMemory: resource.MustParse("350Mi"),
-				},
-				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("500m"),
-					corev1.ResourceMemory: resource.MustParse("850Mi"),
-				},
+const specVMAgent = `
+{
+	"kind": "VMAgent",
+	"apiVersion": "operator.victoriametrics.com/v1beta1",
+	"metadata": {
+		"name": "pmm-vmagent-%[1]s",
+		"creationTimestamp": null
+	},
+	"spec": {
+		"image": {},
+		"replicaCount": 1,
+		"resources": {
+			"limits": {
+				"cpu": "500m",
+				"memory": "850Mi"
 			},
-			ExtraArgs: map[string]string{
-				"memory.allowedPercent": "40",
-			},
-			RemoteWrite: []victoriametricsv1beta1.VMAgentRemoteWriteSpec{
-				{
-					URL: fmt.Sprintf("%s/victoriametrics/api/v1/write", address),
-					TLSConfig: &victoriametricsv1beta1.TLSConfig{
-						InsecureSkipVerify: true,
+			"requests": {
+				"cpu": "250m",
+				"memory": "350Mi"
+			}
+		},
+		"remoteWrite": [
+			{
+				"url": "%[2]s/victoriametrics/api/v1/write",
+				"basicAuth": {
+					"username": {
+						"name": "%[1]s",
+						"key": "username"
 					},
-					BasicAuth: &victoriametricsv1beta1.BasicAuth{
-						Username: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: secretName,
-							},
-							Key: "username",
-						},
-						Password: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: secretName,
-							},
-							Key: "password",
-						},
-					},
+					"password": {
+						"name": "%[1]s",
+						"key": "password"
+					}
 				},
-			},
-		},
+				"tlsConfig": {
+					"ca": {},
+					"cert": {},
+					"insecureSkipVerify": true
+				}
+			}
+		],
+		"selectAllByDefault": true,
+		"serviceScrapeSelector": {},
+		"serviceScrapeNamespaceSelector": {},
+		"podScrapeSelector": {},
+		"podScrapeNamespaceSelector": {},
+		"probeSelector": {},
+		"probeNamespaceSelector": {},
+		"staticScrapeSelector": {},
+		"staticScrapeNamespaceSelector": {},
+		"arbitraryFSAccessThroughSMs": {},
+		"extraArgs": {
+			"memory.allowedPercent": "40"
+		}
+	},
+	"status": {
+		"shards": 0,
+		"selector": "",
+		"replicas": 0,
+		"updatedReplicas": 0,
+		"availableReplicas": 0,
+		"unavailableReplicas": 0
 	}
+}`
+
+//nolint:ireturn
+func vmAgentSpec(secretName, address string) runtime.Object {
+	manifest := fmt.Sprintf(specVMAgent, secretName, address)
+
+	o, _, err := unstructured.UnstructuredJSONScheme.Decode([]byte(manifest), nil, nil)
+	if err != nil {
+		logrus.Panic(err)
+	}
+
+	return o
 }

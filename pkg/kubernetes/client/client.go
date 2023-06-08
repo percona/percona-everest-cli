@@ -30,8 +30,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	vmClient "github.com/VictoriaMetrics/operator/api/client/versioned"
-	vmv1beta1 "github.com/VictoriaMetrics/operator/api/victoriametrics/v1beta1"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
@@ -794,7 +792,12 @@ func (c Client) GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedN
 }
 
 func (c *Client) getKubeclient() (client.Client, error) { //nolint:ireturn
-	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig)
+	rcl, err := rest.HTTPClientFor(c.restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig, rcl)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create dynamic rest mapper")
 	}
@@ -1157,35 +1160,4 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 		}
 	}
 	return nil
-}
-
-// ListVMAgents retrieves all VM agents for a namespace.
-func (c *Client) ListVMAgents(
-	ctx context.Context,
-	namespace string,
-	labels map[string]string,
-) (*vmv1beta1.VMAgentList, error) {
-	vmcli, err := vmClient.NewForConfig(c.restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := metav1.ListOptions{}
-	if labels != nil {
-		opts.LabelSelector = metav1.FormatLabelSelector(&metav1.LabelSelector{
-			MatchLabels: labels,
-		})
-	}
-
-	return vmcli.VictoriametricsV1beta1().VMAgents(namespace).List(ctx, metav1.ListOptions{})
-}
-
-// DeleteVMAgent deletes a Victoria Metrics agent instance.
-func (c *Client) DeleteVMAgent(ctx context.Context, namespace, name string) error {
-	vmcli, err := vmClient.NewForConfig(c.restConfig)
-	if err != nil {
-		return err
-	}
-
-	return vmcli.VictoriametricsV1beta1().VMAgents(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }

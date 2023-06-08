@@ -5,7 +5,6 @@ package client
 import (
 	context "context"
 
-	v1beta1 "github.com/VictoriaMetrics/operator/api/victoriametrics/v1beta1"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	apiv1 "github.com/percona/dbaas-operator/api/v1"
@@ -122,20 +121,6 @@ func (_m *MockKubeClientConnector) DeleteObject(obj runtime.Object) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(runtime.Object) error); ok {
 		r0 = rf(obj)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// DeleteVMAgent provides a mock function with given fields: ctx, namespace, name
-func (_m *MockKubeClientConnector) DeleteVMAgent(ctx context.Context, namespace string, name string) error {
-	ret := _m.Called(ctx, namespace, name)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, namespace, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -687,29 +672,6 @@ func (_m *MockKubeClientConnector) ListSubscriptions(ctx context.Context, namesp
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, namespace)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// ListVMAgents provides a mock function with given fields: ctx, namespace, labels
-func (_m *MockKubeClientConnector) ListVMAgents(ctx context.Context, namespace string, labels map[string]string) (*v1beta1.VMAgentList, error) {
-	ret := _m.Called(ctx, namespace, labels)
-
-	var r0 *v1beta1.VMAgentList
-	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]string) *v1beta1.VMAgentList); ok {
-		r0 = rf(ctx, namespace, labels)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*v1beta1.VMAgentList)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, map[string]string) error); ok {
-		r1 = rf(ctx, namespace, labels)
 	} else {
 		r1 = ret.Error(1)
 	}
