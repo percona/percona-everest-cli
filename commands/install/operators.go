@@ -4,10 +4,12 @@ package install
 import (
 	"os"
 
+	"github.com/percona/percona-everest-backend/client"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/install"
 )
 
@@ -20,7 +22,15 @@ func NewOperatorsCmd() *cobra.Command {
 			if err != nil {
 				os.Exit(1)
 			}
-			op, err := install.NewOperators(c)
+
+			everestCl, err := client.NewClient(c.Everest.Endpoint)
+			if err != nil {
+				logrus.Error(err)
+				os.Exit(1)
+			}
+
+			everestClConnector := everestClient.NewEverest(everestCl)
+			op, err := install.NewOperators(c, everestClConnector)
 			if err != nil {
 				logrus.Error(err)
 				os.Exit(1)
@@ -48,6 +58,8 @@ func NewOperatorsCmd() *cobra.Command {
 }
 
 func initOperatorsFlags(cmd *cobra.Command) {
+	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
+
 	cmd.Flags().BoolP("monitoring.enabled", "m", true, "Enable monitoring")
 	cmd.Flags().StringP("monitoring.type", "", "pmm", "Monitoring type")
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
@@ -56,7 +68,8 @@ func initOperatorsFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolP("enable_backup", "b", true, "Enable backups")
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
-	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "specify kubeconfig")
+	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
+	cmd.Flags().StringP("name", "n", "my.cluster", "Kubernetes Cluster name")
 
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
@@ -68,6 +81,8 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("channel.mongodb", "stable-v1", "Channel for MongoDB operator")
 	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 
+	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
+
 	viper.BindPFlag("monitoring.enabled", cmd.Flags().Lookup("monitoring.enabled"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                 //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint")) //nolint:errcheck,gosec
@@ -77,6 +92,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	viper.BindPFlag("enable_backup", cmd.Flags().Lookup("enable_backup")) //nolint:errcheck,gosec
 	viper.BindPFlag("install_olm", cmd.Flags().Lookup("install_olm"))     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))       //nolint:errcheck,gosec
+	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                   //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec

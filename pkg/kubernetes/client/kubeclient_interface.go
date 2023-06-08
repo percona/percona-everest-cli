@@ -5,7 +5,6 @@ package client
 import (
 	"context"
 
-	vmv1beta1 "github.com/VictoriaMetrics/operator/api/victoriametrics/v1beta1"
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
@@ -90,8 +89,4 @@ type KubeClientConnector interface {
 	// DeleteFile accepts manifest file contents parses into []runtime.Object
 	// and deletes them from the cluster.
 	DeleteFile(fileBytes []byte) error
-	// ListVMAgents retrieves all VM agents for a namespace.
-	ListVMAgents(ctx context.Context, namespace string, labels map[string]string) (*vmv1beta1.VMAgentList, error)
-	// DeleteVMAgent deletes a Victoria Metrics agent instance.
-	DeleteVMAgent(ctx context.Context, namespace, name string) error
 }
