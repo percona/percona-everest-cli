@@ -69,7 +69,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("enable_backup", "b", true, "Enable backups")
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringP("name", "n", "my.cluster", "Kubernetes Cluster name")
+	cmd.Flags().StringP("name", "n", "", "Kubernetes Cluster name")
 
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")

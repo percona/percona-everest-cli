@@ -104,6 +104,7 @@ type Client struct {
 	rcLock           *sync.Mutex
 	restConfig       *rest.Config
 	namespace        string
+	clusterName      string
 }
 
 // SortableEvents implements sort.Interface for []api.Event based on the Timestamp field.
@@ -164,6 +165,12 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	clientConfig, err := clientcmd.Load(fileData)
+	if err != nil {
+		return nil, err
+	}
+
 	config, err := clientcmd.RESTConfigFromKubeConfig(fileData)
 	if err != nil {
 		return nil, err
@@ -189,6 +196,7 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 		dynamicClientset: dynamicClientset,
 		restConfig:       config,
 		rcLock:           &sync.Mutex{},
+		clusterName:      clientConfig.Contexts[clientConfig.CurrentContext].Cluster,
 	}
 	err = c.setup()
 	return c, err
@@ -218,6 +226,11 @@ func (c *Client) initOperatorClients() error {
 	c.dbClusterClient = dbClusterClient
 	_, err = c.GetServerVersion()
 	return err
+}
+
+// ClusterName returns the name of the k8s cluster.
+func (c *Client) ClusterName() string {
+	return c.clusterName
 }
 
 // GetSecretsForServiceAccount returns secret by given service account name.

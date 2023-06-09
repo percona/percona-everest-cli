@@ -23,6 +23,8 @@ import (
 
 // KubeClientConnector ...
 type KubeClientConnector interface {
+	// ClusterName returns the name of the k8s cluster.
+	ClusterName() string
 	// GetSecretsForServiceAccount returns secret by given service account name.
 	GetSecretsForServiceAccount(ctx context.Context, accountName string) (*corev1.Secret, error)
 	// GenerateKubeConfigWithToken generates kubeconfig with a user and token provided as a secret.

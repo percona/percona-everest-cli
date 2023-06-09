@@ -54,6 +54,20 @@ func (_m *MockKubeClientConnector) ApplyObject(obj runtime.Object) error {
 	return r0
 }
 
+// ClusterName provides a mock function with given fields:
+func (_m *MockKubeClientConnector) ClusterName() string {
+	ret := _m.Called()
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name
 func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string) (*v1.OperatorGroup, error) {
 	ret := _m.Called(ctx, namespace, name)
