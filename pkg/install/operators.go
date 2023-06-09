@@ -169,7 +169,7 @@ func (o *Operators) runEverestWizard() error {
 
 	pName := &survey.Input{
 		Message: "Choose your Kubernetes Cluster name",
-		Default: o.config.Name,
+		Default: o.kubeClient.ClusterName(),
 	}
 
 	return survey.AskOne(pName, &o.config.Name)

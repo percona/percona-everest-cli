@@ -156,6 +156,11 @@ func NewEmpty() *Kubernetes {
 	}
 }
 
+// ClusterName returns the name of the k8s cluster.
+func (k *Kubernetes) ClusterName() string {
+	return k.client.ClusterName()
+}
+
 // ListDatabaseClusters returns list of managed PCX clusters.
 func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error) {
 	return k.client.ListDatabaseClusters(ctx)
