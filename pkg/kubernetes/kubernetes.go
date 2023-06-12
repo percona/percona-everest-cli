@@ -835,8 +835,7 @@ const specVMAgent = `
 	}
 }`
 
-//nolint:ireturn
-func vmAgentSpec(secretName, address string) runtime.Object {
+func vmAgentSpec(secretName, address string) runtime.Object { //nolint:ireturn
 	manifest := fmt.Sprintf(specVMAgent, secretName, address)
 
 	o, _, err := unstructured.UnstructuredJSONScheme.Decode([]byte(manifest), nil, nil)
