@@ -698,7 +698,7 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 	return k.client.DeleteObject(obj)
 }
 
-// ProvisionMonitoring provisions monitoring and creates a VM Agent instance.
+// ProvisionMonitoring provisions PMM monitoring and creates a VM Agent instance.
 func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress string) error {
 	randomCrypto, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
@@ -711,7 +711,7 @@ func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress strin
 		"password": []byte(password),
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cannot create PMM secret")
 	}
 
 	vmagent := vmAgentSpec(secretName, pmmPublicAddress)
@@ -738,8 +738,10 @@ func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress strin
 		}
 		// retry 3 times because applying vmagent spec might take some time.
 		for i := 0; i < 3; i++ {
+			k.l.Debugf("Applying file %s", path)
 			err = k.client.ApplyFile(file)
 			if err != nil {
+				k.l.Debugf("%s: retrying after error: %s", path, err)
 				time.Sleep(10 * time.Second)
 				continue
 			}

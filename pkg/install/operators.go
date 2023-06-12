@@ -324,16 +324,19 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 		return err
 	}
 
-	if err := o.provisionOperators(ctx); err != nil {
-		return err
-	}
+	g, gCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return o.provisionOperators(gCtx)
+	})
 
 	if o.config.Monitoring.Enabled {
-		o.l.Info("Started setting up monitoring")
-		// if err := c.provisionPMMMonitoring(); err != nil {
-		// 	return err
-		// }
-		o.l.Info("Monitoring using PMM has been provisioned")
+		g.Go(func() error {
+			return o.provisionPMMMonitoring(gCtx)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	return nil
@@ -412,26 +415,31 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 
 //nolint:unused
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
+	l := o.l.WithField("action", "PMM")
+	l.Info("Setting up PMM monitoring")
+
 	account := fmt.Sprintf("everest-service-account-%s", uuid.NewString())
-	o.l.Info("Creating a new service account in PMM")
+	l.Info("Creating a new service account in PMM")
 	token, err := o.provisionPMM(ctx, account)
 	if err != nil {
 		return err
 	}
-	o.l.Info("New token has been generated")
-	o.l.Info("Started provisioning monitoring in k8s cluster")
+	l.Info("New token has been generated")
+	l.Info("Provisioning monitoring in k8s cluster")
 	err = o.kubeClient.ProvisionMonitoring(account, token, o.config.Monitoring.PMM.Endpoint)
 	if err != nil {
-		o.l.Error("failed provisioning monitoring")
-		return err
+		l.Error("failed provisioning monitoring")
+		return errors.Wrap(err, "could not provision PMM Monitoring")
 	}
+
+	l.Info("PMM Monitoring provisioned successfully")
 
 	return nil
 }
 
 //nolint:unused
 func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
-	token, err := o.createAdminToken(ctx, account, "")
+	token, err := o.createPMMAdminToken(ctx, account, "")
 	return token, err
 }
 
@@ -537,7 +545,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 }
 
 //nolint:unused
-func (o *Operators) createAdminToken(ctx context.Context, name string, token string) (string, error) {
+func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
@@ -562,8 +570,7 @@ func (o *Operators) createAdminToken(ctx context.Context, name string, token str
 	} else {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
