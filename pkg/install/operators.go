@@ -335,11 +335,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 		})
 	}
 
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return g.Wait()
 }
 
 func (o *Operators) provisionOLM(ctx context.Context) error {
