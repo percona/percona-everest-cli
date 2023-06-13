@@ -34,7 +34,6 @@ type Operators struct {
 }
 
 const (
-	namespace                        = "default"
 	catalogSourceNamespace           = "olm"
 	operatorGroup                    = "percona-operators-group"
 	catalogSource                    = "percona-dbaas-catalog"
@@ -88,6 +87,8 @@ type (
 
 	// OperatorConfig identifies which operators shall be installed.
 	OperatorConfig struct {
+		// Namespace defines the namespace operators shall be installed to.
+		Namespace string `mapstructure:"namespace"`
 		// PG stores if PostgresSQL shall be installed.
 		PG bool `mapstructure:"postgresql"`
 		// PSMDB stores if MongoDB shall be installed.
@@ -141,8 +142,23 @@ func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Op
 	return cli, nil
 }
 
-// RunWizard runs installation wizard.
-func (o *Operators) RunWizard() error {
+// Run runs the operators installation process.
+func (o *Operators) Run(ctx context.Context) error {
+	if err := o.runWizard(); err != nil {
+		return err
+	}
+	if err := o.provisionNamespace(); err != nil {
+		return err
+	}
+	if err := o.provisionAllOperators(ctx); err != nil {
+		return err
+	}
+
+	return o.connectToEverest(ctx)
+}
+
+// runWizard runs installation wizard.
+func (o *Operators) runWizard() error {
 	if err := o.runEverestWizard(); err != nil {
 		return err
 	}
@@ -167,9 +183,14 @@ func (o *Operators) runEverestWizard() error {
 		return err
 	}
 
+	clusterName := o.kubeClient.ClusterName()
+	if o.config.Name != "" {
+		clusterName = o.config.Name
+	}
+
 	pName := &survey.Input{
 		Message: "Choose your Kubernetes Cluster name",
-		Default: o.kubeClient.ClusterName(),
+		Default: clusterName,
 	}
 
 	return survey.AskOne(pName, &o.config.Name)
@@ -283,10 +304,21 @@ func (o *Operators) runOperatorsWizard() error {
 	return nil
 }
 
-// ProvisionOperators provisions all configured operators to a k8s cluster.
-func (o *Operators) ProvisionOperators() error {
+// provisionNamespace provisions a namespace for Everest.
+func (o *Operators) provisionNamespace() error {
+	o.l.Infof("Creating namespace %s", o.config.Operator.Namespace)
+	err := o.kubeClient.CreateNamespace(o.config.Operator.Namespace)
+	if err != nil {
+		return errors.Wrap(err, "could not provision namespace")
+	}
+
+	o.l.Infof("Namespace %s has been created", o.config.Operator.Namespace)
+	return nil
+}
+
+// provisionAllOperators provisions all configured operators to a k8s cluster.
+func (o *Operators) provisionAllOperators(ctx context.Context) error {
 	o.l.Info("Started provisioning the cluster")
-	ctx := context.TODO()
 
 	if err := o.provisionOLM(ctx); err != nil {
 		return err
@@ -353,7 +385,7 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
-			Namespace:              namespace,
+			Namespace:              o.config.Operator.Namespace,
 			Name:                   operatorName,
 			OperatorGroup:          operatorGroup,
 			CatalogSource:          catalogSource,
@@ -397,9 +429,9 @@ func (o *Operators) provisionPMM(ctx context.Context, account string) (string, e
 	return token, err
 }
 
-// ConnectToEverest connects the k8s cluster to Everest.
-func (o *Operators) ConnectToEverest(ctx context.Context) error {
-	if err := o.prepareServiceAccount(namespace); err != nil {
+// connectToEverest connects the k8s cluster to Everest.
+func (o *Operators) connectToEverest(ctx context.Context) error {
+	if err := o.prepareServiceAccount(); err != nil {
 		return errors.Wrap(err, "could not prepare a service account")
 	}
 
@@ -422,14 +454,14 @@ func (o *Operators) ConnectToEverest(ctx context.Context) error {
 	return nil
 }
 
-func (o *Operators) prepareServiceAccount(namespace string) error {
+func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
 	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount); err != nil {
 		return errors.Wrap(err, "could not create service account")
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
+	err := o.kubeClient.CreateRole(o.config.Operator.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"dbaas.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
@@ -457,7 +489,7 @@ func (o *Operators) prepareServiceAccount(namespace string) error {
 
 	o.l.Info("Binding role to Everest Service account")
 	err = o.kubeClient.CreateRoleBinding(
-		namespace,
+		o.config.Operator.Namespace,
 		everestServiceAccountRoleBinding,
 		everestServiceAccountRole,
 		everestServiceAccount,

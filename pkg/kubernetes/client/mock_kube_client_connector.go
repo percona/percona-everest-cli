@@ -68,6 +68,20 @@ func (_m *MockKubeClientConnector) ClusterName() string {
 	return r0
 }
 
+// CreateNamespace provides a mock function with given fields: name
+func (_m *MockKubeClientConnector) CreateNamespace(name string) error {
+	ret := _m.Called(name)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name
 func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string) (*v1.OperatorGroup, error) {
 	ret := _m.Called(ctx, namespace, name)
