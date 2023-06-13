@@ -73,7 +73,7 @@ func TestInstallOlmOperator(t *testing.T) {
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
 
-		k8sclient.On("GetOperatorGroup", ctx, "", operatorGroup).Return(&v1.OperatorGroup{}, nil)
+		k8sclient.On("GetOperatorGroup", ctx, subscriptionNamespace, operatorGroup).Return(&v1.OperatorGroup{}, nil)
 		mockSubscription := &v1alpha1.Subscription{
 			Status: v1alpha1.SubscriptionStatus{
 				InstallPlanRef: &corev1.ObjectReference{
