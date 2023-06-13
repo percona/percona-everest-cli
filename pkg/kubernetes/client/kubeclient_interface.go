@@ -66,6 +66,8 @@ type KubeClientConnector interface {
 	GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedName) (types.NamespacedName, error)
 	// DoRolloutWait waits until a deployment has been rolled out susccessfully or there is an error.
 	DoRolloutWait(ctx context.Context, key types.NamespacedName) error
+	// CreateNamespace creates a new namespace.
+	CreateNamespace(name string) error
 	// GetOperatorGroup retrieves an operator group details by namespace and name.
 	GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
 	// CreateOperatorGroup creates an operator group to be used as part of a subscription.

@@ -79,8 +79,7 @@ const (
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 
-	olmNamespace        = "olm"
-	useDefaultNamespace = ""
+	olmNamespace = "olm"
 
 	// APIVersionCoreosV1 constant for some API requests.
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
@@ -545,6 +544,11 @@ func filterResources(resources []unstructured.Unstructured, filter func(unstruct
 	return filtered
 }
 
+// CreateNamespace creates a new namespace.
+func (k *Kubernetes) CreateNamespace(name string) error {
+	return k.client.CreateNamespace(name)
+}
+
 // InstallOperatorRequest holds the fields to make an operator install request.
 type InstallOperatorRequest struct {
 	Namespace              string
@@ -559,7 +563,7 @@ type InstallOperatorRequest struct {
 
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error {
-	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup); err != nil {
+	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace); err != nil {
 		return err
 	}
 
@@ -572,6 +576,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	}
 
 	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
+		k.l.Debugf("Polling subscription %s/%s", req.Namespace, req.Name)
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
 		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
 			return false, err
@@ -598,13 +603,17 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	return err
 }
 
-func createOperatorGroupIfNeeded(ctx context.Context, client client.KubeClientConnector, name string) error {
-	_, err := client.GetOperatorGroup(ctx, useDefaultNamespace, name)
+func createOperatorGroupIfNeeded(
+	ctx context.Context,
+	client client.KubeClientConnector,
+	name, namespace string,
+) error {
+	_, err := client.GetOperatorGroup(ctx, namespace, name)
 	if err == nil {
 		return nil
 	}
 
-	_, err = client.CreateOperatorGroup(ctx, "default", name)
+	_, err = client.CreateOperatorGroup(ctx, namespace, name)
 
 	return err
 }

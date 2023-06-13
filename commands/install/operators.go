@@ -36,16 +36,7 @@ func NewOperatorsCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			if err := op.RunWizard(); err != nil {
-				logrus.Error("Installation wizard exited")
-				logrus.Error(err)
-				os.Exit(1)
-			}
-			if err := op.ProvisionOperators(); err != nil {
-				logrus.Error(err)
-				os.Exit(1)
-			}
-			if err := op.ConnectToEverest(cmd.Context()); err != nil {
+			if err := op.Run(cmd.Context()); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
 			}
@@ -69,8 +60,9 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("enable_backup", "b", true, "Enable backups")
 	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringP("name", "n", "", "Kubernetes Cluster name")
+	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 
+	cmd.Flags().String("operator.namespace", "percona-everest", "Namespace where operators are deployed to")
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
 	cmd.Flags().Bool("operator.xtradb_cluster", true, "Install XtraDB Cluster operator")
@@ -94,6 +86,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))       //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                   //nolint:errcheck,gosec
 
+	viper.BindPFlag("operator.namespace", cmd.Flags().Lookup("operator.namespace"))           //nolint:errcheck,gosec
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
 	viper.BindPFlag("operator.xtradb_cluster", cmd.Flags().Lookup("operator.xtradb_cluster")) //nolint:errcheck,gosec
