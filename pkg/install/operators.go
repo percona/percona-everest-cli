@@ -382,6 +382,12 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
 	return func() error {
+		// We check if the context has not been cancelled yet to return early
+		if err := ctx.Err(); err != nil {
+			o.l.Debugf("Cancelled %s operator installation due to context error: %s", operatorName, err)
+			return err
+		}
+
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
