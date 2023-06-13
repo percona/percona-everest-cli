@@ -593,14 +593,18 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		return errors.Errorf("cannot get an install plan for the operator subscription: %q", req.Name)
 	}
 
-	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
-		ip, err := k.client.GetInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
+	return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
+}
+
+func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installPlanName string) error {
+	err := wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
+		ip, err := k.client.GetInstallPlan(ctx, namespace, installPlanName)
 		if err != nil {
 			return false, err
 		}
 
 		ip.Spec.Approved = true
-		_, err = k.client.UpdateInstallPlan(ctx, req.Namespace, ip)
+		_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
 		if err != nil {
 			var sErr *apierrors.StatusError
 			if ok := errors.As(err, sErr); ok && sErr.Status().Reason == metav1.StatusReasonConflict {
