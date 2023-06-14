@@ -580,46 +580,35 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		k.l.Debugf("Polling subscription %s/%s", req.Namespace, req.Name)
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
 		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
-			return false, err
+			return false, errors.Wrapf(err, "cannot get an install plan for the operator subscription: %q", req.Name)
 		}
 
-		return true, nil
-	})
-
-	if err != nil {
-		return err
-	}
-	if subs == nil {
-		return errors.Errorf("cannot get an install plan for the operator subscription: %q", req.Name)
-	}
-
-	return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
-}
-
-func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installPlanName string) error {
-	err := wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
-		ip, err := k.client.GetInstallPlan(ctx, namespace, installPlanName)
-		if err != nil {
-			return false, err
-		}
-
-		ip.Spec.Approved = true
-		_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
-		if err != nil {
-			var sErr *apierrors.StatusError
-			if ok := errors.As(err, sErr); ok && sErr.Status().Reason == metav1.StatusReasonConflict {
-				// The install plan has changed. We retry to get an updated install plan.
-				k.l.Debugf("Retrying install plan update due to a version conflict. Error: %s", err)
-				return false, nil
-			}
-
-			return false, err
-		}
-
-		return true, nil
+		return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
 	})
 
 	return err
+}
+
+func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installPlanName string) (bool, error) {
+	ip, err := k.client.GetInstallPlan(ctx, namespace, installPlanName)
+	if err != nil {
+		return false, err
+	}
+
+	ip.Spec.Approved = true
+	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
+	if err != nil {
+		var sErr *apierrors.StatusError
+		if ok := errors.As(err, sErr); ok && sErr.Status().Reason == metav1.StatusReasonConflict {
+			// The install plan has changed. We retry to get an updated install plan.
+			k.l.Debugf("Retrying install plan update due to a version conflict. Error: %s", err)
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }
 
 func createOperatorGroupIfNeeded(
