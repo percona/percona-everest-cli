@@ -73,7 +73,7 @@ func TestInstallOlmOperator(t *testing.T) {
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
 
-		k8sclient.On("GetOperatorGroup", ctx, subscriptionNamespace, operatorGroup).Return(&v1.OperatorGroup{}, nil)
+		k8sclient.On("GetOperatorGroup", mock.Anything, subscriptionNamespace, operatorGroup).Return(&v1.OperatorGroup{}, nil)
 		mockSubscription := &v1alpha1.Subscription{
 			Status: v1alpha1.SubscriptionStatus{
 				InstallPlanRef: &corev1.ObjectReference{
@@ -89,10 +89,10 @@ func TestInstallOlmOperator(t *testing.T) {
 		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
 		mockInstallPlan := &v1alpha1.InstallPlan{}
 		k8sclient.On(
-			"GetInstallPlan", ctx,
+			"GetInstallPlan", mock.Anything,
 			subscriptionNamespace, mockSubscription.Status.InstallPlanRef.Name,
 		).Return(mockInstallPlan, nil)
-		k8sclient.On("UpdateInstallPlan", ctx, subscriptionNamespace, mockInstallPlan).Return(mockInstallPlan, nil)
+		k8sclient.On("UpdateInstallPlan", mock.Anything, subscriptionNamespace, mockInstallPlan).Return(mockInstallPlan, nil)
 		err := olms.InstallOperator(ctx, params)
 		assert.NoError(t, err)
 	})
