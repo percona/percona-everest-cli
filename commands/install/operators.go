@@ -51,6 +51,7 @@ func NewOperatorsCmd() *cobra.Command {
 func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 
+	cmd.Flags().BoolP("quiet", "q", false, "Quiet mode. Do not run wizard")
 	cmd.Flags().BoolP("monitoring.enabled", "m", true, "Enable monitoring")
 	cmd.Flags().StringP("monitoring.type", "", "pmm", "Monitoring type")
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
@@ -74,6 +75,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
+	viper.BindPFlag("quiet", cmd.Flags().Lookup("quiet"))                       //nolint:errcheck,gosec
 
 	viper.BindPFlag("monitoring.enabled", cmd.Flags().Lookup("monitoring.enabled"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                 //nolint:errcheck,gosec
