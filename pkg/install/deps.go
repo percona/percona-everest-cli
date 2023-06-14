@@ -11,4 +11,8 @@ type everestClientConnector interface {
 		ctx context.Context,
 		body client.RegisterKubernetesClusterJSONRequestBody,
 	) (*client.KubernetesCluster, error)
+	CreateBackupStorage(
+		ctx context.Context,
+		body client.CreateBackupStorageJSONRequestBody,
+	) (*client.BackupStorage, error)
 }

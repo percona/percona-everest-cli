@@ -55,10 +55,9 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
+		Backup  BackupConfig  `mapstructure:"backup"`
 		Channel ChannelConfig `mapstructure:"channel"`
-		// EnableBackup is true if backup shall be enabled.
-		EnableBackup bool          `mapstructure:"enable_backup"`
-		Everest      EverestConfig `mapstructure:"everest"`
+		Everest EverestConfig `mapstructure:"everest"`
 		// InstallOLM is true if OLM shall be installed.
 		InstallOLM bool `mapstructure:"install_olm"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -69,6 +68,24 @@ type (
 		Operator OperatorConfig `mapstructure:"operator"`
 	}
 
+	// BackupConfig stores configuration for backup.
+	BackupConfig struct {
+		// Enable is true if backup shall be enabled.
+		Enable bool `mapstructure:"enable"`
+		// Name stores name of the backup.
+		Name string `mapstructure:"name"`
+		// Endpoint stores URL to backup.
+		Endpoint string `mapstructure:"endpoint"`
+		// Bucket stores name of the bucket for backup.
+		Bucket string `mapstructure:"bucket"`
+		// AccessKey stores username for backup.
+		AccessKey string `mapstructure:"username"`
+		// SecretKey stores password for backup.
+		SecretKey string `mapstructure:"password"`
+		// Region stores region for backup.
+		Region string `mapstructure:"region"`
+	}
+
 	// EverestConfig stores config for Everest.
 	EverestConfig struct {
 		// Endpoint stores URL to Everest.
@@ -77,8 +94,8 @@ type (
 
 	// MonitoringConfig stores configuration for monitoring.
 	MonitoringConfig struct {
-		// Enabled is true if monitoring shall be enabled.
-		Enabled bool `mapstructure:"enabled"`
+		// Enable is true if monitoring shall be enabled.
+		Enable bool `mapstructure:"enable"`
 		// Type stores the type of monitoring to be used.
 		Type MonitoringType `mapstructure:"type"`
 		// PMM stores configuration for PMM monitoring type.
@@ -154,7 +171,15 @@ func (o *Operators) Run(ctx context.Context) error {
 		return err
 	}
 
-	return o.connectToEverest(ctx)
+	g, gCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return o.connectToEverest(gCtx)
+	})
+	g.Go(func() error {
+		return o.createEverestBackupStorage(gCtx)
+	})
+
+	return g.Wait()
 }
 
 // runWizard runs installation wizard.
@@ -199,14 +224,14 @@ func (o *Operators) runEverestWizard() error {
 func (o *Operators) runMonitoringWizard() error {
 	pMonitor := &survey.Confirm{
 		Message: "Do you want to enable monitoring?",
-		Default: o.config.Monitoring.Enabled,
+		Default: o.config.Monitoring.Enable,
 	}
-	err := survey.AskOne(pMonitor, &o.config.Monitoring.Enabled)
+	err := survey.AskOne(pMonitor, &o.config.Monitoring.Enable)
 	if err != nil {
 		return err
 	}
 
-	if o.config.Monitoring.Enabled {
+	if o.config.Monitoring.Enable {
 		pURL := &survey.Input{
 			Message: "URL Endpoint",
 			Default: o.config.Monitoring.PMM.Endpoint,
@@ -247,9 +272,91 @@ func (o *Operators) runMonitoringWizard() error {
 func (o *Operators) runBackupWizard() error {
 	pBackup := &survey.Confirm{
 		Message: "Do you want to enable backups?",
-		Default: o.config.EnableBackup,
+		Default: o.config.Backup.Enable,
 	}
-	return survey.AskOne(pBackup, &o.config.EnableBackup)
+
+	if err := survey.AskOne(pBackup, &o.config.Backup.Enable); err != nil {
+		return err
+	}
+
+	if o.config.Backup.Enable {
+		return o.runBackupConfigWizard()
+	}
+
+	return nil
+}
+
+func (o *Operators) runBackupConfigWizard() error {
+	pName := &survey.Input{
+		Message: "Name",
+		Default: o.config.Backup.Name,
+	}
+	if err := survey.AskOne(
+		pName,
+		&o.config.Backup.Name,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pURL := &survey.Input{
+		Message: "URL Endpoint",
+		Default: o.config.Backup.Endpoint,
+	}
+	if err := survey.AskOne(
+		pURL,
+		&o.config.Backup.Endpoint,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pRegion := &survey.Input{
+		Message: "Region",
+		Default: o.config.Backup.Region,
+	}
+	if err := survey.AskOne(
+		pRegion,
+		&o.config.Backup.Endpoint,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pBucket := &survey.Input{
+		Message: "Bucket",
+		Default: o.config.Backup.Bucket,
+	}
+	if err := survey.AskOne(
+		pBucket,
+		&o.config.Backup.Bucket,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	return o.runBackupCredentialsConfigWizard()
+}
+
+func (o *Operators) runBackupCredentialsConfigWizard() error {
+	pUser := &survey.Input{
+		Message: "Username",
+		Default: o.config.Backup.AccessKey,
+	}
+	if err := survey.AskOne(
+		pUser,
+		&o.config.Backup.AccessKey,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pPass := &survey.Password{Message: "Password"}
+	return survey.AskOne(
+		pPass,
+		&o.config.Backup.SecretKey,
+		survey.WithValidator(survey.Required),
+	)
 }
 
 func (o *Operators) runOperatorsWizard() error {
@@ -329,7 +436,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 		return o.provisionOperators(gCtx)
 	})
 
-	if o.config.Monitoring.Enabled {
+	if o.config.Monitoring.Enable {
 		g.Go(func() error {
 			return o.provisionPMMMonitoring(gCtx)
 		})
@@ -359,7 +466,7 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 	// The limit can be removed after it's refactored.
 	g.SetLimit(operatorInstallThreads)
 
-	if o.config.Monitoring.Enabled {
+	if o.config.Monitoring.Enable {
 		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName))
 	}
 
@@ -409,7 +516,6 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-//nolint:unused
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	l := o.l.WithField("action", "PMM")
 	l.Info("Setting up PMM monitoring")
@@ -433,7 +539,6 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	return nil
 }
 
-//nolint:unused
 func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
 	token, err := o.createPMMAdminToken(ctx, account, "")
 	return token, err
@@ -460,6 +565,32 @@ func (o *Operators) connectToEverest(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
 	}
+
+	o.l.Info("Connected Kubernetes cluster to Everest")
+
+	return nil
+}
+
+func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
+	if !o.config.Backup.Enable {
+		return nil
+	}
+
+	o.l.Info("Creating a new backup storage in Everest")
+
+	_, err := o.everestClient.CreateBackupStorage(ctx, client.CreateBackupStorageParams{
+		Name:       o.config.Backup.Name,
+		BucketName: o.config.Backup.Bucket,
+		AccessKey:  o.config.Backup.AccessKey,
+		SecretKey:  o.config.Backup.SecretKey,
+		Url:        o.config.Backup.Endpoint,
+		Region:     o.config.Backup.Region,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not create a new backup storage in Everest")
+	}
+
+	o.l.Info("Created a new backup storage in Everest")
 
 	return nil
 }
@@ -540,7 +671,6 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
 }
 
-//nolint:unused
 func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,

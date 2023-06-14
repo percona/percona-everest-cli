@@ -266,8 +266,8 @@ github.com/percona/dbaas-operator v0.1.15 h1:oiLsNlgCpjgbsppT4kLzraccIUkEHuwtdJI
 github.com/percona/dbaas-operator v0.1.15/go.mod h1:jYFE7J3aowuhwZ3+OGI/Iy4cXFwJZRk/XrkzPpbm5ps=
 github.com/percona/percona-backup-mongodb v1.8.1-0.20221024072933-3ec38a5fc670 h1:QJ+ID/EDB/E/Eo6wGlDi6K+iKoi9bt5ntiO0HM5DD2U=
 github.com/percona/percona-backup-mongodb v1.8.1-0.20221024072933-3ec38a5fc670/go.mod h1:vq130+8euuK+U03alsLdmJyiK/iIhq7Qs3ApSACwFDc=
-github.com/percona/percona-everest-backend v0.0.0-20230609094829-e30408a86a0a h1:EcLRcyhHapbsHJlqqN4nQLyPGJ5q9x/c3pUvxtCbWGw=
-github.com/percona/percona-everest-backend v0.0.0-20230609094829-e30408a86a0a/go.mod h1:YBcHENcHN23W/be5zbCxqN6+kcdi6VROfUB0bmR/bNE=
+github.com/percona/percona-everest-backend v0.0.0-20230614150938-d4b7fa8b281e h1:lKKtcOuXvLpitsqTpohC1fQSkyH+hFvFuaSlENO9pao=
+github.com/percona/percona-everest-backend v0.0.0-20230614150938-d4b7fa8b281e/go.mod h1:YBcHENcHN23W/be5zbCxqN6+kcdi6VROfUB0bmR/bNE=
 github.com/perimeterx/marshmallow v1.1.4 h1:pZLDH9RjlLGGorbXhcaQLhfuV0pFMNfPO55FuFkxqLw=
 github.com/perimeterx/marshmallow v1.1.4/go.mod h1:dsXbUu8CRzfYP5a87xpp0xq9S3u0Vchtcl8we9tYaXw=
 github.com/pierrec/lz4 v2.6.1+incompatible h1:9UY3+iC23yxF0UfGaYrGplQ+79Rg+h/q9FV9ix19jjM=

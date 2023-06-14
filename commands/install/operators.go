@@ -50,17 +50,22 @@ func NewOperatorsCmd() *cobra.Command {
 
 func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
+	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
+	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
+	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 
-	cmd.Flags().BoolP("monitoring.enabled", "m", true, "Enable monitoring")
+	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
 	cmd.Flags().StringP("monitoring.type", "", "pmm", "Monitoring type")
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
 	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
 
-	cmd.Flags().BoolP("enable_backup", "b", true, "Enable backups")
-	cmd.Flags().BoolP("install_olm", "o", true, "Install OLM")
-	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
+	cmd.Flags().Bool("backup.enable", false, "Enable backups")
+	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
+	cmd.Flags().String("backup.region", "", "Backup region")
+	cmd.Flags().String("backup.bucket", "", "Backup bucket")
+	cmd.Flags().String("backup.access_key", "", "Backup access key")
+	cmd.Flags().String("backup.secret_key", "", "Backup secret key")
 
 	cmd.Flags().String("operator.namespace", "percona-everest", "Namespace where operators are deployed to")
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
@@ -75,11 +80,18 @@ func initOperatorsFlags(cmd *cobra.Command) {
 
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 
-	viper.BindPFlag("monitoring.enabled", cmd.Flags().Lookup("monitoring.enabled"))           //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))             //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                 //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username")) //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password")) //nolint:errcheck,gosec
+
+	viper.BindPFlag("backup.enable", cmd.Flags().Lookup("backup.enable"))         //nolint:errcheck,gosec
+	viper.BindPFlag("backup.endpoint", cmd.Flags().Lookup("backup.endpoint"))     //nolint:errcheck,gosec
+	viper.BindPFlag("backup.region", cmd.Flags().Lookup("backup.region"))         //nolint:errcheck,gosec
+	viper.BindPFlag("backup.bucket", cmd.Flags().Lookup("backup.bucket"))         //nolint:errcheck,gosec
+	viper.BindPFlag("backup.access_key", cmd.Flags().Lookup("backup.access_key")) //nolint:errcheck,gosec
+	viper.BindPFlag("backup.secret_key", cmd.Flags().Lookup("backup.secret_key")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("enable_backup", cmd.Flags().Lookup("enable_backup")) //nolint:errcheck,gosec
 	viper.BindPFlag("install_olm", cmd.Flags().Lookup("install_olm"))     //nolint:errcheck,gosec
