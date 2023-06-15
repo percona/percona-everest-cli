@@ -412,7 +412,6 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-//nolint:unused
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	l := o.l.WithField("action", "PMM")
 	l.Info("Setting up PMM monitoring")
@@ -436,7 +435,6 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	return nil
 }
 
-//nolint:unused
 func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
 	token, err := o.createPMMAdminToken(ctx, account, "")
 	return token, err
@@ -513,6 +511,7 @@ func (o *Operators) prepareServiceAccount() error {
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
 	// Create token secret
+	//nolint:lll
 	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 	if err != nil {
 		return "", err
@@ -543,7 +542,6 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
 }
 
-//nolint:unused
 func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
