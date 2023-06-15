@@ -59,7 +59,7 @@ type (
 		Channel ChannelConfig `mapstructure:"channel"`
 		Everest EverestConfig `mapstructure:"everest"`
 		// InstallOLM is true if OLM shall be installed.
-		InstallOLM bool `mapstructure:"install_olm"`
+		InstallOLM bool `mapstructure:"install-olm"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string           `mapstructure:"kubeconfig"`
 		Monitoring     MonitoringConfig `mapstructure:"monitoring"`
@@ -111,7 +111,7 @@ type (
 		// PSMDB stores if MongoDB shall be installed.
 		PSMDB bool `mapstructure:"mongodb"`
 		// PXC stores if XtraDB Cluster shall be installed.
-		PXC bool `mapstructure:"xtradb_cluster"`
+		PXC bool `mapstructure:"xtradb-cluster"`
 	}
 
 	// PMMConfig stores configuration for PMM monitoring type.
@@ -133,9 +133,9 @@ type (
 		// PSMDB stores channel for MongoDB.
 		PSMDB string `mapstructure:"mongodb"`
 		// PXC stores channel for xtradb cluster.
-		PXC string `mapstructure:"xtradb_cluster"`
+		PXC string `mapstructure:"xtradb-cluster"`
 		// VictoriaMetrics stores channel for VictoriaMetrics.
-		VictoriaMetrics string `mapstructure:"victoria_metrics"`
+		VictoriaMetrics string `mapstructure:"victoria-metrics"`
 	}
 )
 
