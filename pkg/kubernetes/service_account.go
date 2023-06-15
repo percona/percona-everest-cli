@@ -6,14 +6,15 @@ import (
 )
 
 // CreateServiceAccount creates a new service account.
-func (k *Kubernetes) CreateServiceAccount(name string) error {
+func (k *Kubernetes) CreateServiceAccount(name, namespace string) error {
 	sa := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "ServiceAccount",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
+			Namespace: namespace,
 		},
 	}
 
@@ -21,7 +22,7 @@ func (k *Kubernetes) CreateServiceAccount(name string) error {
 }
 
 // CreateServiceAccountToken creates a new secret with service account token.
-func (k *Kubernetes) CreateServiceAccountToken(serviceAccountName, secretName string) error {
+func (k *Kubernetes) CreateServiceAccountToken(serviceAccountName, secretName, namespace string) error {
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
@@ -31,7 +32,8 @@ func (k *Kubernetes) CreateServiceAccountToken(serviceAccountName, secretName st
 			Annotations: map[string]string{
 				corev1.ServiceAccountNameKey: serviceAccountName,
 			},
-			Name: secretName,
+			Name:      secretName,
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}

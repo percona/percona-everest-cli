@@ -433,13 +433,13 @@ func (_m *MockKubeClientConnector) GetPods(ctx context.Context, namespace string
 	return r0, r1
 }
 
-// GetSecret provides a mock function with given fields: ctx, name
-func (_m *MockKubeClientConnector) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	ret := _m.Called(ctx, name)
+// GetSecret provides a mock function with given fields: ctx, name, namespace
+func (_m *MockKubeClientConnector) GetSecret(ctx context.Context, name string, namespace string) (*corev1.Secret, error) {
+	ret := _m.Called(ctx, name, namespace)
 
 	var r0 *corev1.Secret
-	if rf, ok := ret.Get(0).(func(context.Context, string) *corev1.Secret); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *corev1.Secret); ok {
+		r0 = rf(ctx, name, namespace)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*corev1.Secret)
@@ -447,8 +447,8 @@ func (_m *MockKubeClientConnector) GetSecret(ctx context.Context, name string) (
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, name, namespace)
 	} else {
 		r1 = ret.Error(1)
 	}

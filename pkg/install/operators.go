@@ -55,7 +55,8 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Channel ChannelConfig `mapstructure:"channel"`
+		Channel    ChannelConfig `mapstructure:"channel"`
+		SkipWizard bool          `mapstructure:"skip-wizard"`
 		// EnableBackup is true if backup shall be enabled.
 		EnableBackup bool          `mapstructure:"enable_backup"`
 		Everest      EverestConfig `mapstructure:"everest"`
@@ -144,8 +145,10 @@ func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Op
 
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
-	if err := o.runWizard(); err != nil {
-		return err
+	if !o.config.SkipWizard {
+		if err := o.runWizard(); err != nil {
+			return err
+		}
 	}
 	if err := o.provisionNamespace(); err != nil {
 		return err
@@ -409,7 +412,6 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-//nolint:unused
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	l := o.l.WithField("action", "PMM")
 	l.Info("Setting up PMM monitoring")
@@ -433,7 +435,6 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	return nil
 }
 
-//nolint:unused
 func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
 	token, err := o.createPMMAdminToken(ctx, account, "")
 	return token, err
@@ -466,7 +467,7 @@ func (o *Operators) connectToEverest(ctx context.Context) error {
 
 func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
-	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount); err != nil {
+	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Operator.Namespace); err != nil {
 		return errors.Wrap(err, "could not create service account")
 	}
 
@@ -510,7 +511,8 @@ func (o *Operators) prepareServiceAccount() error {
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
 	// Create token secret
-	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret)
+	//nolint:lll
+	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -518,7 +520,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	var secret *corev1.Secret
 	checkSecretData := func(ctx context.Context) (bool, error) {
 		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
-		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret)
+		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 		if err != nil {
 			return false, err
 		}
@@ -540,7 +542,6 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
 }
 
-//nolint:unused
 func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
