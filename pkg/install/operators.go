@@ -469,7 +469,7 @@ func (o *Operators) connectToEverest(ctx context.Context) error {
 
 func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
-	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount); err != nil {
+	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Operator.Namespace); err != nil {
 		return errors.Wrap(err, "could not create service account")
 	}
 
@@ -513,7 +513,7 @@ func (o *Operators) prepareServiceAccount() error {
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
 	// Create token secret
-	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret)
+	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -521,7 +521,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	var secret *corev1.Secret
 	checkSecretData := func(ctx context.Context) (bool, error) {
 		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
-		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret)
+		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 		if err != nil {
 			return false, err
 		}

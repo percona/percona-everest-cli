@@ -272,8 +272,8 @@ func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error
 }
 
 // GetSecret returns secret by name.
-func (k *Kubernetes) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	return k.client.GetSecret(ctx, name)
+func (k *Kubernetes) GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
+	return k.client.GetSecret(ctx, name, namespace)
 }
 
 // ListSecrets returns secret by name.

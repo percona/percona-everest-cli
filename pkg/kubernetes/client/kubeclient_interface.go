@@ -40,7 +40,7 @@ type KubeClientConnector interface {
 	// GetDeployment returns deployment by name.
 	GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error)
 	// GetSecret returns secret by name.
-	GetSecret(ctx context.Context, name string) (*corev1.Secret, error)
+	GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error)
 	// ListSecrets returns secrets.
 	ListSecrets(ctx context.Context) (*corev1.SecretList, error)
 	// DeleteObject deletes object from the k8s cluster.

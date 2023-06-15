@@ -322,8 +322,8 @@ func (c *Client) GetDeployment(ctx context.Context, name string, namespace strin
 }
 
 // GetSecret returns secret by name.
-func (c *Client) GetSecret(ctx context.Context, name string) (*corev1.Secret, error) {
-	return c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+func (c *Client) GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
+	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // ListSecrets returns secrets.
