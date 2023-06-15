@@ -55,8 +55,8 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Channel ChannelConfig `mapstructure:"channel"`
-		Quiet   bool          `mapstructure:"quiet"`
+		Channel    ChannelConfig `mapstructure:"channel"`
+		SkipWizard bool          `mapstructure:"skip-wizard"`
 		// EnableBackup is true if backup shall be enabled.
 		EnableBackup bool          `mapstructure:"enable_backup"`
 		Everest      EverestConfig `mapstructure:"everest"`
@@ -145,7 +145,7 @@ func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Op
 
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
-	if !o.config.Quiet {
+	if !o.config.SkipWizard {
 		if err := o.runWizard(); err != nil {
 			return err
 		}
