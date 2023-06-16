@@ -53,9 +53,10 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolP("install-olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
+	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
-	cmd.Flags().StringP("monitoring.type", "", "pmm", "Monitoring type")
+	cmd.Flags().String("monitoring.type", "pmm", "Monitoring type")
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
 	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
@@ -79,6 +80,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
+	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))           //nolint:errcheck,gosec
 
 	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))             //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                 //nolint:errcheck,gosec

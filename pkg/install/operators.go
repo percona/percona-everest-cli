@@ -55,17 +55,20 @@ type (
 
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
-		Backup  BackupConfig  `mapstructure:"backup"`
-		Channel ChannelConfig `mapstructure:"channel"`
-		Everest EverestConfig `mapstructure:"everest"`
+		// Name of the Kubernetes Cluster
+		Name string `mapstructure:"name"`
+		// SkipWizard skips wizard during installation.
+		SkipWizard bool `mapstructure:"skip-wizard"`
 		// InstallOLM is true if OLM shall be installed.
 		InstallOLM bool `mapstructure:"install-olm"`
 		// KubeconfigPath is a path to a kubeconfig
-		KubeconfigPath string           `mapstructure:"kubeconfig"`
-		Monitoring     MonitoringConfig `mapstructure:"monitoring"`
-		// Name of the Kubernetes Cluster
-		Name     string         `mapstructure:"name"`
-		Operator OperatorConfig `mapstructure:"operator"`
+		KubeconfigPath string `mapstructure:"kubeconfig"`
+
+		Backup     BackupConfig     `mapstructure:"backup"`
+		Channel    ChannelConfig    `mapstructure:"channel"`
+		Everest    EverestConfig    `mapstructure:"everest"`
+		Monitoring MonitoringConfig `mapstructure:"monitoring"`
+		Operator   OperatorConfig   `mapstructure:"operator"`
 	}
 
 	// BackupConfig stores configuration for backup.
@@ -161,8 +164,10 @@ func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Op
 
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
-	if err := o.runWizard(); err != nil {
-		return err
+	if !o.config.SkipWizard {
+		if err := o.runWizard(); err != nil {
+			return err
+		}
 	}
 	if err := o.provisionNamespace(); err != nil {
 		return err
@@ -597,7 +602,7 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 
 func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
-	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount); err != nil {
+	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Operator.Namespace); err != nil {
 		return errors.Wrap(err, "could not create service account")
 	}
 
@@ -641,7 +646,8 @@ func (o *Operators) prepareServiceAccount() error {
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
 	// Create token secret
-	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret)
+	//nolint:lll
+	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -649,7 +655,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	var secret *corev1.Secret
 	checkSecretData := func(ctx context.Context) (bool, error) {
 		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
-		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret)
+		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
 		if err != nil {
 			return false, err
 		}
