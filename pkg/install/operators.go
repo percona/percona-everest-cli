@@ -588,7 +588,7 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 		BucketName: o.config.Backup.Bucket,
 		AccessKey:  o.config.Backup.AccessKey,
 		SecretKey:  o.config.Backup.SecretKey,
-		Url:        o.config.Backup.Endpoint,
+		Url:        &o.config.Backup.Endpoint,
 		Region:     o.config.Backup.Region,
 	})
 	if err != nil {

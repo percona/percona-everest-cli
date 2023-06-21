@@ -268,6 +268,8 @@ github.com/percona/percona-backup-mongodb v1.8.1-0.20221024072933-3ec38a5fc670 h
 github.com/percona/percona-backup-mongodb v1.8.1-0.20221024072933-3ec38a5fc670/go.mod h1:vq130+8euuK+U03alsLdmJyiK/iIhq7Qs3ApSACwFDc=
 github.com/percona/percona-everest-backend v0.0.0-20230614150938-d4b7fa8b281e h1:lKKtcOuXvLpitsqTpohC1fQSkyH+hFvFuaSlENO9pao=
 github.com/percona/percona-everest-backend v0.0.0-20230614150938-d4b7fa8b281e/go.mod h1:YBcHENcHN23W/be5zbCxqN6+kcdi6VROfUB0bmR/bNE=
+github.com/percona/percona-everest-backend v0.0.0-20230621135027-58f1fbd7aade h1:2dd8eM/oTyLb9A40x1lU66bql/cnHecPELZ9H1pPjkI=
+github.com/percona/percona-everest-backend v0.0.0-20230621135027-58f1fbd7aade/go.mod h1:9AaMu6Mdbl5aor0bpr7Nv1WU0sn3oOwN9GRzFic9sS4=
 github.com/perimeterx/marshmallow v1.1.4 h1:pZLDH9RjlLGGorbXhcaQLhfuV0pFMNfPO55FuFkxqLw=
 github.com/perimeterx/marshmallow v1.1.4/go.mod h1:dsXbUu8CRzfYP5a87xpp0xq9S3u0Vchtcl8we9tYaXw=
 github.com/pierrec/lz4 v2.6.1+incompatible h1:9UY3+iC23yxF0UfGaYrGplQ+79Rg+h/q9FV9ix19jjM=
