@@ -2,6 +2,7 @@
 package install
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
@@ -23,7 +24,7 @@ func NewOperatorsCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			everestCl, err := client.NewClient(c.Everest.Endpoint)
+			everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", c.Everest.Endpoint))
 			if err != nil {
 				logrus.Error(err)
 				os.Exit(1)
