@@ -467,35 +467,41 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 
 	return nil
 }
+func (k *Kubernetes) InstallPerconaCatalog() error {
+	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
+	if err != nil {
+		return errors.Wrapf(err, "failed to read percona catalog file")
+	}
+
+	if err := k.client.ApplyFile(data); err != nil {
+		return errors.Wrapf(err, "cannot apply percona catalog file")
+	}
+	return nil
+}
 
 func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
-	files := []struct {
-		path           string
-		addToResources bool
-	}{
-		{"crds/olm/crds.yaml", true},
-		{"crds/olm/olm.yaml", true},
-		{"crds/olm/percona-dbaas-catalog.yaml", false},
+	files := []string{
+
+		"crds/olm/crds.yaml",
+		"crds/olm/olm.yaml",
 	}
 
 	resources := []unstructured.Unstructured{}
 	for _, f := range files {
-		data, err := fs.ReadFile(data.OLMCRDs, f.path)
+		data, err := fs.ReadFile(data.OLMCRDs, f)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read %q file", f.path)
+			return nil, errors.Wrapf(err, "failed to read %q file", f)
 		}
 
 		if err := k.client.ApplyFile(data); err != nil {
-			return nil, errors.Wrapf(err, "cannot apply %q file", f.path)
+			return nil, errors.Wrapf(err, "cannot apply %q file", f)
 		}
 
-		if f.addToResources {
-			r, err := decodeResources(data)
-			if err != nil {
-				return nil, errors.Wrapf(err, "cannot decode resources in %q", f.path)
-			}
-			resources = append(resources, r...)
+		r, err := decodeResources(data)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot decode resources in %q", f)
 		}
+		resources = append(resources, r...)
 	}
 
 	return resources, nil

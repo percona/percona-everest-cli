@@ -59,8 +59,6 @@ type (
 		Name string `mapstructure:"name"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
-		// InstallOLM is true if OLM shall be installed.
-		InstallOLM bool `mapstructure:"install-olm"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
@@ -451,12 +449,13 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 }
 
 func (o *Operators) provisionOLM(ctx context.Context) error {
-	if o.config.InstallOLM {
-		o.l.Info("Installing Operator Lifecycle Manager")
-		if err := o.kubeClient.InstallOLMOperator(ctx); err != nil {
-			o.l.Error("failed installing OLM")
-			return err
-		}
+	o.l.Info("Installing Operator Lifecycle Manager")
+	if err := o.kubeClient.InstallOLMOperator(ctx); err != nil {
+		o.l.Error("failed installing OLM")
+		return err
+	}
+	if err := o.kubeClient.InstallPerconaCatalog(); err != nil {
+		o.l.Errorf("failed installing OLM catalog: %v", err)
 	}
 	o.l.Info("OLM has been installed")
 
