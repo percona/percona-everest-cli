@@ -454,10 +454,12 @@ func (o *Operators) provisionOLM(ctx context.Context) error {
 		o.l.Error("failed installing OLM")
 		return err
 	}
-	if err := o.kubeClient.InstallPerconaCatalog(); err != nil {
+	o.l.Info("OLM has been installed")
+	o.l.Info("Installing Percona OLM Catalog")
+	if err := o.kubeClient.InstallPerconaCatalog(ctx); err != nil {
 		o.l.Errorf("failed installing OLM catalog: %v", err)
 	}
-	o.l.Info("OLM has been installed")
+	o.l.Info("Percona OLM Catalog has been installed")
 
 	return nil
 }

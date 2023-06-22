@@ -86,7 +86,7 @@ const (
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
 
 	pollInterval = 1 * time.Second
-	pollDuration = 10 * time.Minute
+	pollDuration = 150 * time.Second
 )
 
 // ErrEmptyVersionTag Got an empty version tag from GitHub API.
@@ -467,7 +467,9 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 
 	return nil
 }
-func (k *Kubernetes) InstallPerconaCatalog() error {
+
+// InstallPerconaCatalog installs percona catalog and ensures that packages are available
+func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
 		return errors.Wrapf(err, "failed to read percona catalog file")
@@ -476,12 +478,18 @@ func (k *Kubernetes) InstallPerconaCatalog() error {
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Wrapf(err, "cannot apply percona catalog file")
 	}
+	if err := k.client.DoPackageWait(ctx, "dbaas-operator"); err != nil {
+		return errors.Wrapf(err, "timeout waiting for package")
+	}
+	return nil
+}
+
+func (k *Kubernetes) waitForPackageService() error {
 	return nil
 }
 
 func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 	files := []string{
-
 		"crds/olm/crds.yaml",
 		"crds/olm/olm.yaml",
 	}

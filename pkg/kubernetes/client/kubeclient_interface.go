@@ -62,6 +62,8 @@ type KubeClientConnector interface {
 	ApplyFile(fileBytes []byte) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
+	// DoPackageWait waits until for a package to be ready.
+	DoPackageWait(ctx context.Context, name string) error
 	// GetSubscriptionCSV retrieves a subscription CSV.
 	GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedName) (types.NamespacedName, error)
 	// DoRolloutWait waits until a deployment has been rolled out susccessfully or there is an error.
