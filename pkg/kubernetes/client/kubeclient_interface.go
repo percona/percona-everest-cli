@@ -7,6 +7,7 @@ import (
 
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -62,8 +63,6 @@ type KubeClientConnector interface {
 	ApplyFile(fileBytes []byte) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
-	// DoPackageWait waits until for a package to be ready.
-	DoPackageWait(ctx context.Context, name string) error
 	// GetSubscriptionCSV retrieves a subscription CSV.
 	GetSubscriptionCSV(ctx context.Context, subKey types.NamespacedName) (types.NamespacedName, error)
 	// DoRolloutWait waits until a deployment has been rolled out susccessfully or there is an error.
@@ -82,6 +81,10 @@ type KubeClientConnector interface {
 	ListSubscriptions(ctx context.Context, namespace string) (*v1alpha1.SubscriptionList, error)
 	// GetInstallPlan retrieves an OLM install plan by namespace and name.
 	GetInstallPlan(ctx context.Context, namespace string, name string) (*v1alpha1.InstallPlan, error)
+	// DoPackageWaits for the package to be avaiable in OLM.
+	DoPackageWait(ctx context.Context, name string) error
+	// GetPackageManifest returns a package manifest by given name.
+	GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error)
 	// UpdateInstallPlan updates the existing install plan in the specified namespace.
 	UpdateInstallPlan(ctx context.Context, namespace string, installPlan *v1alpha1.InstallPlan) (*v1alpha1.InstallPlan, error)
 	// ListCRDs returns a list of CRDs.

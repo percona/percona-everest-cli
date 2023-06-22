@@ -1105,6 +1105,7 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 	return operatorClient.OperatorsV1alpha1().InstallPlans(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// DoPackageWaits for the package to be avaiable in OLM.
 func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 	packageInstalled := func(ctx context.Context) (bool, error) {
 		_, err := c.GetPackageManifest(ctx, name)
@@ -1119,6 +1120,7 @@ func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 	return wait.PollUntilContextCancel(ctx, time.Second, true, packageInstalled)
 }
 
+// GetPackageManifest returns a package manifest by given name.
 func (c *Client) GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error) {
 	namespace := "olm"
 	operatorClient, err := packageServerClient.NewForConfig(c.restConfig)
