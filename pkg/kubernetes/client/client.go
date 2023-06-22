@@ -1105,7 +1105,7 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 	return operatorClient.OperatorsV1alpha1().InstallPlans(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-// DoPackageWait for the package to be avaiable in OLM.
+// DoPackageWait for the package to be available in OLM.
 func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 	packageInstalled := func(ctx context.Context) (bool, error) {
 		_, err := c.GetPackageManifest(ctx, name)

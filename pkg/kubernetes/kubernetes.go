@@ -468,7 +468,7 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 	return nil
 }
 
-// InstallPerconaCatalog installs percona catalog and ensures that packages are available
+// InstallPerconaCatalog installs percona catalog and ensures that packages are available.
 func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
@@ -481,10 +481,6 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err := k.client.DoPackageWait(ctx, "dbaas-operator"); err != nil {
 		return errors.Wrapf(err, "timeout waiting for package")
 	}
-	return nil
-}
-
-func (k *Kubernetes) waitForPackageService() error {
 	return nil
 }
 
