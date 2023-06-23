@@ -1111,7 +1111,7 @@ func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 		_, err := c.GetPackageManifest(ctx, name)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
-				return false, nil
+				return false, err
 			}
 			return false, nil
 		}
