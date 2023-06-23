@@ -33,6 +33,8 @@ import (
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
+	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
+	packageServerClient "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/client/clientset/versioned"
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -1101,6 +1103,32 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 	}
 
 	return operatorClient.OperatorsV1alpha1().InstallPlans(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// DoPackageWait for the package to be available in OLM.
+func (c *Client) DoPackageWait(ctx context.Context, name string) error {
+	packageInstalled := func(ctx context.Context) (bool, error) {
+		_, err := c.GetPackageManifest(ctx, name)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return false, err
+			}
+			return false, nil
+		}
+		return true, nil
+	}
+	return wait.PollUntilContextCancel(ctx, time.Second, true, packageInstalled)
+}
+
+// GetPackageManifest returns a package manifest by given name.
+func (c *Client) GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error) {
+	namespace := "olm"
+	operatorClient, err := packageServerClient.NewForConfig(c.restConfig)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create an operator client instance")
+	}
+
+	return operatorClient.OperatorsV1().PackageManifests(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 // UpdateInstallPlan updates the existing install plan in the specified namespace.

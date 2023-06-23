@@ -51,7 +51,6 @@ func NewOperatorsCmd() *cobra.Command {
 
 func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
-	cmd.Flags().BoolP("install-olm", "o", true, "Install OLM")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
@@ -100,9 +99,8 @@ func initViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("backup.access-key", cmd.Flags().Lookup("backup.access-key")) //nolint:errcheck,gosec
 	viper.BindPFlag("backup.secret-key", cmd.Flags().Lookup("backup.secret-key")) //nolint:errcheck,gosec
 
-	viper.BindPFlag("install-olm", cmd.Flags().Lookup("install-olm")) //nolint:errcheck,gosec
-	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))   //nolint:errcheck,gosec
-	viper.BindPFlag("name", cmd.Flags().Lookup("name"))               //nolint:errcheck,gosec
+	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
+	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.namespace", cmd.Flags().Lookup("operator.namespace"))           //nolint:errcheck,gosec
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec

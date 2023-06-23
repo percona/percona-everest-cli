@@ -34,3 +34,9 @@ test-cover:             ## Run tests and collect per-package coverage informatio
 
 test-crosscover:        ## Run tests and collect cross-package coverage information
 	go test -race -timeout=30s -count=1 -coverprofile=crosscover.out -covermode=atomic -p=1 -coverpkg=./... ./...
+
+k8s: ## Create a local minikube cluster
+	minikube start --nodes=3 --cpus=4 --memory=4g --apiserver-names host.docker.internal
+	minikube addons disable storage-provisioner
+	kubectl delete storageclass standard
+	kubectl apply -f ./dev/kubevirt-hostpath-provisioner.yaml
