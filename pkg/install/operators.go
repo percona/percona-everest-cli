@@ -434,18 +434,17 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 		return err
 	}
 
-	g, gCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		return o.provisionOperators(gCtx)
-	})
-
-	if o.config.Monitoring.Enable {
-		g.Go(func() error {
-			return o.provisionPMMMonitoring(gCtx)
-		})
+	if err := o.provisionOperators(ctx); err != nil {
+		return err
 	}
 
-	return g.Wait()
+	if o.config.Monitoring.Enable {
+		if err := o.provisionPMMMonitoring(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (o *Operators) provisionOLM(ctx context.Context) error {
