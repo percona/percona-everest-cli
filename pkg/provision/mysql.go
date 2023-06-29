@@ -80,7 +80,6 @@ func (m *MySQL) Run(ctx context.Context) error {
 
 	m.l.Infof("Creating %q database cluster", m.config.Name)
 	_, err = m.everestClient.CreateDBCluster(ctx, m.config.KubernetesID, *body)
-
 	if err != nil {
 		return err
 	}
