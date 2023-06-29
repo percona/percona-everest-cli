@@ -19,6 +19,8 @@ func NewOperatorsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "operators",
 		Run: func(cmd *cobra.Command, args []string) {
+			initOperatorsViperFlags(cmd)
+
 			c, err := parseConfig()
 			if err != nil {
 				os.Exit(1)
@@ -78,11 +80,9 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("channel.xtradb-cluster", "stable-v1", "Channel for XtraDB Cluster operator")
 	cmd.Flags().String("channel.mongodb", "stable-v1", "Channel for MongoDB operator")
 	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
-
-	initViperFlags(cmd)
 }
 
-func initViperFlags(cmd *cobra.Command) {
+func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))           //nolint:errcheck,gosec
 

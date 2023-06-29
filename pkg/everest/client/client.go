@@ -38,7 +38,7 @@ func do[B interface{}, R interface{}](
 	}
 	defer res.Body.Close() //nolint:errcheck
 
-	if res.StatusCode != http.StatusOK {
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		return processErrorResponse(res, errorStatus)
 	}
 

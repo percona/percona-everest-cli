@@ -10,6 +10,8 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	rootCmd.AddCommand(newInstallCmd())
+	rootCmd.AddCommand(newProvisionCmd())
+	rootCmd.AddCommand(newDeleteCmd())
 
 	return rootCmd
 }
