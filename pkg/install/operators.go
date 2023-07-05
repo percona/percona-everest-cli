@@ -617,7 +617,12 @@ func (o *Operators) prepareServiceAccount() error {
 		{
 			APIGroups: []string{"dbaas.percona.com"},
 			Resources: []string{"databaseengines"},
-			Verbs:     []string{"get", "list"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"dbaas.percona.com"},
+			Resources: []string{"databaseclusterrestores"},
+			Verbs:     []string{"*"},
 		},
 		{
 			APIGroups: []string{""},
