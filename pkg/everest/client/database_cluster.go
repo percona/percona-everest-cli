@@ -15,7 +15,7 @@ func (e *Everest) CreateDBCluster(
 	body client.CreateDatabaseClusterJSONRequestBody,
 ) (*client.DatabaseCluster, error) {
 	res := &client.DatabaseCluster{}
-	err := do(
+	err := makeRequest(
 		ctx,
 		func(
 			ctx context.Context,
@@ -26,7 +26,11 @@ func (e *Everest) CreateDBCluster(
 		},
 		body, res, errors.New("cannot create database cluster due to Everest error"),
 	)
-	return res, err
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // DeleteDBCluster deletes a database cluster.
@@ -36,7 +40,7 @@ func (e *Everest) DeleteDBCluster(
 	name string,
 ) (*client.IoK8sApimachineryPkgApisMetaV1StatusV2, error) {
 	res := &client.IoK8sApimachineryPkgApisMetaV1StatusV2{}
-	err := do(
+	err := makeRequest(
 		ctx,
 		func(
 			ctx context.Context,
@@ -47,5 +51,9 @@ func (e *Everest) DeleteDBCluster(
 		},
 		struct{}{}, res, errors.New("cannot delete database cluster due to Everest error"),
 	)
-	return res, err
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

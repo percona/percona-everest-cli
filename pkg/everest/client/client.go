@@ -23,9 +23,9 @@ func NewEverest(everestClient *client.Client) *Everest {
 	}
 }
 
-// do calls arbitrary *client.Client method for API call and applies common logic for response handling.
+// makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.
 // See methods in Everest struct for examples how to call.
-func do[B interface{}, R interface{}](
+func makeRequest[B interface{}, R interface{}](
 	ctx context.Context,
 	fn func(context.Context, B, ...client.RequestEditorFn) (*http.Response, error),
 	body B,

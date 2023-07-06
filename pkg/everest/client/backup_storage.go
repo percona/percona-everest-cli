@@ -12,10 +12,14 @@ func (e *Everest) CreateBackupStorage(
 	ctx context.Context,
 	body client.CreateBackupStorageJSONRequestBody,
 ) (*client.BackupStorage, error) {
-	bs := &client.BackupStorage{}
-	err := do(
+	res := &client.BackupStorage{}
+	err := makeRequest(
 		ctx, e.cl.CreateBackupStorage,
-		body, bs, errors.New("cannot create backup storage due to Everest error"),
+		body, res, errors.New("cannot create backup storage due to Everest error"),
 	)
-	return bs, err
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

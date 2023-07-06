@@ -12,10 +12,14 @@ func (e *Everest) RegisterKubernetesCluster(
 	ctx context.Context,
 	body client.RegisterKubernetesClusterJSONRequestBody,
 ) (*client.KubernetesCluster, error) {
-	cluster := &client.KubernetesCluster{}
-	err := do(
+	res := &client.KubernetesCluster{}
+	err := makeRequest(
 		ctx, e.cl.RegisterKubernetesCluster,
-		body, cluster, errors.New("cannot register Kubernetes cluster due to Everest error"),
+		body, res, errors.New("cannot register Kubernetes cluster due to Everest error"),
 	)
-	return cluster, err
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
