@@ -33,6 +33,7 @@ import (
 	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	yamlv3 "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -282,14 +283,15 @@ func (k *Kubernetes) ListSecrets(ctx context.Context) (*corev1.SecretList, error
 }
 
 // CreatePMMSecret creates pmm secret in kubernetes.
-func (k *Kubernetes) CreatePMMSecret(secretName string, secrets map[string][]byte) error {
+func (k *Kubernetes) CreatePMMSecret(namespace, secretName string, secrets map[string][]byte) error {
 	secret := &corev1.Secret{ //nolint: exhaustruct
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: secretName,
+			Name:      secretName,
+			Namespace: namespace,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: secrets,
@@ -717,14 +719,14 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 }
 
 // ProvisionMonitoring provisions PMM monitoring and creates a VM Agent instance.
-func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress string) error {
+func (k *Kubernetes) ProvisionMonitoring(namespace, login, password, pmmPublicAddress string) error {
 	randomCrypto, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
 		return err
 	}
 
-	secretName := fmt.Sprintf("vm-operator-%d", randomCrypto)
-	err = k.CreatePMMSecret(secretName, map[string][]byte{
+	secretName := fmt.Sprintf("pmm-credentials-token-%d", randomCrypto)
+	err = k.CreatePMMSecret(namespace, secretName, map[string][]byte{
 		"username": []byte(login),
 		"password": []byte(password),
 	})
@@ -732,24 +734,7 @@ func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress strin
 		return errors.Wrap(err, "cannot create PMM secret")
 	}
 
-	vmagent := vmAgentSpec(secretName, pmmPublicAddress)
-	err = k.client.ApplyObject(vmagent)
-	if err != nil {
-		return errors.Wrap(err, "cannot apply vm agent spec")
-	}
-
-	files := []string{
-		"crds/victoriametrics/crs/vmagent_rbac.yaml",
-		"crds/victoriametrics/crs/vmnodescrape.yaml",
-		"crds/victoriametrics/crs/vmpodscrape.yaml",
-		"crds/victoriametrics/kube-state-metrics/service-account.yaml",
-		"crds/victoriametrics/kube-state-metrics/cluster-role.yaml",
-		"crds/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
-		"crds/victoriametrics/kube-state-metrics/deployment.yaml",
-		"crds/victoriametrics/kube-state-metrics/service.yaml",
-		"crds/victoriametrics/kube-state-metrics.yaml",
-	}
-	for _, path := range files {
+	for _, path := range k.victoriaMetricsCRDFiles() {
 		file, err := data.OLMCRDs.ReadFile(path)
 		if err != nil {
 			return err
@@ -757,7 +742,12 @@ func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress strin
 		// retry 3 times because applying vmagent spec might take some time.
 		for i := 0; i < 3; i++ {
 			k.l.Debugf("Applying file %s", path)
-			err = k.client.ApplyFile(file)
+			newFile, err := k.applyTemplateCustomization(namespace, file)
+			if err != nil {
+				return errors.Wrapf(err, "cannot apply customizations to file: %q", path)
+			}
+
+			err = k.client.ApplyFile(newFile)
 			if err != nil {
 				k.l.Debugf("%s: retrying after error: %s", path, err)
 				time.Sleep(10 * time.Second)
@@ -769,30 +759,89 @@ func (k *Kubernetes) ProvisionMonitoring(login, password, pmmPublicAddress strin
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}
 	}
+
+	return k.deployVMAgent(namespace, secretName, pmmPublicAddress)
+}
+
+func (k *Kubernetes) deployVMAgent(namespace, secretName, pmmPublicAddress string) error {
+	k.l.Debug("Applying VMAgent spec")
+	vmagent, err := vmAgentSpec(namespace, secretName, pmmPublicAddress)
+	if err != nil {
+		return errors.Wrap(err, "cannot generate VMAgent spec")
+	}
+
+	err = k.client.ApplyObject(vmagent)
+	if err != nil {
+		return errors.Wrap(err, "cannot apply VMAgent spec")
+	}
+	k.l.Debug("VMAgent spec has been applied")
+
 	return nil
 }
 
-// CleanupMonitoring remove all files installed by ProvisionMonitoring.
-func (k *Kubernetes) CleanupMonitoring() error {
-	files := []string{
-		"crds/victoriametrics/kube-state-metrics.yaml",
-		"crds/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
-		"crds/victoriametrics/kube-state-metrics/cluster-role.yaml",
-		"crds/victoriametrics/kube-state-metrics/deployment.yaml",
-		"crds/victoriametrics/kube-state-metrics/service-account.yaml",
-		"crds/victoriametrics/kube-state-metrics/service.yaml",
-		"crds/victoriametrics/crs/vmagent_rbac.yaml",
+func (k *Kubernetes) victoriaMetricsCRDFiles() []string {
+	return []string{
+		"crds/victoriametrics/crs/vmagent_rbac_account.yaml",
+		"crds/victoriametrics/crs/vmagent_rbac_role.yaml",
+		"crds/victoriametrics/crs/vmagent_rbac_role_binding.yaml",
 		"crds/victoriametrics/crs/vmnodescrape.yaml",
 		"crds/victoriametrics/crs/vmpodscrape.yaml",
+		"crds/victoriametrics/kube-state-metrics/service-account.yaml",
+		"crds/victoriametrics/kube-state-metrics/cluster-role.yaml",
+		"crds/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"crds/victoriametrics/kube-state-metrics/deployment.yaml",
+		"crds/victoriametrics/kube-state-metrics/service.yaml",
+		"crds/victoriametrics/kube-state-metrics.yaml",
 	}
-	for _, path := range files {
-		file, err := data.OLMCRDs.ReadFile(path)
-		if err != nil {
-			return err
+}
+
+func (k *Kubernetes) applyTemplateCustomization(namespace string, contents []byte) ([]byte, error) {
+	o := make(map[string]interface{})
+	if err := yamlv3.Unmarshal(contents, &o); err != nil {
+		return nil, err
+	}
+
+	if err := unstructured.SetNestedField(o, namespace, "metadata", "namespace"); err != nil {
+		return nil, err
+	}
+
+	kind, ok, err := unstructured.NestedString(o, "kind")
+	if err != nil {
+		return nil, err
+	}
+
+	if ok && kind == "ClusterRoleBinding" {
+		if err := k.updateClusterRoleBindingNamespace(o, namespace); err != nil {
+			return nil, err
 		}
-		err = k.client.DeleteFile(file)
-		if err != nil {
-			return errors.Wrapf(err, "cannot apply file: %q", path)
+	}
+
+	return yamlv3.Marshal(o)
+}
+
+func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{}, namespace string) error {
+	sub, ok, err := unstructured.NestedFieldNoCopy(o, "subjects")
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return nil
+	}
+
+	subjects, ok := sub.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	for _, s := range subjects {
+		sub, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
+			return err
 		}
 	}
 
@@ -804,7 +853,8 @@ const specVMAgent = `
 	"kind": "VMAgent",
 	"apiVersion": "operator.victoriametrics.com/v1beta1",
 	"metadata": {
-		"name": "pmm-vmagent-%[1]s",
+		"name": %[4]s,
+		"namespace": %[3]s,
 		"creationTimestamp": null
 	},
 	"spec": {
@@ -822,14 +872,14 @@ const specVMAgent = `
 		},
 		"remoteWrite": [
 			{
-				"url": "%[2]s/victoriametrics/api/v1/write",
+				"url": %[2]s,
 				"basicAuth": {
 					"username": {
-						"name": "%[1]s",
+						"name": %[1]s,
 						"key": "username"
 					},
 					"password": {
-						"name": "%[1]s",
+						"name": %[1]s,
 						"key": "password"
 					}
 				},
@@ -864,13 +914,33 @@ const specVMAgent = `
 	}
 }`
 
-func vmAgentSpec(secretName, address string) runtime.Object { //nolint:ireturn
-	manifest := fmt.Sprintf(specVMAgent, secretName, address)
+func vmAgentSpec(namespace, secretName, address string) (runtime.Object, error) { //nolint:ireturn
+	jName, err := json.Marshal("pmm-vmagent-" + secretName)
+	if err != nil {
+		return nil, err
+	}
+
+	jSecret, err := json.Marshal(secretName)
+	if err != nil {
+		return nil, err
+	}
+
+	jAddress, err := json.Marshal(address + "/victoriametrics/api/v1/write")
+	if err != nil {
+		return nil, err
+	}
+
+	jNamespace, err := json.Marshal(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest := fmt.Sprintf(specVMAgent, jSecret, jAddress, jNamespace, jName)
 
 	o, _, err := unstructured.UnstructuredJSONScheme.Decode([]byte(manifest), nil, nil)
 	if err != nil {
-		logrus.Panic(err)
+		return nil, err
 	}
 
-	return o
+	return o, nil
 }
