@@ -609,7 +609,7 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
 	if err != nil {
 		var sErr *apierrors.StatusError
-		if ok := errors.As(err, sErr); ok && sErr.Status().Reason == metav1.StatusReasonConflict {
+		if ok := errors.As(err, &sErr); ok && sErr.Status().Reason == metav1.StatusReasonConflict {
 			// The install plan has changed. We retry to get an updated install plan.
 			k.l.Debugf("Retrying install plan update due to a version conflict. Error: %s", err)
 			return false, nil
