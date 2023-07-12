@@ -2,6 +2,7 @@ apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMPodScrape
 metadata:
   name: pmm-vm-pod-scrape
+  namespace: default
 spec:
   podMetricsEndpoints:
     - port: metrics
