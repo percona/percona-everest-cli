@@ -35,7 +35,7 @@ import (
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
 	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
 	packageServerClient "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/client/clientset/versioned"
-	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -77,8 +77,6 @@ const (
 	configKind  = "Config"
 	apiVersion  = "v1"
 	defaultName = "default"
-
-	dbaasToolPath = "/opt/dbaas-tools/bin"
 
 	defaultQPSLimit   = 100
 	defaultBurstLimit = 150
@@ -209,12 +207,6 @@ func (c *Client) setup() error {
 	if space := os.Getenv("NAMESPACE"); space != "" {
 		namespace = space
 	}
-	// Set PATH variable to make aws-iam-authenticator executable
-	path := fmt.Sprintf("%s:%s", os.Getenv("PATH"), dbaasToolPath)
-	if err := os.Setenv("PATH", path); err != nil {
-		return err
-	}
-
 	c.namespace = namespace
 	return c.initOperatorClients()
 }
@@ -297,12 +289,12 @@ func (c *Client) GetServerVersion() (*version.Info, error) {
 }
 
 // ListDatabaseClusters returns list of managed PCX clusters.
-func (c *Client) ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error) {
+func (c *Client) ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error) {
 	return c.dbClusterClient.DBClusters(c.namespace).List(ctx, metav1.ListOptions{})
 }
 
 // GetDatabaseCluster returns PXC clusters by provided name.
-func (c *Client) GetDatabaseCluster(ctx context.Context, name string) (*dbaasv1.DatabaseCluster, error) {
+func (c *Client) GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error) {
 	cluster, err := c.dbClusterClient.DBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err

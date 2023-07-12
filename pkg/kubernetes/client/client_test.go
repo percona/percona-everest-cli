@@ -339,10 +339,10 @@ func TestListCRs(t *testing.T) {
 		{
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}: "MyCoolKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -354,7 +354,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "another-cr",
@@ -367,8 +367,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: nil,
@@ -378,11 +378,11 @@ func TestListCRs(t *testing.T) {
 		{
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}:    "MyCoolKindList",
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "othercoolkinds"}: "OtherKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}:    "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "othercoolkinds"}: "OtherKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -394,7 +394,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "OtherKind",
 						"metadata": map[string]interface{}{
 							"name":      "another-cr",
@@ -407,8 +407,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: nil,
@@ -418,10 +418,10 @@ func TestListCRs(t *testing.T) {
 		{
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}: "MyCoolKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -433,7 +433,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "cool-cr",
@@ -446,8 +446,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: nil,
@@ -457,10 +457,10 @@ func TestListCRs(t *testing.T) {
 		{
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}: "MyCoolKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -472,7 +472,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "cool-cr",
@@ -485,8 +485,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: &metav1.LabelSelector{
@@ -501,10 +501,10 @@ func TestListCRs(t *testing.T) {
 			//nolint:dupl
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}: "MyCoolKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -516,7 +516,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "cool-cr",
@@ -529,7 +529,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "another-cr",
@@ -542,8 +542,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: &metav1.LabelSelector{
@@ -558,10 +558,10 @@ func TestListCRs(t *testing.T) {
 			//nolint:dupl
 			clientset: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
 				map[schema.GroupVersionResource]string{
-					{Group: "dbaas.percona.com", Version: "v1", Resource: "mycoolkinds"}: "MyCoolKindList",
+					{Group: "everest.percona.com", Version: "v1alpha1", Resource: "mycoolkinds"}: "MyCoolKindList",
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "awesome-cr",
@@ -573,7 +573,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "cool-cr",
@@ -586,7 +586,7 @@ func TestListCRs(t *testing.T) {
 					},
 				}, &unstructured.Unstructured{
 					Object: map[string]interface{}{
-						"apiVersion": "dbaas.percona.com/v1",
+						"apiVersion": "everest.percona.com/v1alpha1",
 						"kind":       "MyCoolKind",
 						"metadata": map[string]interface{}{
 							"name":      "another-cr",
@@ -599,8 +599,8 @@ func TestListCRs(t *testing.T) {
 				}),
 			inputNamespace: "my-safe-space",
 			inputGVR: schema.GroupVersionResource{
-				Group:    "dbaas.percona.com",
-				Version:  "v1",
+				Group:    "everest.percona.com",
+				Version:  "v1alpha1",
 				Resource: "mycoolkinds",
 			},
 			inputLabelSelector: &metav1.LabelSelector{

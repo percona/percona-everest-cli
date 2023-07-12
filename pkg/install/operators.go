@@ -37,7 +37,7 @@ const (
 	catalogSourceNamespace           = "olm"
 	operatorGroup                    = "percona-operators-group"
 	catalogSource                    = "percona-dbaas-catalog"
-	dbaasOperatorName                = "dbaas-operator"
+	everestOperatorName              = "everest-operator"
 	pxcOperatorName                  = "percona-xtradb-cluster-operator"
 	psmdbOperatorName                = "percona-server-mongodb-operator"
 	pgOperatorName                   = "percona-postgresql-operator"
@@ -489,7 +489,7 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 		return err
 	}
 
-	return o.installOperator(ctx, o.config.Channel.Everest, dbaasOperatorName)()
+	return o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)()
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
@@ -610,17 +610,17 @@ func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating role for Everest service account")
 	err := o.kubeClient.CreateRole(o.config.Operator.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
 		{
-			APIGroups: []string{"dbaas.percona.com"},
+			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
 			Verbs:     []string{"*"},
 		},
 		{
-			APIGroups: []string{"dbaas.percona.com"},
+			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseengines"},
 			Verbs:     []string{"*"},
 		},
 		{
-			APIGroups: []string{"dbaas.percona.com"},
+			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseclusterrestores"},
 			Verbs:     []string{"*"},
 		},

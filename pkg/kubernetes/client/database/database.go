@@ -20,7 +20,7 @@ import (
 	"context"
 	"sync"
 
-	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -49,15 +49,15 @@ var addToScheme sync.Once
 // NewForConfig creates a new database cluster client based on config.
 func NewForConfig(c *rest.Config) (*DBClusterClient, error) {
 	config := *c
-	config.ContentConfig.GroupVersion = &dbaasv1.GroupVersion
+	config.ContentConfig.GroupVersion = &everestv1alpha1.GroupVersion
 	config.APIPath = "/apis"
 	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
 	config.UserAgent = rest.DefaultKubernetesUserAgent()
 
 	var err error
 	addToScheme.Do(func() {
-		err = dbaasv1.SchemeBuilder.AddToScheme(scheme.Scheme)
-		metav1.AddToGroupVersion(scheme.Scheme, dbaasv1.GroupVersion)
+		err = everestv1alpha1.SchemeBuilder.AddToScheme(scheme.Scheme)
+		metav1.AddToGroupVersion(scheme.Scheme, everestv1alpha1.GroupVersion)
 	})
 
 	if err != nil {
@@ -82,8 +82,8 @@ func (c *DBClusterClient) DBClusters(namespace string) DBClusterInterface { //no
 
 // DBClusterInterface supports list, get and watch methods.
 type DBClusterInterface interface {
-	List(ctx context.Context, opts metav1.ListOptions) (*dbaasv1.DatabaseClusterList, error)
-	Get(ctx context.Context, name string, options metav1.GetOptions) (*dbaasv1.DatabaseCluster, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*everestv1alpha1.DatabaseClusterList, error)
+	Get(ctx context.Context, name string, options metav1.GetOptions) (*everestv1alpha1.DatabaseCluster, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
 }
 
@@ -93,8 +93,8 @@ type dbClusterClient struct {
 }
 
 // List lists database clusters based on opts.
-func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*dbaasv1.DatabaseClusterList, error) {
-	result := &dbaasv1.DatabaseClusterList{}
+func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*everestv1alpha1.DatabaseClusterList, error) {
+	result := &everestv1alpha1.DatabaseClusterList{}
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
@@ -110,8 +110,8 @@ func (c *dbClusterClient) Get(
 	ctx context.Context,
 	name string,
 	opts metav1.GetOptions,
-) (*dbaasv1.DatabaseCluster, error) {
-	result := &dbaasv1.DatabaseCluster{}
+) (*everestv1alpha1.DatabaseCluster, error) {
+	result := &everestv1alpha1.DatabaseCluster{}
 	err := c.restClient.
 		Get().
 		Namespace(c.namespace).
