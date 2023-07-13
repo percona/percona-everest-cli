@@ -625,6 +625,11 @@ func (o *Operators) prepareServiceAccount() error {
 			Verbs:     []string{"*"},
 		},
 		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"objectstorages"},
+			Verbs:     []string{"*"},
+		},
+		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
 			Verbs:     []string{"create", "get"},
