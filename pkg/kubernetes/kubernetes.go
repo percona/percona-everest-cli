@@ -470,7 +470,7 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 
 // InstallPerconaCatalog installs percona catalog and ensures that packages are available.
 func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
-	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-everest-catalog.yaml")
+	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
 		return errors.Wrapf(err, "failed to read percona catalog file")
 	}
