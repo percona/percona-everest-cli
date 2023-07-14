@@ -93,7 +93,7 @@ type dbClusterClient struct {
 }
 
 // List lists database clusters based on opts.
-func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*everestv1alpha1.DatabaseClusterList, error) { //nolint:lll
+func (c *dbClusterClient) List(ctx context.Context, opts metav1.ListOptions) (*everestv1alpha1.DatabaseClusterList, error) {
 	result := &everestv1alpha1.DatabaseClusterList{}
 	err := c.restClient.
 		Get().

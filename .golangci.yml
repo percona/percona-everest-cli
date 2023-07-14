@@ -5,7 +5,7 @@ linters-settings:
   depguard:
     rules:
       main:
-        files: 
+        files:
         - $all
         - "!$test"
         deny:
@@ -39,6 +39,7 @@ linters:
     - varnamelen       # it's useful sometime to have a one-letter name
     - wsl              # too many empty lines makes methods too long
     - wrapcheck        # forces to wrap errors everywhere
+    - lll              # Just useless in the most cases
 
 
 issues:
