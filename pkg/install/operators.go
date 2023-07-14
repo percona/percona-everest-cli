@@ -244,18 +244,26 @@ func (o *Operators) runMonitoringWizard(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.Enable {
-		if o.config.Monitoring.PMM == nil {
-			o.config.Monitoring.PMM = &PMMConfig{}
+		if err := o.runMonitoringConfigWizard(ctx); err != nil {
+			return err
 		}
+	}
 
-		if o.config.Monitoring.PMM.InstanceID == "" {
-			if err := o.runMonitoringURLWizard(ctx); err != nil {
-				return err
-			}
-		} else {
-			if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-				return err
-			}
+	return nil
+}
+
+func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
+	if o.config.Monitoring.PMM == nil {
+		o.config.Monitoring.PMM = &PMMConfig{}
+	}
+
+	if o.config.Monitoring.PMM.InstanceID == "" {
+		if err := o.runMonitoringURLWizard(ctx); err != nil {
+			return err
+		}
+	} else {
+		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
+			return err
 		}
 	}
 

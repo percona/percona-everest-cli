@@ -61,7 +61,9 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
 	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
-	cmd.Flags().String("monitoring.pmm.instance-id", "", "PMM instance ID from Everest. If defined, the flags endpoint, username and password are ignored")
+	cmd.Flags().String("monitoring.pmm.instance-id", "",
+		"PMM instance ID from Everest. If defined, the flags endpoint, username and password are ignored",
+	)
 
 	cmd.Flags().Bool("backup.enable", false, "Enable backups")
 	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
