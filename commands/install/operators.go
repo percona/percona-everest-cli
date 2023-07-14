@@ -53,6 +53,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
+	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
@@ -68,7 +69,6 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("backup.access-key", "", "Backup access key")
 	cmd.Flags().String("backup.secret-key", "", "Backup secret key")
 
-	cmd.Flags().String("operator.namespace", "percona-everest", "Namespace where operators are deployed to")
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
 	cmd.Flags().Bool("operator.xtradb-cluster", true, "Install XtraDB Cluster operator")
@@ -101,8 +101,8 @@ func initViperFlags(cmd *cobra.Command) {
 
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
+	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 
-	viper.BindPFlag("operator.namespace", cmd.Flags().Lookup("operator.namespace"))           //nolint:errcheck,gosec
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
 	viper.BindPFlag("operator.xtradb-cluster", cmd.Flags().Lookup("operator.xtradb-cluster")) //nolint:errcheck,gosec

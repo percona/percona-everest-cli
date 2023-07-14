@@ -57,6 +57,8 @@ type (
 	OperatorsConfig struct {
 		// Name of the Kubernetes Cluster
 		Name string `mapstructure:"name"`
+		// Namespace defines the namespace to which the components are deployed to.
+		Namespace string `mapstructure:"namespace"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -105,8 +107,6 @@ type (
 
 	// OperatorConfig identifies which operators shall be installed.
 	OperatorConfig struct {
-		// Namespace defines the namespace operators shall be installed to.
-		Namespace string `mapstructure:"namespace"`
 		// PG stores if PostgresSQL shall be installed.
 		PG bool `mapstructure:"postgresql"`
 		// PSMDB stores if MongoDB shall be installed.
@@ -416,13 +416,13 @@ func (o *Operators) runOperatorsWizard() error {
 
 // provisionNamespace provisions a namespace for Everest.
 func (o *Operators) provisionNamespace() error {
-	o.l.Infof("Creating namespace %s", o.config.Operator.Namespace)
-	err := o.kubeClient.CreateNamespace(o.config.Operator.Namespace)
+	o.l.Infof("Creating namespace %s", o.config.Namespace)
+	err := o.kubeClient.CreateNamespace(o.config.Namespace)
 	if err != nil {
 		return errors.Wrap(err, "could not provision namespace")
 	}
 
-	o.l.Infof("Namespace %s has been created", o.config.Operator.Namespace)
+	o.l.Infof("Namespace %s has been created", o.config.Namespace)
 	return nil
 }
 
@@ -503,7 +503,7 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
-			Namespace:              o.config.Operator.Namespace,
+			Namespace:              o.config.Namespace,
 			Name:                   operatorName,
 			OperatorGroup:          operatorGroup,
 			CatalogSource:          catalogSource,
@@ -532,9 +532,14 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	l.Info("New token has been generated")
+	l.Infof("New token with name %q has been generated", account)
 	l.Info("Provisioning monitoring in k8s cluster")
-	err = o.kubeClient.ProvisionMonitoring(account, token, o.config.Monitoring.PMM.Endpoint)
+	err = o.kubeClient.ProvisionMonitoring(
+		o.config.Namespace,
+		"api_key",
+		token,
+		o.config.Monitoring.PMM.Endpoint,
+	)
 	if err != nil {
 		l.Error("failed provisioning monitoring")
 		return errors.Wrap(err, "could not provision PMM Monitoring")
@@ -603,12 +608,12 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 
 func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
-	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Operator.Namespace); err != nil {
+	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Namespace); err != nil {
 		return errors.Wrap(err, "could not create service account")
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(o.config.Operator.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
+	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
@@ -646,7 +651,7 @@ func (o *Operators) prepareServiceAccount() error {
 
 	o.l.Info("Binding role to Everest Service account")
 	err = o.kubeClient.CreateRoleBinding(
-		o.config.Operator.Namespace,
+		o.config.Namespace,
 		everestServiceAccountRoleBinding,
 		everestServiceAccountRole,
 		everestServiceAccount,
@@ -657,7 +662,7 @@ func (o *Operators) prepareServiceAccount() error {
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
 	// Create token secret
-	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
+	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -665,7 +670,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	var secret *corev1.Secret
 	checkSecretData := func(ctx context.Context) (bool, error) {
 		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
-		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Operator.Namespace)
+		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Namespace)
 		if err != nil {
 			return false, err
 		}
