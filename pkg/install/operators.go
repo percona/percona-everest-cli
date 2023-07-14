@@ -27,10 +27,14 @@ import (
 
 // Operators implements the main logic for commands.
 type Operators struct {
+	l *logrus.Entry
+
 	config        *OperatorsConfig
 	everestClient everestClientConnector
 	kubeClient    *kubernetes.Kubernetes
-	l             *logrus.Entry
+
+	// apiKeySecretID stores name of a secret with PMM API key.
+	apiKeySecretID string
 }
 
 const (
@@ -123,6 +127,9 @@ type (
 		Username string `mapstructure:"username"`
 		// Password stores password for authentication against PMM.
 		Password string `mapstructure:"password"`
+		// InstanceID stores PMM instance ID from Everest.
+		// If provided, Endpoint, Username and Password are ignored.
+		InstanceID string `mapstructure:"instance-id"`
 	}
 
 	// ChannelConfig stores configuration for operator channels.
@@ -139,6 +146,8 @@ type (
 		VictoriaMetrics string `mapstructure:"victoria-metrics"`
 	}
 )
+
+const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
 func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
@@ -163,7 +172,7 @@ func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Op
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
 	if !o.config.SkipWizard {
-		if err := o.runWizard(); err != nil {
+		if err := o.runWizard(ctx); err != nil {
 			return err
 		}
 	}
@@ -186,12 +195,12 @@ func (o *Operators) Run(ctx context.Context) error {
 }
 
 // runWizard runs installation wizard.
-func (o *Operators) runWizard() error {
+func (o *Operators) runWizard(ctx context.Context) error {
 	if err := o.runEverestWizard(); err != nil {
 		return err
 	}
 
-	if err := o.runMonitoringWizard(); err != nil {
+	if err := o.runMonitoringWizard(ctx); err != nil {
 		return err
 	}
 
@@ -224,7 +233,7 @@ func (o *Operators) runEverestWizard() error {
 	return survey.AskOne(pName, &o.config.Name)
 }
 
-func (o *Operators) runMonitoringWizard() error {
+func (o *Operators) runMonitoringWizard(ctx context.Context) error {
 	pMonitor := &survey.Confirm{
 		Message: "Do you want to enable monitoring?",
 		Default: o.config.Monitoring.Enable,
@@ -235,41 +244,91 @@ func (o *Operators) runMonitoringWizard() error {
 	}
 
 	if o.config.Monitoring.Enable {
-		pURL := &survey.Input{
-			Message: "URL Endpoint",
-			Default: o.config.Monitoring.PMM.Endpoint,
-		}
-		if err := survey.AskOne(
-			pURL,
-			&o.config.Monitoring.PMM.Endpoint,
-			survey.WithValidator(survey.Required),
-		); err != nil {
-			return err
+		if o.config.Monitoring.PMM == nil {
+			o.config.Monitoring.PMM = &PMMConfig{}
 		}
 
-		pUser := &survey.Input{
-			Message: "Username",
-			Default: o.config.Monitoring.PMM.Username,
-		}
-		if err := survey.AskOne(
-			pUser,
-			&o.config.Monitoring.PMM.Username,
-			survey.WithValidator(survey.Required),
-		); err != nil {
-			return err
-		}
-
-		pPass := &survey.Password{Message: "Password"}
-		if err := survey.AskOne(
-			pPass,
-			&o.config.Monitoring.PMM.Password,
-			survey.WithValidator(survey.Required),
-		); err != nil {
-			return err
+		if o.config.Monitoring.PMM.InstanceID == "" {
+			if err := o.runMonitoringURLWizard(ctx); err != nil {
+				return err
+			}
+		} else {
+			if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
+	instances, err := o.everestClient.ListPMMInstances(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve list of PMM instances")
+	}
+
+	if len(instances) == 0 {
+		return o.runMonitoringNewURLWizard()
+	}
+
+	opts := make([]string, 0, len(instances)+1)
+	for _, i := range instances {
+		opts = append(opts, i.Url)
+	}
+	opts = append(opts, "Add new PMM instance")
+
+	pInstance := &survey.Select{
+		Message: "Select PMM instance:",
+		Options: opts,
+	}
+	ix := 0
+	if err := survey.AskOne(pInstance, &ix); err != nil {
+		return err
+	}
+
+	if ix > len(instances)-1 {
+		return o.runMonitoringNewURLWizard()
+	}
+
+	pmm := instances[ix]
+	o.config.Monitoring.PMM.Endpoint = pmm.Url
+	o.apiKeySecretID = pmm.ApiKeySecretId
+
+	return nil
+}
+
+func (o *Operators) runMonitoringNewURLWizard() error {
+	pURL := &survey.Input{
+		Message: "URL Endpoint",
+		Default: o.config.Monitoring.PMM.Endpoint,
+	}
+	if err := survey.AskOne(
+		pURL,
+		&o.config.Monitoring.PMM.Endpoint,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pUser := &survey.Input{
+		Message: "Username",
+		Default: o.config.Monitoring.PMM.Username,
+	}
+	if err := survey.AskOne(
+		pUser,
+		&o.config.Monitoring.PMM.Username,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	pPass := &survey.Password{Message: "Password"}
+	return survey.AskOne(
+		pPass,
+		&o.config.Monitoring.PMM.Password,
+		survey.WithValidator(survey.Required),
+	)
 }
 
 func (o *Operators) runBackupWizard() error {
@@ -414,6 +473,17 @@ func (o *Operators) runOperatorsWizard() error {
 	return nil
 }
 
+func (o *Operators) setPMMAPIKeySecretIDFromInstanceID(ctx context.Context) error {
+	pmm, err := o.everestClient.GetPMMInstance(ctx, o.config.Monitoring.PMM.InstanceID)
+	if err != nil {
+		return err
+	}
+
+	o.apiKeySecretID = pmm.ApiKeySecretId
+
+	return nil
+}
+
 // provisionNamespace provisions a namespace for Everest.
 func (o *Operators) provisionNamespace() error {
 	o.l.Infof("Creating namespace %s", o.config.Namespace)
@@ -526,33 +596,70 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	l := o.l.WithField("action", "PMM")
 	l.Info("Setting up PMM monitoring")
 
-	account := fmt.Sprintf("everest-service-account-%s", uuid.NewString())
-	l.Info("Creating a new service account in PMM")
-	token, err := o.provisionPMM(ctx, account)
-	if err != nil {
-		return err
+	if o.apiKeySecretID == "" {
+		if err := o.provisionNewPMMInstance(ctx, l); err != nil {
+			return errors.Wrap(err, "could not create a new PMM instance")
+		}
 	}
-	l.Infof("New token with name %q has been generated", account)
+
+	l.Debugf("Using API key secret ID %s", o.apiKeySecretID)
+
 	l.Info("Provisioning monitoring in k8s cluster")
-	err = o.kubeClient.ProvisionMonitoring(
+	err := o.kubeClient.ProvisionMonitoring(
 		o.config.Namespace,
-		"api_key",
-		token,
+		o.apiKeySecretID,
 		o.config.Monitoring.PMM.Endpoint,
 	)
 	if err != nil {
-		l.Error("failed provisioning monitoring")
 		return errors.Wrap(err, "could not provision PMM Monitoring")
 	}
 
-	l.Info("PMM Monitoring provisioned successfully")
+	l.Info("PMM Monitoring has been provisioned successfully")
 
 	return nil
 }
 
-func (o *Operators) provisionPMM(ctx context.Context, account string) (string, error) {
-	token, err := o.createPMMAdminToken(ctx, account, "")
-	return token, err
+func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *logrus.Entry) error {
+	if o.config.Monitoring.PMM.Endpoint == "" || o.config.Monitoring.PMM.Username == "" {
+		return errors.New("PMM endpoint or username is empty")
+	}
+
+	account := fmt.Sprintf("everest-pmm-%s", uuid.NewString())
+	l.Info("Creating a new API key in PMM")
+
+	apiKey, err := o.createPMMApiKey(ctx, account, "")
+	if err != nil {
+		return errors.Wrap(err, "could not create PMM API key")
+	}
+
+	l.Infof("New API key with name %q has been created", account)
+
+	l.Info("Creating PMM instance in Everest")
+	pmm, err := o.everestClient.CreatePMMInstance(ctx, client.PMMInstanceCreateParams{
+		Url:    o.config.Monitoring.PMM.Endpoint,
+		ApiKey: apiKey,
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not create PMM instance in Everest")
+	}
+	l.Infof("PMM instance %s has been created in Everest", *pmm.Id)
+
+	if pmm.Id == nil || *pmm.Id == "" {
+		return errors.New("PMM instance ID is empty")
+	}
+
+	l.Info("Creating secret in Kubernetes")
+	o.apiKeySecretID = fmt.Sprintf(secretNameTemplate, *pmm.Id)
+	err = o.kubeClient.CreatePMMSecret(o.config.Namespace, o.apiKeySecretID, map[string][]byte{
+		"username": []byte("api_key"),
+		"password": []byte(apiKey),
+	})
+	if err != nil {
+		return errors.Wrap(err, "could not create secret in Kubernetes")
+	}
+	l.Infof("Secret %s has been created", o.apiKeySecretID)
+
+	return nil
 }
 
 // connectToEverest connects the k8s cluster to Everest.
@@ -688,7 +795,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
 }
 
-func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token string) (string, error) {
+func (o *Operators) createPMMApiKey(ctx context.Context, name string, token string) (string, error) {
 	apiKey := map[string]string{
 		"name": name,
 		"role": "Admin",
