@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     env:
-      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend
+      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
 
     steps:
       - name: Configure git for private modules
@@ -124,7 +124,7 @@ jobs:
 
     env:
       GO_VERSION: ${{ matrix.go-version }}
-      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend
+      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
 
     steps:
       - name: Configure git for private modules

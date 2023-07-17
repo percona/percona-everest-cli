@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	yamlv3 "gopkg.in/yaml.v3"
@@ -63,16 +63,16 @@ const (
 	// ClusterTypeGeneric is a generic type.
 	ClusterTypeGeneric ClusterType = "generic"
 
-	pxcDeploymentName          = "percona-xtradb-cluster-operator"
-	psmdbDeploymentName        = "percona-server-mongodb-operator"
-	dbaasDeploymentName        = "dbaas-operator-controller-manager"
-	psmdbOperatorContainerName = "percona-server-mongodb-operator"
-	pxcOperatorContainerName   = "percona-xtradb-cluster-operator"
-	dbaasOperatorContainerName = "manager"
-	databaseClusterKind        = "DatabaseCluster"
-	databaseClusterAPIVersion  = "dbaas.percona.com/v1"
-	restartAnnotationKey       = "dbaas.percona.com/restart"
-	managedByKey               = "dbaas.percona.com/managed-by"
+	pxcDeploymentName            = "percona-xtradb-cluster-operator"
+	psmdbDeploymentName          = "percona-server-mongodb-operator"
+	everestDeploymentName        = "everest-operator-controller-manager"
+	psmdbOperatorContainerName   = "percona-server-mongodb-operator"
+	pxcOperatorContainerName     = "percona-xtradb-cluster-operator"
+	everestOperatorContainerName = "manager"
+	databaseClusterKind          = "DatabaseCluster"
+	databaseClusterAPIVersion    = "everest.percona.com/v1alpha1"
+	restartAnnotationKey         = "everest.percona.com/restart"
+	managedByKey                 = "everest.percona.com/managed-by"
 
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
@@ -163,12 +163,12 @@ func (k *Kubernetes) ClusterName() string {
 }
 
 // ListDatabaseClusters returns list of managed PCX clusters.
-func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error) {
+func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error) {
 	return k.client.ListDatabaseClusters(ctx)
 }
 
 // GetDatabaseCluster returns PXC clusters by provided name.
-func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*dbaasv1.DatabaseCluster, error) {
+func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error) {
 	return k.client.GetDatabaseCluster(ctx, name)
 }
 
@@ -188,12 +188,12 @@ func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) er
 }
 
 // PatchDatabaseCluster patches CR of managed Database cluster.
-func (k *Kubernetes) PatchDatabaseCluster(cluster *dbaasv1.DatabaseCluster) error {
+func (k *Kubernetes) PatchDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
 	return k.client.ApplyObject(cluster)
 }
 
 // CreateDatabaseCluster creates database cluster.
-func (k *Kubernetes) CreateDatabaseCluster(cluster *dbaasv1.DatabaseCluster) error {
+func (k *Kubernetes) CreateDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
 	if cluster.ObjectMeta.Annotations == nil {
 		cluster.ObjectMeta.Annotations = make(map[string]string)
 	}
@@ -269,7 +269,7 @@ func (k *Kubernetes) GetPXCOperatorVersion(ctx context.Context) (string, error) 
 
 // GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment.
 func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error) {
-	return k.getOperatorVersion(ctx, dbaasDeploymentName, dbaasOperatorContainerName)
+	return k.getOperatorVersion(ctx, everestDeploymentName, everestOperatorContainerName)
 }
 
 // GetSecret returns secret by name.
@@ -300,7 +300,7 @@ func (k *Kubernetes) CreatePMMSecret(namespace, secretName string, secrets map[s
 }
 
 // CreateRestore creates a restore.
-func (k *Kubernetes) CreateRestore(restore *dbaasv1.DatabaseClusterRestore) error {
+func (k *Kubernetes) CreateRestore(restore *everestv1alpha1.DatabaseClusterRestore) error {
 	return k.client.ApplyObject(restore)
 }
 
@@ -480,7 +480,7 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Wrapf(err, "cannot apply percona catalog file")
 	}
-	if err := k.client.DoPackageWait(ctx, "dbaas-operator"); err != nil {
+	if err := k.client.DoPackageWait(ctx, "everest-operator"); err != nil {
 		return errors.Wrapf(err, "timeout waiting for package")
 	}
 	return nil
