@@ -259,6 +259,14 @@ jobs:
 
       - name: Run integration tests
         working-directory: cli-tests
+        id: cli-tests
         run: |
           make init
           make test
+          
+      - name: Attach the report
+        if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: cli-tests-report
+          path: cli-tests/test-report
