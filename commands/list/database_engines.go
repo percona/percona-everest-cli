@@ -21,9 +21,9 @@ func NewDatabaseEnginesCmd() *cobra.Command {
 		Use:     "databaseengines",
 		Aliases: []string{"databaseengine", "dbengines", "dbengine"},
 		Run: func(cmd *cobra.Command, args []string) {
-			initDatabaseEngineViperFlags(cmd)
+			initDatabaseEnginesViperFlags(cmd)
 
-			c, err := parseConfig()
+			c, err := parseDatabaseEnginesConfig()
 			if err != nil {
 				os.Exit(1)
 			}
@@ -46,22 +46,22 @@ func NewDatabaseEnginesCmd() *cobra.Command {
 		},
 	}
 
-	initOperatorsFlags(cmd)
+	initDatabaseEnginesFlags(cmd)
 
 	return cmd
 }
 
-func initOperatorsFlags(cmd *cobra.Command) {
+func initDatabaseEnginesFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID")
 }
 
-func initDatabaseEngineViperFlags(cmd *cobra.Command) {
+func initDatabaseEnginesViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("kubernetes-id", cmd.Flags().Lookup("kubernetes-id"))       //nolint:errcheck,gosec
 }
 
-func parseConfig() (*list.DBEnginesConfig, error) {
+func parseDatabaseEnginesConfig() (*list.DBEnginesConfig, error) {
 	c := &list.DBEnginesConfig{}
 	err := viper.Unmarshal(c)
 	return c, err
