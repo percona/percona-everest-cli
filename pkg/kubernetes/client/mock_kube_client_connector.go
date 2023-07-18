@@ -8,7 +8,7 @@ import (
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	operatorsv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
-	apiv1 "github.com/percona/dbaas-operator/api/v1"
+	apiv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	mock "github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -246,15 +246,15 @@ func (_m *MockKubeClientConnector) GetClusterServiceVersion(ctx context.Context,
 }
 
 // GetDatabaseCluster provides a mock function with given fields: ctx, name
-func (_m *MockKubeClientConnector) GetDatabaseCluster(ctx context.Context, name string) (*apiv1.DatabaseCluster, error) {
+func (_m *MockKubeClientConnector) GetDatabaseCluster(ctx context.Context, name string) (*apiv1alpha1.DatabaseCluster, error) {
 	ret := _m.Called(ctx, name)
 
-	var r0 *apiv1.DatabaseCluster
-	if rf, ok := ret.Get(0).(func(context.Context, string) *apiv1.DatabaseCluster); ok {
+	var r0 *apiv1alpha1.DatabaseCluster
+	if rf, ok := ret.Get(0).(func(context.Context, string) *apiv1alpha1.DatabaseCluster); ok {
 		r0 = rf(ctx, name)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*apiv1.DatabaseCluster)
+			r0 = ret.Get(0).(*apiv1alpha1.DatabaseCluster)
 		}
 	}
 
@@ -677,15 +677,15 @@ func (_m *MockKubeClientConnector) ListClusterServiceVersion(ctx context.Context
 }
 
 // ListDatabaseClusters provides a mock function with given fields: ctx
-func (_m *MockKubeClientConnector) ListDatabaseClusters(ctx context.Context) (*apiv1.DatabaseClusterList, error) {
+func (_m *MockKubeClientConnector) ListDatabaseClusters(ctx context.Context) (*apiv1alpha1.DatabaseClusterList, error) {
 	ret := _m.Called(ctx)
 
-	var r0 *apiv1.DatabaseClusterList
-	if rf, ok := ret.Get(0).(func(context.Context) *apiv1.DatabaseClusterList); ok {
+	var r0 *apiv1alpha1.DatabaseClusterList
+	if rf, ok := ret.Get(0).(func(context.Context) *apiv1alpha1.DatabaseClusterList); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*apiv1.DatabaseClusterList)
+			r0 = ret.Get(0).(*apiv1alpha1.DatabaseClusterList)
 		}
 	}
 

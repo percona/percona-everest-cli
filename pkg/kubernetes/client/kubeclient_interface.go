@@ -8,7 +8,7 @@ import (
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
-	dbaasv1 "github.com/percona/dbaas-operator/api/v1"
+	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -33,9 +33,9 @@ type KubeClientConnector interface {
 	// GetServerVersion returns server version.
 	GetServerVersion() (*version.Info, error)
 	// ListDatabaseClusters returns list of managed PCX clusters.
-	ListDatabaseClusters(ctx context.Context) (*dbaasv1.DatabaseClusterList, error)
+	ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error)
 	// GetDatabaseCluster returns PXC clusters by provided name.
-	GetDatabaseCluster(ctx context.Context, name string) (*dbaasv1.DatabaseCluster, error)
+	GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error)
 	// GetStorageClasses returns all storage classes available in the cluster.
 	GetStorageClasses(ctx context.Context) (*storagev1.StorageClassList, error)
 	// GetDeployment returns deployment by name.
@@ -81,7 +81,7 @@ type KubeClientConnector interface {
 	ListSubscriptions(ctx context.Context, namespace string) (*v1alpha1.SubscriptionList, error)
 	// GetInstallPlan retrieves an OLM install plan by namespace and name.
 	GetInstallPlan(ctx context.Context, namespace string, name string) (*v1alpha1.InstallPlan, error)
-	// DoPackageWaits for the package to be avaiable in OLM.
+	// DoPackageWait for the package to be available in OLM.
 	DoPackageWait(ctx context.Context, name string) error
 	// GetPackageManifest returns a package manifest by given name.
 	GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error)
