@@ -2,6 +2,7 @@ apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMNodeScrape
 metadata:
   name: pmm-vm-cadvisor-metrics
+  namespace: default
 spec:
   scheme: "https"
   interval: "10s"
