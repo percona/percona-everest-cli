@@ -22,7 +22,6 @@ type MySQL struct {
 // MySQLConfig stores configuration for the MySQL command.
 type MySQLConfig struct {
 	Name         string
-	Namespace    string
 	KubernetesID string `mapstructure:"kubernetes-id"`
 
 	Everest struct {
@@ -40,17 +39,6 @@ type MySQLConfig struct {
 	Disk   string
 
 	ExternalAccess bool `mapstructure:"external-access"`
-
-	Monitoring struct {
-		// Enable is true if monitoring shall be enabled.
-		Enable bool
-		// Endpoint stores URL to PMM.
-		Endpoint string
-		// Username stores username for authentication against PMM.
-		Username string
-		// Password stores password for authentication against PMM.
-		Password string
-	}
 }
 
 // NewMySQL returns a new MySQL struct.
@@ -110,8 +98,7 @@ func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 			Kind:       "DatabaseCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.config.Name,
-			Namespace: m.config.Namespace,
+			Name: m.config.Name,
 		},
 		Spec: everestv1alpha.DatabaseClusterSpec{
 			Engine: everestv1alpha.Engine{

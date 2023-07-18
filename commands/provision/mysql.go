@@ -49,7 +49,6 @@ func NewMySQLCmd() *cobra.Command {
 
 func initMySQLFlags(cmd *cobra.Command) {
 	cmd.Flags().String("name", "", "Cluster name")
-	cmd.Flags().String("namespace", "percona-everest", "Kubernetes namespace where cluster will be provisioned")
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID in Everest")
 
@@ -61,16 +60,10 @@ func initMySQLFlags(cmd *cobra.Command) {
 	cmd.Flags().String("disk", "15G", "MB of disk to assign to the cluster (8G, 500M, etc.)")
 
 	cmd.Flags().Bool("external-access", false, "Make this cluster available outside of Kubernetes")
-
-	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
-	cmd.Flags().String("monitoring.endpoint", "http://127.0.0.1", "PMM endpoint URL")
-	cmd.Flags().String("monitoring.username", "admin", "PMM username")
-	cmd.Flags().String("monitoring.password", "password", "PMM password")
 }
 
 func initMySQLViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                         //nolint:errcheck,gosec
-	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))               //nolint:errcheck,gosec
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("kubernetes-id", cmd.Flags().Lookup("kubernetes-id"))       //nolint:errcheck,gosec
 
@@ -82,11 +75,6 @@ func initMySQLViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("disk", cmd.Flags().Lookup("disk"))     //nolint:errcheck,gosec
 
 	viper.BindPFlag("external-access", cmd.Flags().Lookup("external-access")) //nolint:errcheck,gosec
-
-	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))     //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.endpoint", cmd.Flags().Lookup("monitoring.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.username", cmd.Flags().Lookup("monitoring.username")) //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.password", cmd.Flags().Lookup("monitoring.password")) //nolint:errcheck,gosec
 }
 
 func parseMySQLConfig() (*provision.MySQLConfig, error) {
