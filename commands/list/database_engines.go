@@ -18,7 +18,8 @@ import (
 // NewDatabaseEnginesCmd returns a new database engines command.
 func NewDatabaseEnginesCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "databaseengines",
+		Use:     "databaseengines",
+		Aliases: []string{"databaseengine", "dbengines", "dbengine"},
 		Run: func(cmd *cobra.Command, args []string) {
 			initDatabaseEngineViperFlags(cmd)
 
