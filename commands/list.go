@@ -12,6 +12,7 @@ func newListCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(list.NewDatabaseEnginesCmd())
+	cmd.AddCommand(list.NewVersionsCmd())
 
 	return cmd
 }
