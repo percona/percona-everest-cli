@@ -9,7 +9,10 @@ func NewRootCmd() *cobra.Command {
 		Use: "everest",
 	}
 
+	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
+
 	rootCmd.AddCommand(newInstallCmd())
+	rootCmd.AddCommand(newListCmd())
 
 	return rootCmd
 }
