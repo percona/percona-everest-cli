@@ -3,13 +3,11 @@ package provision
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
-	dbclusterv1 "github.com/percona/dbaas-operator/api/v1"
+	everestv1alpha "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -105,45 +103,48 @@ func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 		return nil, errors.Wrap(err, "cannot parse disk storage")
 	}
 
-	payload := dbclusterv1.DatabaseCluster{
+	replicas := int32(m.config.Nodes)
+	payload := everestv1alpha.DatabaseCluster{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "dbaas.percona.com/v1",
+			APIVersion: "everest.percona.com/v1alpha1",
 			Kind:       "DatabaseCluster",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.config.Name,
 			Namespace: m.config.Namespace,
 		},
-		Spec: dbclusterv1.DatabaseSpec{
-			Database:      dbclusterv1.PXCEngine,
-			DatabaseImage: fmt.Sprintf("percona/percona-xtradb-cluster:%s", m.config.DB.Version),
-			ClusterSize:   int32(m.config.Nodes),
-			DBInstance: dbclusterv1.DBInstanceSpec{
-				CPU:      cpu,
-				Memory:   memory,
-				DiskSize: disk,
+		Spec: everestv1alpha.DatabaseClusterSpec{
+			Engine: everestv1alpha.Engine{
+				Type:     everestv1alpha.DatabaseEnginePXC,
+				Replicas: replicas,
+				Version:  m.config.DB.Version,
+				Storage: everestv1alpha.Storage{
+					Size: disk,
+				},
+				Resources: everestv1alpha.Resources{
+					CPU:    cpu,
+					Memory: memory,
+				},
 			},
-			LoadBalancer: dbclusterv1.LoadBalancerSpec{
-				Type:       dbclusterv1.LoadBalancerHAProxy,
-				ExposeType: corev1.ServiceTypeClusterIP,
-				Size:       int32(m.config.Nodes),
-				Image:      "percona/percona-xtradb-cluster-operator:1.12.0-haproxy",
+			Proxy: everestv1alpha.Proxy{
+				Type:     everestv1alpha.ProxyTypeHAProxy,
+				Replicas: &replicas,
+				Expose: everestv1alpha.Expose{
+					Type: everestv1alpha.ExposeTypeInternal,
+				},
 			},
 		},
 	}
 
 	if m.config.ExternalAccess {
 		m.l.Debug("Enabling external access")
-		payload.Spec.LoadBalancer = dbclusterv1.LoadBalancerSpec{
-			Size:       int32(m.config.Nodes),
-			ExposeType: corev1.ServiceTypeLoadBalancer,
-		}
+		payload.Spec.Proxy.Expose.Type = everestv1alpha.ExposeTypeExternal
 	}
 
 	return m.convertPayload(payload)
 }
 
-func (m *MySQL) convertPayload(payload dbclusterv1.DatabaseCluster) (*client.DatabaseCluster, error) {
+func (m *MySQL) convertPayload(payload everestv1alpha.DatabaseCluster) (*client.DatabaseCluster, error) {
 	bodyJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot marshal payload to json")
