@@ -25,7 +25,16 @@ export default defineConfig({
     ['list'],
     ['html', { open: 'never', outputFolder: './test-report' }]
   ],
+  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    trace: 'off',
+    /* Base URL to use in actions like `await page.goto('/')`. */
+    baseURL: 'http://127.0.0.1:8081',
+    extraHTTPHeaders: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+
+    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    trace: 'on-first-retry',
   },
 });
