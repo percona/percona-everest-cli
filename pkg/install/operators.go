@@ -140,6 +140,10 @@ type (
 	}
 )
 
+type pmmErrorMessage struct {
+	Message string `json:"message"`
+}
+
 // NewOperators returns a new Operators struct.
 func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
 	if c == nil {
@@ -727,6 +731,15 @@ func (o *Operators) createPMMAdminToken(ctx context.Context, name string, token 
 	if err != nil {
 		return "", err
 	}
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		var pmmErr *pmmErrorMessage
+		if err := json.Unmarshal(data, &pmmErr); err != nil {
+			return "", errors.Wrapf(err, "PMM returned an unknown error. HTTP status code %d", resp.StatusCode)
+		}
+		return "", errors.Errorf("PMM returned an error with message: %s", pmmErr.Message)
+	}
+
 	var m map[string]interface{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return "", err
