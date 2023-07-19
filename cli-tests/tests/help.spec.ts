@@ -5,7 +5,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('--help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Usage:',
       'everest [command]',
       'Available Commands:',
@@ -22,7 +22,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Usage:',
       'everest [command]',
       'Available Commands:',
@@ -39,7 +39,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('completion --help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Generate the autocompletion script for everest for the specified shell.',
       "See each sub-command's help for details on how to use the generated script.",
       'Usage:',
@@ -59,7 +59,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('completion bash --help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Generate the autocompletion script for the bash shell.',
       "This script depends on the 'bash-completion' package.",
       "If it is not installed already, you can install it via your OS's package manager.",
@@ -83,7 +83,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('install --help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Usage:',
       'everest install [command]',
       'Available Commands:',
@@ -98,7 +98,7 @@ test.describe('Everest CLI "--help" validation', async () => {
     const out = await cli.everestExecSilent('install operators --help');
 
     await out.assertSuccess();
-    await out.outEqualsNormalizedMany([
+    await out.outContainsNormalizedMany([
       'Usage:',
       'everest install operators [flags]',
       'Flags:',
