@@ -1,4 +1,5 @@
 import { test, expect } from '@fixtures';
+import { waitForDBEngines } from '@tests/support/kubernetes';
 
 let kubernetesId = ''
 
@@ -8,24 +9,7 @@ test.beforeAll(async ({ cli, request }) => {
   expect(kubernetesId).toBeTruthy()
 
   // Wait until all dbengines are ready
-  await expect.poll(async () => {
-    const out = await cli.execSilent('kubectl -n percona-everest get dbengine -o json')
-    await out.assertSuccess()
-    
-    const res = JSON.parse(out.stdout)
-    const installed = res.items.filter(i => i.status.status === 'installed')
-    for(const engine of ['pxc', 'psmdb', 'postgresql']) {
-      if (res.items.findIndex(i => i.spec.type === engine) == -1) {
-        return `dbengine ${engine} not yet available`
-      } 
-    }
-    
-    if (installed.length !== res.items.length) {
-      return false
-    }
-
-    return true
-  }, {
+  await expect.poll(() => waitForDBEngines(cli), {
     message: 'dbengine not yet installed',
     intervals: [1000],
     timeout: 240 * 1000
