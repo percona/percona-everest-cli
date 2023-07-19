@@ -1,11 +1,25 @@
 import { test, expect } from '@fixtures';
+import promiseRetry from 'promise-retry'
 
 let kubernetesId = ''
 
-test.beforeAll(async ({ request }) => {
+test.beforeAll(async ({ cli, request }) => {
   const kubernetesList = await request.get('/v1/kubernetes')
   kubernetesId = (await kubernetesList.json())[0].id
   expect(kubernetesId).toBeTruthy()
+
+  // Wait until all dbengines are ready
+  await promiseRetry(async retry => {
+    const out = await cli.execSilent('kubectl -n percona-everest get dbengine -o json')
+    await out.assertSuccess()
+    
+    const res = JSON.parse(out.stdout)
+    const installed = res.items.filter(i => i.status.status === 'installed')
+
+    if (installed.length !== res.items.length) {
+      return retry(new Error('dbengine not ready yet'))
+    }
+  })
 })
 
 test.describe('Database engines', async () => {
