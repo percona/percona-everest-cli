@@ -572,6 +572,7 @@ func (o *Operators) connectToEverest(ctx context.Context) error {
 	_, err = o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
 		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
 		Name:       o.config.Name,
+		Namespace:  &o.config.Namespace,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
