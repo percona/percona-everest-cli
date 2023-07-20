@@ -86,9 +86,9 @@ type (
 		// Bucket stores name of the bucket for backup.
 		Bucket string `mapstructure:"bucket"`
 		// AccessKey stores username for backup.
-		AccessKey string `mapstructure:"username"`
+		AccessKey string `mapstructure:"access-key"`
 		// SecretKey stores password for backup.
-		SecretKey string `mapstructure:"password"`
+		SecretKey string `mapstructure:"secret-key"`
 		// Region stores region for backup.
 		Region string `mapstructure:"region"`
 	}
@@ -387,7 +387,7 @@ func (o *Operators) runBackupConfigWizard() error {
 	}
 	if err := survey.AskOne(
 		pRegion,
-		&o.config.Backup.Endpoint,
+		&o.config.Backup.Region,
 		survey.WithValidator(survey.Required),
 	); err != nil {
 		return err
@@ -410,7 +410,7 @@ func (o *Operators) runBackupConfigWizard() error {
 
 func (o *Operators) runBackupCredentialsConfigWizard() error {
 	pUser := &survey.Input{
-		Message: "Username",
+		Message: "Access key",
 		Default: o.config.Backup.AccessKey,
 	}
 	if err := survey.AskOne(
@@ -421,7 +421,7 @@ func (o *Operators) runBackupCredentialsConfigWizard() error {
 		return err
 	}
 
-	pPass := &survey.Password{Message: "Password"}
+	pPass := &survey.Password{Message: "Secret key"}
 	return survey.AskOne(
 		pPass,
 		&o.config.Backup.SecretKey,
@@ -706,6 +706,7 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 	o.l.Info("Creating a new backup storage in Everest")
 
 	_, err := o.everestClient.CreateBackupStorage(ctx, client.CreateBackupStorageParams{
+		Type:       client.CreateBackupStorageParamsTypeS3,
 		Name:       o.config.Backup.Name,
 		BucketName: o.config.Backup.Bucket,
 		AccessKey:  o.config.Backup.AccessKey,
