@@ -15,4 +15,14 @@ type everestClientConnector interface {
 		ctx context.Context,
 		body client.CreateBackupStorageJSONRequestBody,
 	) (*client.BackupStorage, error)
+
+	CreatePMMInstance(
+		ctx context.Context,
+		body client.CreatePMMInstanceJSONRequestBody,
+	) (*client.PMMInstance, error)
+	GetPMMInstance(
+		ctx context.Context,
+		pmmInstanceID string,
+	) (*client.PMMInstance, error)
+	ListPMMInstances(ctx context.Context) ([]client.PMMInstance, error)
 }

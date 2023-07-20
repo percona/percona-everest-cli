@@ -8,7 +8,7 @@ require (
 	github.com/operator-framework/api v0.17.5
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
 	github.com/percona/everest-operator v0.0.2
-	github.com/percona/percona-everest-backend v0.0.0-20230621135027-58f1fbd7aade
+	github.com/percona/percona-everest-backend v0.0.0-20230714112601-60f666625a47
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
