@@ -2,6 +2,12 @@ init:               ## Install dependencies
 	npm ci
 	npx playwright install
 
+install-operators:  ## Install operators to k8s
+	../bin/everest install operators \
+		--skip-wizard \
+		--backup.enable=0 \
+		--monitoring.enable=0
+
 test:               ## Run all tests
 	npx playwright test
 

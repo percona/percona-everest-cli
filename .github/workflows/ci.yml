@@ -262,6 +262,7 @@ jobs:
         id: cli-tests
         run: |
           make init
+          make install-operators
           make test
           
       - name: Attach the report
