@@ -498,7 +498,16 @@ func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 			return nil, errors.Wrapf(err, "failed to read %q file", f)
 		}
 
-		if err := k.client.ApplyFile(data); err != nil {
+		applyFile := func(ctx context.Context) (bool, error) {
+			k.l.Debugf("Applying %q file", f)
+			if err := k.client.ApplyFile(data); err != nil {
+				k.l.Warn(errors.Wrapf(err, "cannot apply %q file", f))
+				return false, nil
+			}
+			return true, nil
+		}
+
+		if err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, applyFile); err != nil {
 			return nil, errors.Wrapf(err, "cannot apply %q file", f)
 		}
 
