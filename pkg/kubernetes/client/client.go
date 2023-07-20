@@ -1102,7 +1102,7 @@ func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 	packageInstalled := func(ctx context.Context) (bool, error) {
 		_, err := c.GetPackageManifest(ctx, name)
 		if err != nil {
-			if !apierrors.IsNotFound(err) && !apierrors.IsServiceUnavailable(err) {
+			if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
 				return false, err
 			}
 			return false, nil
