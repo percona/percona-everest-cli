@@ -23,8 +23,10 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose mode")
+	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
 
 	rootCmd.AddCommand(newInstallCmd())
+	rootCmd.AddCommand(newListCmd())
 
 	return rootCmd
 }

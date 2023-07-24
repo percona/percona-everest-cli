@@ -35,10 +35,12 @@ class Output {
     });
   }
 
-  async outNotContains(expectedValue: string) {
-    await test.step(`Verify command output contains ${expectedValue}`, async () => {
-      expect(this.stdout, `Stdout does not contain ${expectedValue}!`).not.toContain(expectedValue);
-    });
+  async outNotContains(expectedValue: string[]) {
+    for (const v of expectedValue) {
+      await test.step(`Verify command output contains ${v}`, async () => {
+        expect(this.stdout, `Stdout does not contain ${v}!`).not.toContain(v);
+      });
+    }
   }
 
   async outContainsNormalizedMany(expectedValues: string[]) {
