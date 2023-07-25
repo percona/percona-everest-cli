@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/bombsimon/logrusr/v4 v4.0.0
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.5
