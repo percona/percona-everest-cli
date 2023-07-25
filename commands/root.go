@@ -26,7 +26,9 @@ func NewRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
 
 	rootCmd.AddCommand(newInstallCmd())
+	rootCmd.AddCommand(newProvisionCmd())
 	rootCmd.AddCommand(newListCmd())
+	rootCmd.AddCommand(newDeleteCmd())
 
 	return rootCmd
 }

@@ -60,53 +60,53 @@ type (
 	// OperatorsConfig stores configuration for the operators.
 	OperatorsConfig struct {
 		// Name of the Kubernetes Cluster
-		Name string `mapstructure:"name"`
-		// Namespace defines the namespace to which the components are deployed to.
-		Namespace string `mapstructure:"namespace"`
+		Name string
+		// Namespace defines the namespace operators shall be installed to.
+		Namespace string
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
-		Backup     BackupConfig     `mapstructure:"backup"`
-		Channel    ChannelConfig    `mapstructure:"channel"`
-		Everest    EverestConfig    `mapstructure:"everest"`
-		Monitoring MonitoringConfig `mapstructure:"monitoring"`
-		Operator   OperatorConfig   `mapstructure:"operator"`
+		Backup     BackupConfig
+		Channel    ChannelConfig
+		Everest    EverestConfig
+		Monitoring MonitoringConfig
+		Operator   OperatorConfig
 	}
 
 	// BackupConfig stores configuration for backup.
 	BackupConfig struct {
 		// Enable is true if backup shall be enabled.
-		Enable bool `mapstructure:"enable"`
+		Enable bool
 		// Name stores name of the backup.
-		Name string `mapstructure:"name"`
+		Name string
 		// Endpoint stores URL to backup.
-		Endpoint string `mapstructure:"endpoint"`
+		Endpoint string
 		// Bucket stores name of the bucket for backup.
-		Bucket string `mapstructure:"bucket"`
+		Bucket string
 		// AccessKey stores username for backup.
 		AccessKey string `mapstructure:"access-key"`
 		// SecretKey stores password for backup.
 		SecretKey string `mapstructure:"secret-key"`
 		// Region stores region for backup.
-		Region string `mapstructure:"region"`
+		Region string
 	}
 
 	// EverestConfig stores config for Everest.
 	EverestConfig struct {
 		// Endpoint stores URL to Everest.
-		Endpoint string `mapstructure:"endpoint"`
+		Endpoint string
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
 	MonitoringConfig struct {
 		// Enable is true if monitoring shall be enabled.
-		Enable bool `mapstructure:"enable"`
+		Enable bool
 		// Type stores the type of monitoring to be used.
-		Type MonitoringType `mapstructure:"type"`
+		Type MonitoringType
 		// PMM stores configuration for PMM monitoring type.
-		PMM *PMMConfig `mapstructure:"pmm"`
+		PMM *PMMConfig
 	}
 
 	// OperatorConfig identifies which operators shall be installed.
@@ -122,11 +122,11 @@ type (
 	// PMMConfig stores configuration for PMM monitoring type.
 	PMMConfig struct {
 		// Endpoint stores URL to PMM.
-		Endpoint string `mapstructure:"endpoint"`
+		Endpoint string
 		// Username stores username for authentication against PMM.
-		Username string `mapstructure:"username"`
+		Username string
 		// Password stores password for authentication against PMM.
-		Password string `mapstructure:"password"`
+		Password string
 		// InstanceID stores PMM instance ID from Everest.
 		// If provided, Endpoint, Username and Password are ignored.
 		InstanceID string `mapstructure:"instance-id"`
@@ -135,7 +135,7 @@ type (
 	// ChannelConfig stores configuration for operator channels.
 	ChannelConfig struct {
 		// Everest stores channel for Everest.
-		Everest string `mapstructure:"everest"`
+		Everest string
 		// PG stores channel for PostgreSQL.
 		PG string `mapstructure:"postgresql"`
 		// PSMDB stores channel for MongoDB.
@@ -156,7 +156,7 @@ const secretNameTemplate = "everest-%s"
 // NewOperators returns a new Operators struct.
 func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
 	if c == nil {
-		panic("OperatorsConfig is required")
+		logrus.Panic("OperatorsConfig is required")
 	}
 
 	cli := &Operators{
