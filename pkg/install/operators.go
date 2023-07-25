@@ -181,11 +181,11 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
-	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
-	if err != nil {
-		return err
+	if o.everestClient == nil {
+		if err := o.configureEverestConnector(); err != nil {
+			return err
+		}
 	}
-	o.everestClient = cl
 
 	if err := o.provisionNamespace(); err != nil {
 		return err
@@ -203,6 +203,16 @@ func (o *Operators) Run(ctx context.Context) error {
 	})
 
 	return g.Wait()
+}
+
+func (o *Operators) configureEverestConnector() error {
+	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
+	if err != nil {
+		return err
+	}
+	o.everestClient = cl
+
+	return nil
 }
 
 // runWizard runs installation wizard.
@@ -228,6 +238,10 @@ func (o *Operators) runEverestWizard() error {
 		Default: o.config.Everest.Endpoint,
 	}
 	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
+		return err
+	}
+
+	if err := o.configureEverestConnector(); err != nil {
 		return err
 	}
 
