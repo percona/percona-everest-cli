@@ -23,6 +23,15 @@ func NewEverest(everestClient *client.Client) *Everest {
 	}
 }
 
+// NewEverestFromURL returns a new Everest from a provided URL.
+func NewEverestFromURL(url string) (*Everest, error) {
+	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not initialize everest client")
+	}
+	return NewEverest(everestCl), nil
+}
+
 // makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.
 // See methods in Everest struct for examples how to call.
 func makeRequest[B interface{}, R interface{}](
