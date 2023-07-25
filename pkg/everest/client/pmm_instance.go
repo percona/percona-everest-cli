@@ -14,7 +14,7 @@ func (e *Everest) CreatePMMInstance(
 	body client.CreatePMMInstanceJSONRequestBody,
 ) (*client.PMMInstance, error) {
 	res := &client.PMMInstance{}
-	err := do(
+	err := makeRequest(
 		ctx, e.cl.CreatePMMInstance,
 		body, res, errors.New("cannot create PMM instance due to Everest error"),
 	)
@@ -28,7 +28,7 @@ func (e *Everest) CreatePMMInstance(
 // GetPMMInstance retrieves a PMM instance by its ID.
 func (e *Everest) GetPMMInstance(ctx context.Context, pmmInstanceID string) (*client.PMMInstance, error) {
 	res := &client.PMMInstance{}
-	err := do(
+	err := makeRequest(
 		ctx, e.cl.GetPMMInstance,
 		pmmInstanceID, res, errors.New("cannot retrieve PMM instance due to Everest error"),
 	)
@@ -42,7 +42,7 @@ func (e *Everest) GetPMMInstance(ctx context.Context, pmmInstanceID string) (*cl
 // ListPMMInstances lists PMM instances.
 func (e *Everest) ListPMMInstances(ctx context.Context) ([]client.PMMInstance, error) {
 	res := []client.PMMInstance{}
-	err := do(
+	err := makeRequest(
 		ctx, func(
 			ctx context.Context,
 			_ struct{},
