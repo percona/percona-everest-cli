@@ -3,6 +3,9 @@ kind: VMNodeScrape
 metadata:
   name: pmm-vm-cadvisor-metrics
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: everest
+    everest.percona.com/type: monitoring
 spec:
   scheme: "https"
   interval: "10s"

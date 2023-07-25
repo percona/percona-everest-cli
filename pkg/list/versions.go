@@ -14,7 +14,7 @@ import (
 
 // Versions implements the main logic for commands.
 type Versions struct {
-	config        *VersionsConfig
+	config        VersionsConfig
 	everestClient everestClientConnector
 	l             *logrus.Entry
 }
@@ -51,11 +51,7 @@ func (v VersionsList) String() string {
 }
 
 // NewVersions returns a new Versions struct.
-func NewVersions(c *VersionsConfig, everestClient everestClientConnector) *Versions {
-	if c == nil {
-		panic("VersionsConfig is required")
-	}
-
+func NewVersions(c VersionsConfig, everestClient everestClientConnector) *Versions {
 	cli := &Versions{
 		config:        c,
 		everestClient: everestClient,

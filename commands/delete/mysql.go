@@ -33,7 +33,7 @@ func NewMySQLCmd() *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := delete.NewMySQL(c, everestClConnector)
+			command := delete.NewMySQL(*c, everestClConnector)
 
 			if err := command.Run(cmd.Context()); err != nil {
 				logrus.Error(err)

@@ -3,6 +3,9 @@ kind: ClusterRoleBinding
 metadata:
   name: vmagent
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: everest
+    everest.percona.com/type: monitoring
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

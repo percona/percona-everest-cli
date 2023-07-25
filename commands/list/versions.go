@@ -34,7 +34,7 @@ func NewVersionsCmd() *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := list.NewVersions(c, everestClConnector)
+			command := list.NewVersions(*c, everestClConnector)
 			res, err := command.Run(cmd.Context())
 			if err != nil {
 				logrus.Error(err)

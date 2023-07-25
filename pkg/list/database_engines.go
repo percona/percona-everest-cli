@@ -12,7 +12,7 @@ import (
 
 // DBEngines implements the main logic for commands.
 type DBEngines struct {
-	config        *DBEnginesConfig
+	config        DBEnginesConfig
 	everestClient everestClientConnector
 	l             *logrus.Entry
 }
@@ -51,11 +51,7 @@ func (d DBEnginesList) String() string {
 }
 
 // NewDatabaseEngines returns a new DBEngines struct.
-func NewDatabaseEngines(c *DBEnginesConfig, everestClient everestClientConnector) *DBEngines {
-	if c == nil {
-		panic("DBEnginesConfig is required")
-	}
-
+func NewDatabaseEngines(c DBEnginesConfig, everestClient everestClientConnector) *DBEngines {
 	cli := &DBEngines{
 		config:        c,
 		everestClient: everestClient,

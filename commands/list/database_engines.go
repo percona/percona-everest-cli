@@ -35,7 +35,7 @@ func NewDatabaseEnginesCmd() *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := list.NewDatabaseEngines(c, everestClConnector)
+			command := list.NewDatabaseEngines(*c, everestClConnector)
 			dbEngines, err := command.Run(cmd.Context())
 			if err != nil {
 				logrus.Error(err)

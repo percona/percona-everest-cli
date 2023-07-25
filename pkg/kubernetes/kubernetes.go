@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -424,7 +425,7 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
 		return nil // already installed
 	}
 
-	resources, err := k.applyResources()
+	resources, err := k.applyResources(ctx)
 	if err != nil {
 		return err
 	}
@@ -485,7 +486,7 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	return nil
 }
 
-func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
+func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstructured, error) {
 	files := []string{
 		"crds/olm/crds.yaml",
 		"crds/olm/olm.yaml",
@@ -493,6 +494,7 @@ func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 
 	resources := []unstructured.Unstructured{}
 	for _, f := range files {
+		f := f
 		data, err := fs.ReadFile(data.OLMCRDs, f)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read %q file", f)
@@ -507,7 +509,7 @@ func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 			return true, nil
 		}
 
-		if err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, applyFile); err != nil {
+		if err := wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, applyFile); err != nil {
 			return nil, errors.Wrapf(err, "cannot apply %q file", f)
 		}
 
@@ -849,7 +851,11 @@ const specVMAgent = `
 	"metadata": {
 		"name": %[4]s,
 		"namespace": %[3]s,
-		"creationTimestamp": null
+		"creationTimestamp": null,
+		"labels": {
+			"app.kubernetes.io/managed-by": "everest",
+			"everest.percona.com/type": "monitoring"
+		}
 	},
 	"spec": {
 		"image": {},
@@ -909,7 +915,7 @@ const specVMAgent = `
 }`
 
 func vmAgentSpec(namespace, secretName, address string) (runtime.Object, error) { //nolint:ireturn
-	jName, err := json.Marshal("pmm-vmagent-" + secretName)
+	jName, err := json.Marshal("pmm-" + uuid.NewString())
 	if err != nil {
 		return nil, err
 	}

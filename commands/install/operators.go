@@ -33,7 +33,7 @@ func NewOperatorsCmd() *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			op, err := install.NewOperators(c, everestClConnector)
+			op, err := install.NewOperators(*c, everestClConnector)
 			if err != nil {
 				logrus.Error(err)
 				os.Exit(1)

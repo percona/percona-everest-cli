@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
@@ -42,7 +43,14 @@ func makeRequest[B interface{}, R interface{}](
 		return processErrorResponse(res, errorStatus)
 	}
 
-	return json.NewDecoder(res.Body).Decode(ret)
+	err = json.NewDecoder(res.Body).Decode(ret)
+	if errors.Is(err, io.EOF) {
+		// In case the server returns no content, such as with the DELETE method,
+		// don't return an error.
+		return nil
+	}
+
+	return err
 }
 
 func processErrorResponse(res *http.Response, err error) error {

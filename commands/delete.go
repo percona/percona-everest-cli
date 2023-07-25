@@ -12,6 +12,7 @@ func newDeleteCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(delete.NewMySQLCmd())
+	cmd.AddCommand(delete.NewClusterCmd())
 
 	return cmd
 }

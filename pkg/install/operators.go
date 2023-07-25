@@ -29,7 +29,7 @@ import (
 type Operators struct {
 	l *logrus.Entry
 
-	config        *OperatorsConfig
+	config        OperatorsConfig
 	everestClient everestClientConnector
 	kubeClient    *kubernetes.Kubernetes
 
@@ -154,11 +154,7 @@ type pmmErrorMessage struct {
 const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
-	if c == nil {
-		logrus.Panic("OperatorsConfig is required")
-	}
-
+func NewOperators(c OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
 	cli := &Operators{
 		config:        c,
 		everestClient: everestClient,
@@ -734,7 +730,24 @@ func (o *Operators) prepareServiceAccount() error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
+	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountPolicyRules())
+	if err != nil {
+		return errors.Wrap(err, "could not create role")
+	}
+
+	o.l.Info("Binding role to Everest Service account")
+	err = o.kubeClient.CreateRoleBinding(
+		o.config.Namespace,
+		everestServiceAccountRoleBinding,
+		everestServiceAccountRole,
+		everestServiceAccount,
+	)
+
+	return errors.Wrap(err, "could not create cluster role binding")
+}
+
+func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
@@ -756,29 +769,36 @@ func (o *Operators) prepareServiceAccount() error {
 			Verbs:     []string{"*"},
 		},
 		{
+			APIGroups: []string{"operator.victoriametrics.com"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"deployments"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"services"},
+			Verbs:     []string{"*"},
+		},
+		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"create", "get"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"serviceaccounts"},
+			Verbs:     []string{"*"},
 		},
 		{
 			APIGroups: []string{""},
 			Resources: []string{"storageclasses"},
 			Verbs:     []string{"get", "list"},
 		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not create role")
 	}
-
-	o.l.Info("Binding role to Everest Service account")
-	err = o.kubeClient.CreateRoleBinding(
-		o.config.Namespace,
-		everestServiceAccountRoleBinding,
-		everestServiceAccountRole,
-		everestServiceAccount,
-	)
-
-	return errors.Wrap(err, "could not create cluster role binding")
 }
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {

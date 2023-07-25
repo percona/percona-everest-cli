@@ -10,7 +10,7 @@ import (
 
 // MySQL implements logic for the MySQL command.
 type MySQL struct {
-	config        *MySQLConfig
+	config        MySQLConfig
 	everestClient everestClientConnector
 	l             *logrus.Entry
 }
@@ -30,11 +30,7 @@ type MySQLConfig struct {
 }
 
 // NewMySQL returns a new MySQL struct.
-func NewMySQL(c *MySQLConfig, everestClient everestClientConnector) *MySQL {
-	if c == nil {
-		logrus.Panic("MySQLConfig is required")
-	}
-
+func NewMySQL(c MySQLConfig, everestClient everestClientConnector) *MySQL {
 	cli := &MySQL{
 		config:        c,
 		everestClient: everestClient,
