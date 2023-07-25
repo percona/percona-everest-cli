@@ -19,7 +19,6 @@ package kubernetes
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -499,7 +498,16 @@ func (k *Kubernetes) applyResources() ([]unstructured.Unstructured, error) {
 			return nil, errors.Wrapf(err, "failed to read %q file", f)
 		}
 
-		if err := k.client.ApplyFile(data); err != nil {
+		applyFile := func(ctx context.Context) (bool, error) {
+			k.l.Debugf("Applying %q file", f)
+			if err := k.client.ApplyFile(data); err != nil {
+				k.l.Warn(errors.Wrapf(err, "cannot apply %q file", f))
+				return false, nil
+			}
+			return true, nil
+		}
+
+		if err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, applyFile); err != nil {
 			return nil, errors.Wrapf(err, "cannot apply %q file", f)
 		}
 
@@ -719,21 +727,7 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 }
 
 // ProvisionMonitoring provisions PMM monitoring and creates a VM Agent instance.
-func (k *Kubernetes) ProvisionMonitoring(namespace, login, password, pmmPublicAddress string) error {
-	randomCrypto, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return err
-	}
-
-	secretName := fmt.Sprintf("pmm-credentials-token-%d", randomCrypto)
-	err = k.CreatePMMSecret(namespace, secretName, map[string][]byte{
-		"username": []byte(login),
-		"password": []byte(password),
-	})
-	if err != nil {
-		return errors.Wrap(err, "cannot create PMM secret")
-	}
-
+func (k *Kubernetes) ProvisionMonitoring(namespace, k8sSecretID, pmmPublicAddress string) error {
 	for _, path := range k.victoriaMetricsCRDFiles() {
 		file, err := data.OLMCRDs.ReadFile(path)
 		if err != nil {
@@ -760,7 +754,7 @@ func (k *Kubernetes) ProvisionMonitoring(namespace, login, password, pmmPublicAd
 		}
 	}
 
-	return k.deployVMAgent(namespace, secretName, pmmPublicAddress)
+	return k.deployVMAgent(namespace, k8sSecretID, pmmPublicAddress)
 }
 
 func (k *Kubernetes) deployVMAgent(namespace, secretName, pmmPublicAddress string) error {

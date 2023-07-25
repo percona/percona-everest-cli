@@ -4,11 +4,13 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/bombsimon/logrusr/v4 v4.0.0
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.5
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
 	github.com/percona/everest-operator v0.0.4
-	github.com/percona/percona-everest-backend v0.0.0-20230717145811-c50ac74bed68
+	github.com/percona/percona-everest-backend v0.0.0-20230718110312-5b2134cae9b6
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
@@ -19,9 +21,9 @@ require (
 	k8s.io/api v0.28.0-alpha.4
 	k8s.io/apiextensions-apiserver v0.28.0-alpha.4
 	k8s.io/apimachinery v0.28.0-alpha.4
-	k8s.io/cli-runtime v0.28.0-alpha.3
+	k8s.io/cli-runtime v0.28.0-alpha.4
 	k8s.io/client-go v0.28.0-alpha.4
-	k8s.io/kubectl v0.28.0-alpha.3
+	k8s.io/kubectl v0.28.0-alpha.4
 	sigs.k8s.io/controller-runtime v0.15.0
 )
 
@@ -63,7 +65,6 @@ require (
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/h2non/filetype v1.1.1 // indirect
 	github.com/h2non/go-is-svg v0.0.0-20160927212452-35e8c4b0612c // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
