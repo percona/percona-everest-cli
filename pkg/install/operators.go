@@ -181,14 +181,8 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
-	if o.config.Monitoring.Enable && o.apiKeySecretID == "" {
-		if o.config.Monitoring.PMM.InstanceID == "" {
-			return errors.New("--monitoring.pmm.instance-id cannot be empty if monitoring is enabled")
-		}
-
-		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-			return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
-		}
+	if err := o.validateConfig(ctx); err != nil {
+		return err
 	}
 
 	if o.everestClient == nil {
@@ -213,6 +207,20 @@ func (o *Operators) Run(ctx context.Context) error {
 	})
 
 	return g.Wait()
+}
+
+func (o *Operators) validateConfig(ctx context.Context) error {
+	if o.config.Monitoring.Enable && o.apiKeySecretID == "" {
+		if o.config.Monitoring.PMM.InstanceID == "" {
+			return errors.New("--monitoring.pmm.instance-id cannot be empty if monitoring is enabled")
+		}
+
+		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
+			return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
+		}
+	}
+
+	return nil
 }
 
 func (o *Operators) configureEverestConnector() error {
