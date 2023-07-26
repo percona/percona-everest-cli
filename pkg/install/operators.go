@@ -22,6 +22,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
@@ -154,15 +155,14 @@ type pmmErrorMessage struct {
 const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c *OperatorsConfig, everestClient everestClientConnector) (*Operators, error) {
+func NewOperators(c *OperatorsConfig) (*Operators, error) {
 	if c == nil {
 		logrus.Panic("OperatorsConfig is required")
 	}
 
 	cli := &Operators{
-		config:        c,
-		everestClient: everestClient,
-		l:             logrus.WithField("component", "install/operators"),
+		config: c,
+		l:      logrus.WithField("component", "install/operators"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
@@ -180,6 +180,13 @@ func (o *Operators) Run(ctx context.Context) error {
 			return err
 		}
 	}
+
+	if o.everestClient == nil {
+		if err := o.configureEverestConnector(); err != nil {
+			return err
+		}
+	}
+
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
@@ -196,6 +203,16 @@ func (o *Operators) Run(ctx context.Context) error {
 	})
 
 	return g.Wait()
+}
+
+func (o *Operators) configureEverestConnector() error {
+	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
+	if err != nil {
+		return err
+	}
+	o.everestClient = cl
+
+	return nil
 }
 
 // runWizard runs installation wizard.
@@ -221,6 +238,10 @@ func (o *Operators) runEverestWizard() error {
 		Default: o.config.Everest.Endpoint,
 	}
 	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
+		return err
+	}
+
+	if err := o.configureEverestConnector(); err != nil {
 		return err
 	}
 
