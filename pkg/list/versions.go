@@ -9,14 +9,14 @@ import (
 	goversion "github.com/hashicorp/go-version"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // Versions implements the main logic for commands.
 type Versions struct {
 	config        *VersionsConfig
 	everestClient everestClientConnector
-	l             *logrus.Entry
+	l             *zap.SugaredLogger
 }
 
 type (
@@ -51,7 +51,7 @@ func (v VersionsList) String() string {
 }
 
 // NewVersions returns a new Versions struct.
-func NewVersions(c *VersionsConfig, everestClient everestClientConnector) *Versions {
+func NewVersions(c *VersionsConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *Versions {
 	if c == nil {
 		panic("VersionsConfig is required")
 	}
@@ -59,7 +59,7 @@ func NewVersions(c *VersionsConfig, everestClient everestClientConnector) *Versi
 	cli := &Versions{
 		config:        c,
 		everestClient: everestClient,
-		l:             logrus.WithField("component", "list/versions"),
+		l:             l.With("component", "list/versions"),
 	}
 
 	return cli

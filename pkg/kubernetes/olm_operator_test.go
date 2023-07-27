@@ -24,6 +24,7 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,7 +37,10 @@ func TestInstallOlmOperator(t *testing.T) {
 	ctx := context.Background()
 	k8sclient := &client.MockKubeClientConnector{}
 
-	olms := NewEmpty()
+	l, err := zap.NewDevelopment()
+	assert.NoError(t, err)
+
+	olms := NewEmpty(l.Sugar())
 	olms.client = k8sclient
 
 	//nolint:paralleltest

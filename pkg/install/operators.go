@@ -16,7 +16,7 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,7 +28,7 @@ import (
 
 // Operators implements the main logic for commands.
 type Operators struct {
-	l *logrus.Entry
+	l *zap.SugaredLogger
 
 	config        *OperatorsConfig
 	everestClient everestClientConnector
@@ -155,14 +155,14 @@ type pmmErrorMessage struct {
 const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c *OperatorsConfig) (*Operators, error) {
+func NewOperators(c *OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 	if c == nil {
-		logrus.Panic("OperatorsConfig is required")
+		panic("OperatorsConfig is required")
 	}
 
 	cli := &Operators{
 		config: c,
-		l:      logrus.WithField("component", "install/operators"),
+		l:      l.With("component", "install/operators"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
@@ -644,7 +644,7 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 }
 
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
-	l := o.l.WithField("action", "PMM")
+	l := o.l.With("action", "PMM")
 	l.Info("Setting up PMM monitoring")
 
 	if o.apiKeySecretID == "" {
@@ -670,7 +670,7 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	return nil
 }
 
-func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *logrus.Entry) error {
+func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *zap.SugaredLogger) error {
 	if o.config.Monitoring.PMM.Endpoint == "" || o.config.Monitoring.PMM.Username == "" {
 		return errors.New("PMM endpoint or username is empty")
 	}

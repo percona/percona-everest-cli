@@ -4,15 +4,15 @@ package install
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/pkg/install"
 )
 
 // NewOperatorsCmd returns a new operators command.
-func NewOperatorsCmd() *cobra.Command {
+func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "operators",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -23,14 +23,14 @@ func NewOperatorsCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			op, err := install.NewOperators(c)
+			op, err := install.NewOperators(c, l)
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
 			if err := op.Run(cmd.Context()); err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 		},

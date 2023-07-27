@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/list"
@@ -15,7 +15,7 @@ import (
 )
 
 // NewVersionsCmd returns a new versions command.
-func NewVersionsCmd() *cobra.Command {
+func NewVersionsCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "versions",
 		Aliases: []string{"version"},
@@ -29,19 +29,19 @@ func NewVersionsCmd() *cobra.Command {
 
 			everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", c.Everest.Endpoint))
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := list.NewVersions(c, everestClConnector)
+			command := list.NewVersions(c, everestClConnector, l)
 			res, err := command.Run(cmd.Context())
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
-			output.PrintOutput(cmd, res)
+			output.PrintOutput(cmd, l, res)
 		},
 	}
 
@@ -53,7 +53,7 @@ func NewVersionsCmd() *cobra.Command {
 func initVersionsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID")
-	cmd.MarkFlagRequired("kubernetes-id")
+	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 
 	cmd.Flags().String("type", "", "Filter by database engine type")
 }

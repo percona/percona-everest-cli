@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.6
-	github.com/bombsimon/logrusr/v4 v4.0.0
+	github.com/go-logr/zapr v1.2.4
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.5
@@ -12,10 +12,10 @@ require (
 	github.com/percona/everest-operator v0.0.4
 	github.com/percona/percona-everest-backend v0.0.0-20230718110312-5b2134cae9b6
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.4
+	go.uber.org/zap v1.24.0
 	golang.org/x/sync v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.28.0-alpha.4
@@ -97,6 +97,7 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -109,6 +110,8 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
+	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/mod v0.12.0 // indirect
