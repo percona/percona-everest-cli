@@ -206,13 +206,11 @@ func (o *Operators) Run(ctx context.Context) error {
 }
 
 func (o *Operators) validateConfig(ctx context.Context) error {
-	if o.config.Monitoring.Enable && o.apiKeySecretID == "" {
-		if o.config.Monitoring.PMM.InstanceID == "" {
-			return errors.New("--monitoring.pmm.instance-id cannot be empty if monitoring is enabled")
-		}
-
-		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-			return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
+	if o.config.Monitoring.Enable {
+		if o.apiKeySecretID == "" && o.config.Monitoring.PMM.InstanceID != "" {
+			if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
+				return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
+			}
 		}
 	}
 
