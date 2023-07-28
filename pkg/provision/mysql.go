@@ -88,6 +88,12 @@ func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 	}
 
 	replicas := int32(m.config.Nodes)
+	version := m.config.DB.Version
+	if m.config.DB.Version == "latest" {
+		// An empty string means the operator uses the latest version
+		version = ""
+	}
+
 	payload := everestv1alpha.DatabaseCluster{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "everest.percona.com/v1alpha1",
@@ -100,7 +106,7 @@ func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 			Engine: everestv1alpha.Engine{
 				Type:     everestv1alpha.DatabaseEnginePXC,
 				Replicas: replicas,
-				Version:  m.config.DB.Version,
+				Version:  version,
 				Storage: everestv1alpha.Storage{
 					Size: disk,
 				},

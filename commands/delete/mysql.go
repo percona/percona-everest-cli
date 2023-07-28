@@ -49,8 +49,10 @@ func NewMySQLCmd() *cobra.Command {
 
 func initMySQLFlags(cmd *cobra.Command) {
 	cmd.Flags().String("name", "", "Cluster name")
+	cmd.MarkFlagRequired("name")
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID in Everest")
+	cmd.MarkFlagRequired("kubernetes-id")
 
 	cmd.Flags().BoolP("force", "f", false, "Do not prompt to confirm removal")
 }

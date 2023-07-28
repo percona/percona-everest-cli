@@ -902,14 +902,6 @@ const specVMAgent = `
 		"extraArgs": {
 			"memory.allowedPercent": "40"
 		}
-	},
-	"status": {
-		"shards": 0,
-		"selector": "",
-		"replicas": 0,
-		"updatedReplicas": 0,
-		"availableReplicas": 0,
-		"unavailableReplicas": 0
 	}
 }`
 
