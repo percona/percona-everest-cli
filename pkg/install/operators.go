@@ -181,14 +181,14 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
-	if err := o.validateConfig(ctx); err != nil {
-		return err
-	}
-
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
 		}
+	}
+
+	if err := o.validateConfig(ctx); err != nil {
+		return err
 	}
 
 	if err := o.provisionNamespace(); err != nil {
