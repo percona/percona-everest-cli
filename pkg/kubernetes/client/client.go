@@ -222,6 +222,27 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
+func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
+	rcl, err := rest.HTTPClientFor(c.restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig, rcl)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create dynamic rest mapper")
+	}
+
+	cl, err := client.New(c.restConfig, client.Options{
+		Scheme: scheme.Scheme,
+		Mapper: rm,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create client")
+	}
+	return cl, nil
+}
+
 // ClusterName returns the name of the k8s cluster.
 func (c *Client) ClusterName() string {
 	return c.clusterName

@@ -769,29 +769,9 @@ func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"*"},
 		},
 		{
-			APIGroups: []string{"operator.victoriametrics.com"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"apps"},
-			Resources: []string{"deployments"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"services"},
-			Verbs:     []string{"*"},
-		},
-		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"serviceaccounts"},
-			Verbs:     []string{"*"},
+			Verbs:     []string{"create", "get"},
 		},
 		{
 			APIGroups: []string{""},

@@ -8,16 +8,25 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
 // Cluster implements logic for the cluster command.
 type Cluster struct {
 	config        ClusterConfig
 	everestClient everestClientConnector
+	kubeClient    *kubernetes.Kubernetes
 	l             *logrus.Entry
 
-	// kubernetesID stores ID of the Kubernetes cluster to be removed.
-	kubernetesID string
+	kubernetes *k8sCluster
+}
+
+type k8sCluster struct {
+	// id stores ID of the Kubernetes cluster to be removed.
+	id string
+	// namespace stores everest namespace in the k8s cluster.
+	namespace string
 }
 
 // ClusterConfig stores configuration for the ClusterL command.
@@ -30,24 +39,34 @@ type ClusterConfig struct {
 		Endpoint string
 	}
 
+	// KubeconfigPath is a path to a kubeconfig
+	KubeconfigPath string `mapstructure:"kubeconfig"`
+
 	// Force is true when we shall not prompt for removal.
 	Force bool
 }
 
 // NewCluster returns a new Cluster struct.
-func NewCluster(c ClusterConfig, everestClient everestClientConnector) *Cluster {
+func NewCluster(c ClusterConfig, everestClient everestClientConnector) (*Cluster, error) {
+	l := logrus.WithField("component", "delete/cluster")
+	kubeClient, err := kubernetes.New(c.KubeconfigPath, l)
+	if err != nil {
+		return nil, err
+	}
+
 	cli := &Cluster{
 		config:        c,
 		everestClient: everestClient,
-		l:             logrus.WithField("component", "delete/cluster"),
+		kubeClient:    kubeClient,
+		l:             l,
 	}
 
-	return cli
+	return cli, nil
 }
 
 // Run runs the cluster command.
 func (c *Cluster) Run(ctx context.Context) error {
-	if err := c.populateKubernetesID(ctx); err != nil {
+	if err := c.populateKubernetesCluster(ctx); err != nil {
 		return err
 	}
 
@@ -66,8 +85,19 @@ func (c *Cluster) Run(ctx context.Context) error {
 		}
 	}
 
-	c.l.Infof("Deleting %q Kubernetes cluster from Everest", c.config.Name)
-	err := c.everestClient.UnregisterKubernetesCluster(ctx, c.kubernetesID, client.UnregisterKubernetesClusterParams{
+	if c.kubernetes == nil {
+		// This shall not happen but it's here in case the logic
+		// above becomes broken and somehow we end up with an empty kubernetes field.
+		return errors.New("could not find Kubernetes cluster in Everest")
+	}
+
+	c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
+	if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
+		return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
+	}
+
+	c.l.Infof("Deleting Kubernetes cluster %q from Everest", c.config.Name)
+	err := c.everestClient.UnregisterKubernetesCluster(ctx, c.kubernetes.id, client.UnregisterKubernetesClusterParams{
 		Force: &c.config.Force,
 	})
 	if err != nil {
@@ -79,8 +109,8 @@ func (c *Cluster) Run(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) populateKubernetesID(ctx context.Context) error {
-	if c.kubernetesID != "" {
+func (c *Cluster) populateKubernetesCluster(ctx context.Context) error {
+	if c.kubernetes != nil {
 		return nil
 	}
 
@@ -90,22 +120,16 @@ func (c *Cluster) populateKubernetesID(ctx context.Context) error {
 		}
 	}
 
-	if c.kubernetesID == "" {
-		id, err := c.lookupKubernetesClusterID(ctx, c.config.Name)
+	if c.kubernetes == nil {
+		cluster, err := c.lookupKubernetesCluster(ctx, c.config.Name)
 		if err != nil {
 			return err
 		}
 
-		if id == "" {
-			return errors.New("could not find Kubernetes cluster in Everest by its name")
+		c.kubernetes = &k8sCluster{
+			id:        cluster.Id,
+			namespace: cluster.Namespace,
 		}
-		c.kubernetesID = id
-	}
-
-	if c.kubernetesID == "" {
-		// This shall not happen but is here in case the logic
-		// above is changed and somehow we end up with an empty kubernetesID
-		return errors.New("could not find Kubernetes cluster ID in Everest")
 	}
 
 	return nil
@@ -133,22 +157,25 @@ func (c *Cluster) askForKubernetesCluster(ctx context.Context) error {
 
 	cluster := clusters[ix]
 	c.config.Name = cluster.Name
-	c.kubernetesID = cluster.Id
+	c.kubernetes = &k8sCluster{
+		id:        cluster.Id,
+		namespace: cluster.Namespace,
+	}
 
 	return nil
 }
 
-func (c *Cluster) lookupKubernetesClusterID(ctx context.Context, name string) (string, error) {
+func (c *Cluster) lookupKubernetesCluster(ctx context.Context, name string) (*client.KubernetesCluster, error) {
 	clusters, err := c.everestClient.ListKubernetesClusters(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	for _, i := range clusters {
 		if i.Name == name {
-			return i.Id, nil
+			return &i, nil
 		}
 	}
 
-	return "", nil
+	return nil, errors.New("could not find Kubernetes cluster in Everest by its name")
 }

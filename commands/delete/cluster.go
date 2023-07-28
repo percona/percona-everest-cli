@@ -32,7 +32,12 @@ func NewClusterCmd() *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			op := delete.NewCluster(*c, everestClConnector)
+			op, err := delete.NewCluster(*c, everestClConnector)
+			if err != nil {
+				logrus.Error(err)
+				os.Exit(1)
+			}
+
 			if err := op.Run(cmd.Context()); err != nil {
 				logrus.Error(err)
 				os.Exit(1)
@@ -47,12 +52,14 @@ func NewClusterCmd() *cobra.Command {
 
 func initClusterFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
+	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("name", "", "Kubernetes cluster name in Everest")
 	cmd.Flags().BoolP("force", "f", false, "Force removal in case there are database clusters running")
 }
 
 func initClusterViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
+	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))             //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                         //nolint:errcheck,gosec
 	viper.BindPFlag("force", cmd.Flags().Lookup("force"))                       //nolint:errcheck,gosec
 }

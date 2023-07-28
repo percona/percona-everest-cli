@@ -98,4 +98,6 @@ type KubeClientConnector interface {
 	// DeleteFile accepts manifest file contents parses into []runtime.Object
 	// and deletes them from the cluster.
 	DeleteFile(fileBytes []byte) error
+	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
+	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 }
