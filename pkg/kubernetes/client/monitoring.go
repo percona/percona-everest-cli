@@ -5,6 +5,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +71,8 @@ func (c *Client) monitoringResourceTypesForRemoval() []client.Object {
 		&corev1.ServiceAccount{},
 		&corev1.Service{},
 		&appsv1.Deployment{},
+		&rbacv1.ClusterRole{},
+		&rbacv1.ClusterRoleBinding{},
 
 		vmNodeScrape,
 		vmPodScrape,
