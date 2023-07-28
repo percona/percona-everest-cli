@@ -28,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
@@ -849,7 +848,7 @@ const specVMAgent = `
 	"kind": "VMAgent",
 	"apiVersion": "operator.victoriametrics.com/v1beta1",
 	"metadata": {
-		"name": %[4]s,
+		"generateName": %[4]s,
 		"namespace": %[3]s,
 		"creationTimestamp": null,
 		"labels": {
@@ -915,7 +914,7 @@ const specVMAgent = `
 }`
 
 func vmAgentSpec(namespace, secretName, address string) (runtime.Object, error) { //nolint:ireturn
-	jName, err := json.Marshal("pmm-" + uuid.NewString())
+	jName, err := json.Marshal("everest-pmm-")
 	if err != nil {
 		return nil, err
 	}
