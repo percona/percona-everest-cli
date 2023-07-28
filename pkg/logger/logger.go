@@ -8,12 +8,27 @@ import (
 	"go.uber.org/zap"
 )
 
-// MustInitLogger initializes logger and panics in case of an error.
+// MustInitLogger initializes a logger and panics in case of an error.
 func MustInitLogger(json bool) *zap.Logger {
 	lCfg := zap.NewProductionConfig()
 	lCfg.EncoderConfig = zap.NewDevelopmentEncoderConfig()
 	if !json {
 		lCfg.Encoding = "console"
+	}
+
+	l, err := lCfg.Build()
+	if err != nil {
+		panic(fmt.Sprintf("Cannot initialize logger: %s", err))
+	}
+
+	return l
+}
+
+// MustInitVerboseLogger initializes a verbose logger and panics in case of an error.
+func MustInitVerboseLogger(json bool) *zap.Logger {
+	lCfg := zap.NewDevelopmentConfig()
+	if json {
+		lCfg.Encoding = "json"
 	}
 
 	l, err := lCfg.Build()
@@ -37,11 +52,9 @@ func InitLoggerInRootCmd(cmd *cobra.Command, l *zap.SugaredLogger) {
 		l.Warn(`Could not parse "json" flag`)
 	}
 
-	if json {
+	if verbose {
+		*l = *MustInitVerboseLogger(json).Sugar()
+	} else if json {
 		*l = *MustInitLogger(true).Sugar()
-	}
-
-	if !verbose {
-		*l = *l.WithOptions(zap.IncreaseLevel(zap.InfoLevel))
 	}
 }

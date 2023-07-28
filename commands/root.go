@@ -14,6 +14,7 @@ func NewRootCmd(l *zap.SugaredLogger) *cobra.Command {
 		Use: "everest",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			logger.InitLoggerInRootCmd(cmd, l)
+			l.Debug("Debug logging enabled")
 		},
 	}
 
