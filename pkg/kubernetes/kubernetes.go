@@ -121,8 +121,8 @@ type NodeFileSystemSummary struct {
 }
 
 // New returns new Kubernetes object.
-func New(kubeconfig string, l *logrus.Entry) (*Kubernetes, error) {
-	client, err := client.NewFromKubeConfig(kubeconfig)
+func New(kubeconfigPath string, l *logrus.Entry) (*Kubernetes, error) {
+	client, err := client.NewFromKubeConfig(kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func New(kubeconfig string, l *logrus.Entry) (*Kubernetes, error) {
 				IdleConnTimeout: 10 * time.Second,
 			},
 		},
-		kubeconfig: kubeconfig,
+		kubeconfig: kubeconfigPath,
 	}, nil
 }
 
