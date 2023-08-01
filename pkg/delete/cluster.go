@@ -29,7 +29,7 @@ type k8sCluster struct {
 	namespace string
 }
 
-// ClusterConfig stores configuration for the ClusterL command.
+// ClusterConfig stores configuration for the Cluster command.
 type ClusterConfig struct {
 	// Name is a name of the Kubernetes cluster in Everest
 	Name string
