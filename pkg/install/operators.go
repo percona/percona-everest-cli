@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -16,7 +17,7 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,7 +29,7 @@ import (
 
 // Operators implements the main logic for commands.
 type Operators struct {
-	l *logrus.Entry
+	l *zap.SugaredLogger
 
 	config        OperatorsConfig
 	everestClient everestClientConnector
@@ -155,14 +156,19 @@ type pmmErrorMessage struct {
 const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c OperatorsConfig) (*Operators, error) {
+func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 	cli := &Operators{
 		config: c,
-		l:      logrus.WithField("component", "install/operators"),
+		l:      l.With("component", "install/operators"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
 	if err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			cli.l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this computer/server.")
+		}
 		return nil, err
 	}
 	cli.kubeClient = k
@@ -310,6 +316,9 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 	instances, err := o.everestClient.ListPMMInstances(ctx)
 	if err != nil {
+		o.l.Error("Could not get a list of PMM instances from Everest. " +
+			"Make sure Everest is running and is accessible from this computer/server.")
+
 		return errors.Wrap(err, "could not retrieve list of PMM instances")
 	}
 
@@ -521,6 +530,12 @@ func (o *Operators) runOperatorsWizard() error {
 func (o *Operators) setPMMAPIKeySecretIDFromInstanceID(ctx context.Context) error {
 	pmm, err := o.everestClient.GetPMMInstance(ctx, o.config.Monitoring.PMM.InstanceID)
 	if err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this computer/server.")
+		}
+
 		return err
 	}
 
@@ -638,7 +653,7 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 }
 
 func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
-	l := o.l.WithField("action", "PMM")
+	l := o.l.With("action", "PMM")
 	l.Info("Setting up PMM monitoring")
 
 	if o.apiKeySecretID == "" {
@@ -664,7 +679,7 @@ func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
 	return nil
 }
 
-func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *logrus.Entry) error {
+func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *zap.SugaredLogger) error {
 	if o.config.Monitoring.PMM.Endpoint == "" || o.config.Monitoring.PMM.Username == "" {
 		return errors.New("PMM endpoint or username is empty")
 	}
@@ -808,7 +823,7 @@ func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"create", "get"},
+			Verbs:     []string{"create", "get", "delete"},
 		},
 		{
 			APIGroups: []string{""},

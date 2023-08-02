@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // DBEngines implements the main logic for commands.
 type DBEngines struct {
 	config        DBEnginesConfig
 	everestClient everestClientConnector
-	l             *logrus.Entry
+	l             *zap.SugaredLogger
 }
 
 type (
@@ -51,11 +51,11 @@ func (d DBEnginesList) String() string {
 }
 
 // NewDatabaseEngines returns a new DBEngines struct.
-func NewDatabaseEngines(c DBEnginesConfig, everestClient everestClientConnector) *DBEngines {
+func NewDatabaseEngines(c DBEnginesConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *DBEngines {
 	cli := &DBEngines{
 		config:        c,
 		everestClient: everestClient,
-		l:             logrus.WithField("component", "list/databaseengines"),
+		l:             l.With("component", "list/databaseengines"),
 	}
 
 	return cli

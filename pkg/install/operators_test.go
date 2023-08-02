@@ -2,14 +2,14 @@ package install
 
 import (
 	"context"
-	"io"
 	"strings"
 	"testing"
 
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	mock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const apiSecret = "api-secret"
@@ -93,16 +93,17 @@ func TestOperators_validateConfig(t *testing.T) {
 			},
 		},
 	}
+
+	l, err := zap.NewDevelopment()
+	require.NoError(t, err)
+
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			l := logrus.New()
-			l.SetOutput(io.Discard)
-
 			o := &Operators{
-				l:              l.WithField("component", "test"),
+				l:              l.Sugar(),
 				config:         tt.fields.config,
 				everestClient:  tt.fields.everestClient,
 				apiKeySecretID: tt.fields.apiKeySecretID,

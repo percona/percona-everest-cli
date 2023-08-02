@@ -4,24 +4,22 @@ package main
 import (
 	"os"
 
-	"github.com/bombsimon/logrusr/v4"
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/zapr"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/percona/percona-everest-cli/commands"
+	"github.com/percona/percona-everest-cli/pkg/logger"
 )
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
+	l := logger.MustInitLogger(false)
 
 	// This is required because controller-runtime requires a logger
 	// to be set within 30 seconds of the program initialization.
-	log := logrusr.New(logrus.StandardLogger())
+	log := zapr.NewLogger(l)
 	ctrlruntimelog.SetLogger(log)
 
-	rootCmd := commands.NewRootCmd()
+	rootCmd := commands.NewRootCmd(l.Sugar())
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

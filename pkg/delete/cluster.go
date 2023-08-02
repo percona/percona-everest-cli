@@ -7,7 +7,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
@@ -17,7 +17,7 @@ type Cluster struct {
 	config        ClusterConfig
 	everestClient everestClientConnector
 	kubeClient    *kubernetes.Kubernetes
-	l             *logrus.Entry
+	l             *zap.SugaredLogger
 
 	kubernetes *k8sCluster
 }
@@ -47,8 +47,7 @@ type ClusterConfig struct {
 }
 
 // NewCluster returns a new Cluster struct.
-func NewCluster(c ClusterConfig, everestClient everestClientConnector) (*Cluster, error) {
-	l := logrus.WithField("component", "delete/cluster")
+func NewCluster(c ClusterConfig, everestClient everestClientConnector, l *zap.SugaredLogger) (*Cluster, error) {
 	kubeClient, err := kubernetes.New(c.KubeconfigPath, l)
 	if err != nil {
 		return nil, err

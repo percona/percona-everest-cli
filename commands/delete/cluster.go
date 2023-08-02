@@ -6,16 +6,16 @@ import (
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/pkg/delete"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 )
 
 // NewClusterCmd returns a new cluster command.
-func NewClusterCmd() *cobra.Command {
+func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "cluster",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -27,19 +27,19 @@ func NewClusterCmd() *cobra.Command {
 
 			everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", c.Everest.Endpoint))
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			op, err := delete.NewCluster(*c, everestClConnector)
+			op, err := delete.NewCluster(*c, everestClConnector, l)
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
 			if err := op.Run(cmd.Context()); err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 		},
