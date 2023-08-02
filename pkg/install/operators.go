@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -167,6 +168,11 @@ func NewOperators(c *OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) 
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
 	if err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			cli.l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this computer/server.")
+		}
 		return nil, err
 	}
 	cli.kubeClient = k
@@ -181,14 +187,14 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
-	if err := o.validateConfig(ctx); err != nil {
-		return err
-	}
-
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
 		}
+	}
+
+	if err := o.validateConfig(ctx); err != nil {
+		return err
 	}
 
 	if err := o.provisionNamespace(); err != nil {
@@ -316,6 +322,9 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 	instances, err := o.everestClient.ListPMMInstances(ctx)
 	if err != nil {
+		o.l.Error("Could not get a list of PMM instances from Everest. " +
+			"Make sure Everest is running and is accessible from this computer/server.")
+
 		return errors.Wrap(err, "could not retrieve list of PMM instances")
 	}
 
@@ -527,6 +536,12 @@ func (o *Operators) runOperatorsWizard() error {
 func (o *Operators) setPMMAPIKeySecretIDFromInstanceID(ctx context.Context) error {
 	pmm, err := o.everestClient.GetPMMInstance(ctx, o.config.Monitoring.PMM.InstanceID)
 	if err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this computer/server.")
+		}
+
 		return err
 	}
 
@@ -797,7 +812,7 @@ func (o *Operators) prepareServiceAccount() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"create", "get"},
+			Verbs:     []string{"create", "get", "delete"},
 		},
 		{
 			APIGroups: []string{""},

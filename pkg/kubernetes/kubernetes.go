@@ -121,8 +121,8 @@ type NodeFileSystemSummary struct {
 }
 
 // New returns new Kubernetes object.
-func New(kubeconfig string, l *zap.SugaredLogger) (*Kubernetes, error) {
-	client, err := client.NewFromKubeConfig(kubeconfig, l)
+func New(kubeconfigPath string, l *zap.SugaredLogger) (*Kubernetes, error) {
+	client, err := client.NewFromKubeConfig(kubeconfigPath, l)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func New(kubeconfig string, l *zap.SugaredLogger) (*Kubernetes, error) {
 				IdleConnTimeout: 10 * time.Second,
 			},
 		},
-		kubeconfig: kubeconfig,
+		kubeconfig: kubeconfigPath,
 	}, nil
 }
 
