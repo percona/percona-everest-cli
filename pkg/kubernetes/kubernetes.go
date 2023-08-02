@@ -493,7 +493,10 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 
 	resources := []unstructured.Unstructured{}
 	for _, f := range files {
+		// The scopelint linter warns about using the f variable in a function.
+		// While it's safe, we assign f := f to silent the warning.
 		f := f
+
 		data, err := fs.ReadFile(data.OLMCRDs, f)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to read %q file", f)
