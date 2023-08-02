@@ -797,7 +797,7 @@ func (o *Operators) prepareServiceAccount() error {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"create", "get"},
+			Verbs:     []string{"create", "get", "delete"},
 		},
 		{
 			APIGroups: []string{""},
