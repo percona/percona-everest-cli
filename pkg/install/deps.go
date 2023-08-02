@@ -6,6 +6,8 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 )
 
+//go:generate ../../bin/mockery --name=everestClientConnector --case=snake --inpackage --testonly
+
 type everestClientConnector interface {
 	RegisterKubernetesCluster(
 		ctx context.Context,
