@@ -5,6 +5,8 @@ metadata:
     app.kubernetes.io/component: exporter
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/version: 2.5.0
+    app.kubernetes.io/managed-by: everest
+    everest.percona.com/type: monitoring
   name: kube-state-metrics
   namespace: default
 roleRef:

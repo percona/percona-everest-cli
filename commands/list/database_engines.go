@@ -35,7 +35,7 @@ func NewDatabaseEnginesCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := list.NewDatabaseEngines(c, everestClConnector, l)
+			command := list.NewDatabaseEngines(*c, everestClConnector, l)
 			dbEngines, err := command.Run(cmd.Context())
 			if err != nil {
 				l.Error(err)

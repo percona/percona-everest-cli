@@ -33,7 +33,7 @@ func NewMySQLCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := delete.NewMySQL(c, everestClConnector, l)
+			command := delete.NewMySQL(*c, everestClConnector, l)
 
 			if err := command.Run(cmd.Context()); err != nil {
 				l.Error(err)

@@ -3,6 +3,9 @@ kind: ClusterRole
 metadata:
   name: vmagent
   namespace: default
+  labels:
+    app.kubernetes.io/managed-by: everest
+    everest.percona.com/type: monitoring
 rules:
   - apiGroups: ["","networking.k8s.io","extensions"]
     resources:

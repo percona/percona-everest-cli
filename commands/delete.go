@@ -13,6 +13,7 @@ func newDeleteCmd(l *zap.SugaredLogger) *cobra.Command {
 	}
 
 	cmd.AddCommand(delete.NewMySQLCmd(l))
+	cmd.AddCommand(delete.NewClusterCmd(l))
 
 	return cmd
 }

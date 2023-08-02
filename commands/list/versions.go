@@ -34,7 +34,7 @@ func NewVersionsCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := list.NewVersions(c, everestClConnector, l)
+			command := list.NewVersions(*c, everestClConnector, l)
 			res, err := command.Run(cmd.Context())
 			if err != nil {
 				l.Error(err)

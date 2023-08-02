@@ -14,7 +14,7 @@ import (
 
 // MySQL implements logic for the MySQL command.
 type MySQL struct {
-	config        *MySQLConfig
+	config        MySQLConfig
 	everestClient everestClientConnector
 	l             *zap.SugaredLogger
 }
@@ -42,11 +42,7 @@ type MySQLConfig struct {
 }
 
 // NewMySQL returns a new MySQL struct.
-func NewMySQL(c *MySQLConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *MySQL {
-	if c == nil {
-		l.Panic("MySQLConfig is required")
-	}
-
+func NewMySQL(c MySQLConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *MySQL {
 	cli := &MySQL{
 		config:        c,
 		everestClient: everestClient,

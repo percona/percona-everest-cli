@@ -31,7 +31,7 @@ import (
 type Operators struct {
 	l *zap.SugaredLogger
 
-	config        *OperatorsConfig
+	config        OperatorsConfig
 	everestClient everestClientConnector
 	kubeClient    *kubernetes.Kubernetes
 
@@ -156,11 +156,7 @@ type pmmErrorMessage struct {
 const secretNameTemplate = "everest-%s"
 
 // NewOperators returns a new Operators struct.
-func NewOperators(c *OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
-	if c == nil {
-		panic("OperatorsConfig is required")
-	}
-
+func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 	cli := &Operators{
 		config: c,
 		l:      l.With("component", "install/operators"),
@@ -216,13 +212,11 @@ func (o *Operators) Run(ctx context.Context) error {
 }
 
 func (o *Operators) validateConfig(ctx context.Context) error {
-	if o.config.Monitoring.Enable && o.apiKeySecretID == "" {
-		if o.config.Monitoring.PMM.InstanceID == "" {
-			return errors.New("--monitoring.pmm.instance-id cannot be empty if monitoring is enabled")
-		}
-
-		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-			return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
+	if o.config.Monitoring.Enable {
+		if o.apiKeySecretID == "" && o.config.Monitoring.PMM.InstanceID != "" {
+			if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
+				return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
+			}
 		}
 	}
 
@@ -788,7 +782,24 @@ func (o *Operators) prepareServiceAccount() error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, []rbacv1.PolicyRule{
+	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountPolicyRules())
+	if err != nil {
+		return errors.Wrap(err, "could not create role")
+	}
+
+	o.l.Info("Binding role to Everest Service account")
+	err = o.kubeClient.CreateRoleBinding(
+		o.config.Namespace,
+		everestServiceAccountRoleBinding,
+		everestServiceAccountRole,
+		everestServiceAccount,
+	)
+
+	return errors.Wrap(err, "could not create cluster role binding")
+}
+
+func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"databaseclusters", "databaseclusterrestores"},
@@ -819,20 +830,7 @@ func (o *Operators) prepareServiceAccount() error {
 			Resources: []string{"storageclasses"},
 			Verbs:     []string{"get", "list"},
 		},
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not create role")
 	}
-
-	o.l.Info("Binding role to Everest Service account")
-	err = o.kubeClient.CreateRoleBinding(
-		o.config.Namespace,
-		everestServiceAccountRoleBinding,
-		everestServiceAccountRole,
-		everestServiceAccount,
-	)
-
-	return errors.Wrap(err, "could not create cluster role binding")
 }
 
 func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {

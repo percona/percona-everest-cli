@@ -23,7 +23,7 @@ func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
-			op, err := install.NewOperators(c, l)
+			op, err := install.NewOperators(*c, l)
 			if err != nil {
 				l.Error(err)
 				os.Exit(1)

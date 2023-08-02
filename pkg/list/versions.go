@@ -14,7 +14,7 @@ import (
 
 // Versions implements the main logic for commands.
 type Versions struct {
-	config        *VersionsConfig
+	config        VersionsConfig
 	everestClient everestClientConnector
 	l             *zap.SugaredLogger
 }
@@ -51,11 +51,7 @@ func (v VersionsList) String() string {
 }
 
 // NewVersions returns a new Versions struct.
-func NewVersions(c *VersionsConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *Versions {
-	if c == nil {
-		panic("VersionsConfig is required")
-	}
-
+func NewVersions(c VersionsConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *Versions {
 	cli := &Versions{
 		config:        c,
 		everestClient: everestClient,
