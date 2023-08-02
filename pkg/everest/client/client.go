@@ -57,7 +57,7 @@ func makeRequest[B interface{}, R interface{}](
 func processErrorResponse(res *http.Response, err error) error {
 	errMsg := client.Error{}
 	if err := json.NewDecoder(res.Body).Decode(&errMsg); err != nil {
-		return err
+		return errors.Wrapf(err, "could not decode Everest error response (status %d)", res.StatusCode)
 	}
 
 	msg := fmt.Sprintf("unknown error (status %d)", res.StatusCode)

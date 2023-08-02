@@ -163,12 +163,12 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 	path := strings.ReplaceAll(kubeconfig, "~", home)
 	fileData, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not read kubeconfig file")
 	}
 
 	clientConfig, err := clientcmd.Load(fileData)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not parse kubeconfig file")
 	}
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(fileData)
