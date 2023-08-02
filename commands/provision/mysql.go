@@ -6,16 +6,16 @@ import (
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/provision"
 )
 
 // NewMySQLCmd returns a new MySQL command.
-func NewMySQLCmd() *cobra.Command {
+func NewMySQLCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "mysql",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -28,15 +28,15 @@ func NewMySQLCmd() *cobra.Command {
 
 			everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", c.Everest.Endpoint))
 			if err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 
 			everestClConnector := everestClient.NewEverest(everestCl)
-			command := provision.NewMySQL(c, everestClConnector)
+			command := provision.NewMySQL(c, everestClConnector, l)
 
 			if err := command.Run(cmd.Context()); err != nil {
-				logrus.Error(err)
+				l.Error(err)
 				os.Exit(1)
 			}
 		},
@@ -49,10 +49,10 @@ func NewMySQLCmd() *cobra.Command {
 
 func initMySQLFlags(cmd *cobra.Command) {
 	cmd.Flags().String("name", "", "Cluster name")
-	cmd.MarkFlagRequired("name")
+	cmd.MarkFlagRequired("name") //nolint:errcheck,gosec
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID in Everest")
-	cmd.MarkFlagRequired("kubernetes-id")
+	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 
 	cmd.Flags().String("db.version", "latest", "MySQL version")
 

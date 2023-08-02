@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 // MySQL implements logic for the MySQL command.
 type MySQL struct {
 	config        *MySQLConfig
 	everestClient everestClientConnector
-	l             *logrus.Entry
+	l             *zap.SugaredLogger
 }
 
 // MySQLConfig stores configuration for the MySQL command.
@@ -30,15 +30,15 @@ type MySQLConfig struct {
 }
 
 // NewMySQL returns a new MySQL struct.
-func NewMySQL(c *MySQLConfig, everestClient everestClientConnector) *MySQL {
+func NewMySQL(c *MySQLConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *MySQL {
 	if c == nil {
-		logrus.Panic("MySQLConfig is required")
+		l.Panic("MySQLConfig is required")
 	}
 
 	cli := &MySQL{
 		config:        c,
 		everestClient: everestClient,
-		l:             logrus.WithField("component", "delete/mysql"),
+		l:             l.With("component", "delete/mysql"),
 	}
 
 	return cli

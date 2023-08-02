@@ -31,7 +31,7 @@ import (
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -95,7 +95,7 @@ var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github"
 // Kubernetes is a client for Kubernetes.
 type Kubernetes struct {
 	client     client.KubeClientConnector
-	l          *logrus.Entry
+	l          *zap.SugaredLogger
 	httpClient *http.Client
 	kubeconfig string
 }
@@ -121,15 +121,15 @@ type NodeFileSystemSummary struct {
 }
 
 // New returns new Kubernetes object.
-func New(kubeconfigPath string, l *logrus.Entry) (*Kubernetes, error) {
-	client, err := client.NewFromKubeConfig(kubeconfigPath)
+func New(kubeconfigPath string, l *zap.SugaredLogger) (*Kubernetes, error) {
+	client, err := client.NewFromKubeConfig(kubeconfigPath, l)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Kubernetes{
 		client: client,
-		l:      l.WithField("component", "kubernetes"),
+		l:      l.With("component", "kubernetes"),
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 			Transport: &http.Transport{
@@ -142,10 +142,10 @@ func New(kubeconfigPath string, l *logrus.Entry) (*Kubernetes, error) {
 }
 
 // NewEmpty returns new Kubernetes object.
-func NewEmpty() *Kubernetes {
+func NewEmpty(l *zap.SugaredLogger) *Kubernetes {
 	return &Kubernetes{
 		client: &client.Client{},
-		l:      logrus.WithField("component", "kubernetes"),
+		l:      l.With("component", "kubernetes"),
 		httpClient: &http.Client{
 			Timeout: time.Second * 5,
 			Transport: &http.Transport{

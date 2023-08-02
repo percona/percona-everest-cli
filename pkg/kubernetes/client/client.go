@@ -37,7 +37,7 @@ import (
 	packageServerClient "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/client/clientset/versioned"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -97,6 +97,8 @@ const (
 
 // Client is the internal client for Kubernetes.
 type Client struct {
+	l *zap.SugaredLogger
+
 	clientset        kubernetes.Interface
 	apiextClientset  apiextv1clientset.Interface
 	dynamicClientset dynamic.Interface
@@ -158,7 +160,7 @@ func (e podErrors) Error() string {
 }
 
 // NewFromKubeConfig returns new Client from path to a kubeconfig.
-func NewFromKubeConfig(kubeconfig string) (*Client, error) {
+func NewFromKubeConfig(kubeconfig string, l *zap.SugaredLogger) (*Client, error) {
 	home := os.Getenv("HOME")
 	path := strings.ReplaceAll(kubeconfig, "~", home)
 	fileData, err := os.ReadFile(path) //nolint:gosec
@@ -191,6 +193,7 @@ func NewFromKubeConfig(kubeconfig string) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
+		l:                l,
 		clientset:        clientset,
 		apiextClientset:  apiextClientset,
 		dynamicClientset: dynamicClientset,
@@ -532,7 +535,7 @@ func (c *Client) GetEvents(ctx context.Context, name string) (string, error) {
 
 	var events *corev1.EventList
 	if ref, err := reference.GetReference(scheme.Scheme, pod); err != nil {
-		logrus.Warnf("Unable to construct reference to '%#v': %v", pod, err)
+		c.l.Warnf("Unable to construct reference to '%#v': %v", pod, err)
 	} else {
 		ref.Kind = ""
 		if _, isMirrorPod := pod.Annotations[corev1.MirrorPodAnnotationKey]; isMirrorPod {

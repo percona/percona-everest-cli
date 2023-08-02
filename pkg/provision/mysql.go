@@ -7,7 +7,7 @@ import (
 	everestv1alpha "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -16,7 +16,7 @@ import (
 type MySQL struct {
 	config        *MySQLConfig
 	everestClient everestClientConnector
-	l             *logrus.Entry
+	l             *zap.SugaredLogger
 }
 
 // MySQLConfig stores configuration for the MySQL command.
@@ -42,15 +42,15 @@ type MySQLConfig struct {
 }
 
 // NewMySQL returns a new MySQL struct.
-func NewMySQL(c *MySQLConfig, everestClient everestClientConnector) *MySQL {
+func NewMySQL(c *MySQLConfig, everestClient everestClientConnector, l *zap.SugaredLogger) *MySQL {
 	if c == nil {
-		logrus.Panic("MySQLConfig is required")
+		l.Panic("MySQLConfig is required")
 	}
 
 	cli := &MySQL{
 		config:        c,
 		everestClient: everestClient,
-		l:             logrus.WithField("component", "provision/mysql"),
+		l:             l.With("component", "provision/mysql"),
 	}
 
 	return cli

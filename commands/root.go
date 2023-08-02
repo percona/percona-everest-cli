@@ -2,33 +2,29 @@
 package commands
 
 import (
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/pkg/logger"
 )
 
 // NewRootCmd creates a new root command for the cli.
-func NewRootCmd() *cobra.Command {
+func NewRootCmd(l *zap.SugaredLogger) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use: "everest",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			verbose, err := cmd.Flags().GetBool("verbose")
-			if err != nil {
-				logrus.Warn(`Could not parse "verbose" flag`)
-			}
-
-			if verbose {
-				logrus.SetLevel(logrus.DebugLevel)
-			}
+			logger.InitLoggerInRootCmd(cmd, l)
+			l.Debug("Debug logging enabled")
 		},
 	}
 
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose mode")
 	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
 
-	rootCmd.AddCommand(newInstallCmd())
-	rootCmd.AddCommand(newProvisionCmd())
-	rootCmd.AddCommand(newListCmd())
-	rootCmd.AddCommand(newDeleteCmd())
+	rootCmd.AddCommand(newInstallCmd(l))
+	rootCmd.AddCommand(newProvisionCmd(l))
+	rootCmd.AddCommand(newListCmd(l))
+	rootCmd.AddCommand(newDeleteCmd(l))
 
 	return rootCmd
 }
