@@ -71,6 +71,11 @@ func (c *Cluster) Run(ctx context.Context) error {
 	}
 
 	if !c.config.Force {
+		//nolint:forbidigo,govet
+		fmt.Println(`
+You are about to delete a Kubernetes cluster from Everest.
+This will delete all monitoring resources deployed by Everest from the Kubernetes cluster.
+`)
 		confirm := &survey.Confirm{
 			Message: fmt.Sprintf("Are you sure you want to delete the %q Kubernetes cluster in Everest?", c.config.Name),
 		}
