@@ -31,11 +31,11 @@ func TestOperators_validateConfig(t *testing.T) {
 		name               string
 		fields             fields
 		errContains        string
-		wantApiKeySecretID string
+		wantAPIKeySecretID string
 	}{
 		{
 			name:               "shall work with PMM instance-id",
-			wantApiKeySecretID: apiSecret,
+			wantAPIKeySecretID: apiSecret,
 			fields: fields{
 				everestClient: m,
 				config: OperatorsConfig{
@@ -50,7 +50,7 @@ func TestOperators_validateConfig(t *testing.T) {
 		},
 		{
 			name:               "shall prefer PMM instance-id",
-			wantApiKeySecretID: apiSecret,
+			wantAPIKeySecretID: apiSecret,
 			fields: fields{
 				everestClient: m,
 				config: OperatorsConfig{
@@ -112,8 +112,8 @@ func TestOperators_validateConfig(t *testing.T) {
 				t.Errorf("Operators.validateConfig() error = %v, errContains %v", err, tt.errContains)
 			}
 
-			if tt.wantApiKeySecretID != "" && o.apiKeySecretID != tt.wantApiKeySecretID {
-				t.Errorf("Operators.apiKeySecretID = %v, expected %v", o.apiKeySecretID, tt.wantApiKeySecretID)
+			if tt.wantAPIKeySecretID != "" && o.apiKeySecretID != tt.wantAPIKeySecretID {
+				t.Errorf("Operators.apiKeySecretID = %v, expected %v", o.apiKeySecretID, tt.wantAPIKeySecretID)
 			}
 		})
 	}
