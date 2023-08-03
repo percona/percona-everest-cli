@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // Package install holds the main logic for installation commands.
+
+// Package install ...
 package install
 
 import (
