@@ -798,7 +798,7 @@ func (o *Operators) prepareServiceAccount() error {
 	}
 
 	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountPolicyRules())
+	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
 	if err != nil {
 		return errors.Wrap(err, "could not create role")
 	}
@@ -810,11 +810,33 @@ func (o *Operators) prepareServiceAccount() error {
 		everestServiceAccountRole,
 		everestServiceAccount,
 	)
+	if err != nil {
+		return errors.Wrap(err, "could not create role binding")
+	}
 
-	return errors.Wrap(err, "could not create cluster role binding")
+	o.l.Info("Creating cluster role for Everest service account")
+	err = o.kubeClient.CreateClusterRole(
+		o.config.Namespace, everestServiceAccountRole, o.serviceAccountClusterRolePolicyRules(),
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not create cluster role")
+	}
+
+	o.l.Info("Binding cluster role to Everest Service account")
+	err = o.kubeClient.CreateClusterRoleBinding(
+		o.config.Namespace,
+		everestServiceAccountRoleBinding,
+		everestServiceAccountRole,
+		everestServiceAccount,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not create cluster role binding")
+	}
+
+	return nil
 }
 
-func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
+func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 	return []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"everest.percona.com"},
@@ -841,10 +863,25 @@ func (o *Operators) serviceAccountPolicyRules() []rbacv1.PolicyRule {
 			Resources: []string{"secrets"},
 			Verbs:     []string{"create", "get", "delete"},
 		},
+	}
+}
+
+func (o *Operators) serviceAccountClusterRolePolicyRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"storage.k8s.io"},
+			Resources: []string{"storageclasses"},
+			Verbs:     []string{"list"},
+		},
 		{
 			APIGroups: []string{""},
-			Resources: []string{"storageclasses"},
+			Resources: []string{"nodes"},
 			Verbs:     []string{"get", "list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"list"},
 		},
 	}
 }
