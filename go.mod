@@ -3,7 +3,7 @@ module github.com/percona/percona-everest-cli
 go 1.20
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.6
+	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/go-logr/zapr v1.2.4
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-version v1.6.0
