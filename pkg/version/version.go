@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package list holds the main logic for list commands.
+// Package version holds release version information
 package version
 
 var (
