@@ -1,3 +1,4 @@
+name: Release CLI artifacts
 on:
   push:
     tags:
