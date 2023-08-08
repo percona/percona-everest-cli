@@ -29,7 +29,7 @@ func newVersionCmd(_ *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("everest-cli version: %s\n", version.Version)
+			fmt.Printf("everest-cli version: %s\n", version.Version) //nolint:forbidigo
 		},
 	}
 
