@@ -1,5 +1,4 @@
 FILES = $(shell find . -type f -name '*.go')
-VERSION = ${IMAGE_VERSION}
 
 default: help
 
