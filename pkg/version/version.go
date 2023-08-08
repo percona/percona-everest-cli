@@ -16,8 +16,5 @@
 // Package version holds release version information
 package version
 
-var (
-
-	// Version of the everest cli
-	Version string
-)
+// Version of the everest cli
+var Version string
