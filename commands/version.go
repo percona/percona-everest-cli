@@ -25,7 +25,7 @@ import (
 	"github.com/percona/percona-everest-cli/pkg/version"
 )
 
-func newVersionCmd(l *zap.SugaredLogger) *cobra.Command {
+func newVersionCmd(_ *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "version",
 		Run: func(cmd *cobra.Command, args []string) {
