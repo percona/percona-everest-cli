@@ -1,4 +1,5 @@
 FILES = $(shell find . -type f -name '*.go')
+VERSION = ${IMAGE_VERSION}
 
 default: help
 
@@ -40,3 +41,9 @@ k8s: ## Create a local minikube cluster
 	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f ./dev/kubevirt-hostpath-provisioner.yaml
+
+release:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags " -X 'github.com/percona/percona-everest-cli/pkg/version.Version=$(VERSION)'" -o ./dist/everest-cli-linux-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v -ldflags " -X 'github.com/percona/percona-everest-cli/pkg/version.Version=$(VERSION)'" -o ./dist/everest-cli-linux-arm64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v -ldflags " -X 'github.com/percona/percona-everest-cli/pkg/version.Version=$(VERSION)'" -o ./dist/everest-cli-darwin-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -v -ldflags " -X 'github.com/percona/percona-everest-cli/pkg/version.Version=$(VERSION)'" -o ./dist/everest-cli-darwin-arm64 ./cmd/everest
