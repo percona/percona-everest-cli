@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package version holds release version information
+// Package version holds release version information.
 package version
 
-// Version of the everest cli
+// Version of the everest cli.
 var Version string
