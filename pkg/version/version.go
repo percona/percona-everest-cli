@@ -17,4 +17,4 @@
 package version
 
 // Version of the everest cli.
-var Version string
+var Version string //nolint:gochecknoglobals
