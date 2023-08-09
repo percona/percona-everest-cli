@@ -326,10 +326,7 @@ jobs:
           minikube delete --all --purge
           rm -rf ~/.minikube
           minikube config set cpus 2
-          minikube config set memory 4096
-          minikube start
-          sudo echo "127.0.0.1  host.docker.internal" | sudo tee -a /etc/hosts
-          cat /etc/hosts
+          minikube start --apiserver-name=host.docker.internal
 
       - name: Build CLI binary
         run: |

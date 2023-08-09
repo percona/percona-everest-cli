@@ -18,9 +18,13 @@ import { faker } from '@faker-js/faker';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
-    await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
-    await cli.execute('minikube delete');
-    await cli.execute('minikube start --apiserver-name=host.docker.internal');
+    let out = await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
+
+    console.log(out);
+    out = await cli.execute('minikube delete');
+    console.log(out);
+    out = await cli.execute('minikube start --apiserver-name=host.docker.internal');
+    console.log(out);
   });
 
   test('install all operators', async ({ page, cli }) => {
@@ -29,6 +33,8 @@ test.describe('Everest CLI install operators', async () => {
       const out = await cli.everestExecSkipWizard(
         `install operators --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
+
+      console.log(out);
 
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
