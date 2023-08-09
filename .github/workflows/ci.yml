@@ -321,8 +321,10 @@ jobs:
 
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/docker/
-      - name: Configure minikube and /etc/hosts
+      - name: Configure minikube, docker and /etc/hosts
+        working-directory: cli-tests
         run: |
+          docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes
           minikube delete --all --purge
           rm -rf ~/.minikube
           minikube config set cpus 2
@@ -342,7 +344,6 @@ jobs:
         working-directory: cli-tests
         id: cli-tests
         run: |
-          docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes
           make init
           make test-install-operators
 
