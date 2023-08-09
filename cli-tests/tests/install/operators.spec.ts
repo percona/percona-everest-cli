@@ -18,14 +18,10 @@ import { faker } from '@faker-js/faker';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
-    let out = await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
-
-    console.log(out);
-    out = await cli.execute('minikube delete');
-    console.log(out);
-    out = await cli.execute('minikube start');
-    // out = await cli.execute('minikube start --apiserver-name=host.docker.internal');
-    console.log(out);
+    await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
+    await cli.execute('minikube delete');
+    await cli.execute('minikube start');
+    // await cli.execute('minikube start --apiserver-name=host.docker.internal');
   });
 
   test('install all operators', async ({ page, cli }) => {
@@ -34,8 +30,6 @@ test.describe('Everest CLI install operators', async () => {
       const out = await cli.everestExecSkipWizard(
         `install operators --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
-
-      console.log(out);
 
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
@@ -60,100 +54,100 @@ test.describe('Everest CLI install operators', async () => {
       ]);
     });
   });
-  //
-  // test('install only mongodb-operator', async ({ page, cli }) => {
-  //   await test.step('run everest install operators command', async () => {
-  //     const clusterName = `test-${faker.number.int()}`;
-  //     const out = await cli.everestExecSkipWizard(
-  //       `install operators --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
-  //     );
-  //
-  //     await out.assertSuccess();
-  //     await out.outErrContainsNormalizedMany([
-  //       'percona-server-mongodb-operator operator has been installed',
-  //       'everest-operator operator has been installed',
-  //       'Connected Kubernetes cluster to Everest',
-  //     ]);
-  //   });
-  //
-  //   await page.waitForTimeout(10_000);
-  //
-  //   await test.step('verify installed operators in k8s', async () => {
-  //     const out = await cli.exec('kubectl get pods --namespace=percona-everest');
-  //
-  //     await out.outContainsNormalizedMany([
-  //       'percona-server-mongodb-operator',
-  //       'everest-operator-controller-manager',
-  //     ]);
-  //
-  //     await out.outNotContains([
-  //       'percona-postgresql-operator',
-  //       'percona-xtradb-cluster-operator',
-  //     ]);
-  //   });
-  // });
-  //
-  // test('install only postgresql-operator', async ({ page, cli }) => {
-  //   await test.step('run everest install operators command', async () => {
-  //     const clusterName = `test-${faker.number.int()}`;
-  //     const out = await cli.everestExecSkipWizard(
-  //       `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
-  //     );
-  //
-  //     await out.assertSuccess();
-  //     await out.outErrContainsNormalizedMany([
-  //       'percona-postgresql-operator operator has been installed',
-  //       'everest-operator operator has been installed',
-  //       'Connected Kubernetes cluster to Everest',
-  //     ]);
-  //   });
-  //
-  //   await page.waitForTimeout(10_000);
-  //
-  //   await test.step('verify installed operators in k8s', async () => {
-  //     const out = await cli.exec('kubectl get pods --namespace=percona-everest');
-  //
-  //     await out.outContainsNormalizedMany([
-  //       'percona-postgresql-operator',
-  //       'everest-operator-controller-manager',
-  //     ]);
-  //
-  //     await out.outNotContains([
-  //       'percona-server-mongodb-operator',
-  //       'percona-xtradb-cluster-operator',
-  //     ]);
-  //   });
-  // });
-  //
-  // test('install only xtradb-cluster-operator', async ({ page, cli }) => {
-  //   await test.step('run everest install operators command', async () => {
-  //     const clusterName = `test-${faker.number.int()}`;
-  //     const out = await cli.everestExecSkipWizard(
-  //       `install operators --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
-  //     );
-  //
-  //     await out.assertSuccess();
-  //     await out.outErrContainsNormalizedMany([
-  //       'percona-xtradb-cluster-operator operator has been installed',
-  //       'everest-operator operator has been installed',
-  //       'Connected Kubernetes cluster to Everest',
-  //     ]);
-  //   });
-  //
-  //   await page.waitForTimeout(10_000);
-  //
-  //   await test.step('verify installed operators in k8s', async () => {
-  //     const out = await cli.exec('kubectl get pods --namespace=percona-everest');
-  //
-  //     await out.outContainsNormalizedMany([
-  //       'percona-xtradb-cluster-operator',
-  //       'everest-operator-controller-manager',
-  //     ]);
-  //
-  //     await out.outNotContains([
-  //       'percona-server-mongodb-operator',
-  //       'percona-postgresql-operator',
-  //     ]);
-  //   });
-  // });
+
+  test('install only mongodb-operator', async ({ page, cli }) => {
+    await test.step('run everest install operators command', async () => {
+      const clusterName = `test-${faker.number.int()}`;
+      const out = await cli.everestExecSkipWizard(
+        `install operators --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+      );
+
+      await out.assertSuccess();
+      await out.outErrContainsNormalizedMany([
+        'percona-server-mongodb-operator operator has been installed',
+        'everest-operator operator has been installed',
+        'Connected Kubernetes cluster to Everest',
+      ]);
+    });
+
+    await page.waitForTimeout(10_000);
+
+    await test.step('verify installed operators in k8s', async () => {
+      const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+      await out.outContainsNormalizedMany([
+        'percona-server-mongodb-operator',
+        'everest-operator-controller-manager',
+      ]);
+
+      await out.outNotContains([
+        'percona-postgresql-operator',
+        'percona-xtradb-cluster-operator',
+      ]);
+    });
+  });
+
+  test('install only postgresql-operator', async ({ page, cli }) => {
+    await test.step('run everest install operators command', async () => {
+      const clusterName = `test-${faker.number.int()}`;
+      const out = await cli.everestExecSkipWizard(
+        `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+      );
+
+      await out.assertSuccess();
+      await out.outErrContainsNormalizedMany([
+        'percona-postgresql-operator operator has been installed',
+        'everest-operator operator has been installed',
+        'Connected Kubernetes cluster to Everest',
+      ]);
+    });
+
+    await page.waitForTimeout(10_000);
+
+    await test.step('verify installed operators in k8s', async () => {
+      const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+      await out.outContainsNormalizedMany([
+        'percona-postgresql-operator',
+        'everest-operator-controller-manager',
+      ]);
+
+      await out.outNotContains([
+        'percona-server-mongodb-operator',
+        'percona-xtradb-cluster-operator',
+      ]);
+    });
+  });
+
+  test('install only xtradb-cluster-operator', async ({ page, cli }) => {
+    await test.step('run everest install operators command', async () => {
+      const clusterName = `test-${faker.number.int()}`;
+      const out = await cli.everestExecSkipWizard(
+        `install operators --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+      );
+
+      await out.assertSuccess();
+      await out.outErrContainsNormalizedMany([
+        'percona-xtradb-cluster-operator operator has been installed',
+        'everest-operator operator has been installed',
+        'Connected Kubernetes cluster to Everest',
+      ]);
+    });
+
+    await page.waitForTimeout(10_000);
+
+    await test.step('verify installed operators in k8s', async () => {
+      const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+      await out.outContainsNormalizedMany([
+        'percona-xtradb-cluster-operator',
+        'everest-operator-controller-manager',
+      ]);
+
+      await out.outNotContains([
+        'percona-server-mongodb-operator',
+        'percona-postgresql-operator',
+      ]);
+    });
+  });
 });
