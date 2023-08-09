@@ -327,7 +327,7 @@ jobs:
           rm -rf ~/.minikube
           minikube config set cpus 2
           minikube config set memory 4096
-          sudo echo '127.0.0.1  host.docker.internal' >> /etc/hosts
+          sudo echo "127.0.0.1  host.docker.internal" | sudo tee -a /etc/hosts
 
       - name: Build CLI binary
         run: |
