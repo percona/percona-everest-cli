@@ -1,0 +1,26 @@
+name: Release CLI artifacts
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set release version
+        run: echo "IMAGE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Build binaries
+        run: make release
+
+      - name: Create release with binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

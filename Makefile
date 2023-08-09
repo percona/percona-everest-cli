@@ -40,3 +40,9 @@ k8s: ## Create a local minikube cluster
 	minikube addons disable storage-provisioner
 	kubectl delete storageclass standard
 	kubectl apply -f ./dev/kubevirt-hostpath-provisioner.yaml
+
+release:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o ./dist/everestctl-linux-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v -o ./dist/everestctl-linux-arm64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v -o ./dist/everestctl-darwin-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -v -o ./dist/everestctl-darwin-arm64 ./cmd/everest
