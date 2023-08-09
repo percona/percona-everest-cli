@@ -70,6 +70,19 @@ class Output {
     ).toHaveLength(0);
   }
 
+  async outErrContainsNormalizedMany(expectedValues: string[]) {
+    for (const val of expectedValues) {
+      await test.step(`Verify command stderr contains ${val}`, async () => {
+        expect.soft(this.stderr.replace(/ +(?= )/g, ''), `Stdout does not contain '${val}'!`).toContain(val);
+      });
+    }
+
+    expect(
+      test.info().errors,
+      `'Contains all elements' failed with ${test.info().errors.length} error(s):\n${this.getErrors()}`,
+    ).toHaveLength(0);
+  }
+
   async outEqualsNormalizedMany(expectedValues: string[]) {
     const out = this.stdout.replace(/ +(?= )/g, '')
       .split('\n').filter((el) => el !== '')
