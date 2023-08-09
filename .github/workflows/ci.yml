@@ -327,7 +327,9 @@ jobs:
           rm -rf ~/.minikube
           minikube config set cpus 2
           minikube config set memory 4096
+          minikube start
           sudo echo "127.0.0.1  host.docker.internal" | sudo tee -a /etc/hosts
+          cat /etc/hosts
 
       - name: Build CLI binary
         run: |
@@ -343,6 +345,7 @@ jobs:
         working-directory: cli-tests
         id: cli-tests
         run: |
+          docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes
           make init
           make test-install-operators
 
