@@ -263,7 +263,7 @@ jobs:
         run: |
           make init
           make install-operators
-          make test
+          make test-cli
 
       - name: Attach the report
         if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}

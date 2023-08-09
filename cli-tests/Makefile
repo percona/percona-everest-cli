@@ -11,7 +11,7 @@ install-operators:  ## Install operators to k8s
 test-cli:           ## Run all tests
 	npx playwright test --project=cli
 
-test-install:       ## Run install operators tests. Requires minikube installed and /etc/hosts updated
+test-install-operators:       ## Run install operators tests. Requires minikube installed and /etc/hosts updated
 	npx playwright test --project=install-operators
 
 lint:               ## Run linter typescript checks
