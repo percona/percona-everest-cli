@@ -27,7 +27,7 @@ jobs:
         may-fail: [false]
 
     continue-on-error: ${{ matrix.may-fail }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     env:
       GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
