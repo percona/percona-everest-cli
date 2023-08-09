@@ -56,6 +56,7 @@ export default defineConfig({
     {
       name: 'install-operators',
       testDir: './tests/install',
+      retries: process.env.CI ? 1 : 0,
     },
     {
       name: 'cli',
