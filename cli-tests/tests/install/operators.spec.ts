@@ -23,7 +23,8 @@ test.describe('Everest CLI install operators', async () => {
     console.log(out);
     out = await cli.execute('minikube delete');
     console.log(out);
-    out = await cli.execute('minikube start --apiserver-name=host.docker.internal');
+    out = await cli.execute('minikube start');
+    // out = await cli.execute('minikube start --apiserver-name=host.docker.internal');
     console.log(out);
   });
 
