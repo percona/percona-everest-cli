@@ -127,7 +127,7 @@ test.describe('Everest CLI "--help" validation', async () => {
       '--channel.postgresql string Channel for PostgreSQL operator (default "fast-v2")',
       '--channel.victoria-metrics string Channel for VictoriaMetrics operator (default "stable-v0")',
       '--channel.xtradb-cluster string Channel for XtraDB Cluster operator (default "stable-v1")',
-      '--everest.endpoint string Everest endpoint URL (default "http://127.0.0.1:8081")',
+      '--everest.endpoint string Everest endpoint URL (default "http://127.0.0.1:8080")',
       '-h, --help help for operators',
       '-k, --kubeconfig string Path to a kubeconfig (default "~/.kube/config")',
       '-m, --monitoring.enable Enable monitoring (default true)',
