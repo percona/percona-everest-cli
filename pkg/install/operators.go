@@ -855,6 +855,11 @@ func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusterbackups"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
 			Resources: []string{"objectstorages"},
 			Verbs:     []string{"*"},
 		},
