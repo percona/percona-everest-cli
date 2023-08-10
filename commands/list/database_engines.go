@@ -67,7 +67,7 @@ func NewDatabaseEnginesCmd(l *zap.SugaredLogger) *cobra.Command {
 }
 
 func initDatabaseEnginesFlags(cmd *cobra.Command) {
-	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
+	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
 	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID")
 	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 }

@@ -58,7 +58,7 @@ func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 }
 
 func initOperatorsFlags(cmd *cobra.Command) {
-	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8081", "Everest endpoint URL")
+	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
