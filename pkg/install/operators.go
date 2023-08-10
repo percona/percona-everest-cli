@@ -866,7 +866,7 @@ func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
-			Verbs:     []string{"create", "get", "delete"},
+			Verbs:     []string{"*"},
 		},
 	}
 }
