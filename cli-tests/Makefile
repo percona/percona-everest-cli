@@ -8,8 +8,11 @@ install-operators:  ## Install operators to k8s
 		--backup.enable=0 \
 		--monitoring.enable=0
 
-test:               ## Run all tests
-	npx playwright test
+test-cli:           ## Run all tests
+	npx playwright test --project=cli
+
+test-install-operators:       ## Run install operators tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test --project=install-operators
 
 lint:               ## Run linter typescript checks
 	npm run lint:ts && npm run typecheck && echo 'Lint OK'
