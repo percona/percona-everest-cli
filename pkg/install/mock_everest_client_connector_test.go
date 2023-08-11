@@ -40,24 +40,24 @@ func (_m *mockEverestClientConnector) CreateBackupStorage(ctx context.Context, b
 	return r0, r1
 }
 
-// CreatePMMInstance provides a mock function with given fields: ctx, body
-func (_m *mockEverestClientConnector) CreatePMMInstance(ctx context.Context, body client.PMMInstanceCreateParams) (*client.PMMInstance, error) {
+// CreateMonitoringInstance provides a mock function with given fields: ctx, body
+func (_m *mockEverestClientConnector) CreateMonitoringInstance(ctx context.Context, body client.MonitoringInstanceCreateParams) (*client.MonitoringInstance, error) {
 	ret := _m.Called(ctx, body)
 
-	var r0 *client.PMMInstance
+	var r0 *client.MonitoringInstance
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, client.PMMInstanceCreateParams) (*client.PMMInstance, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, client.MonitoringInstanceCreateParams) (*client.MonitoringInstance, error)); ok {
 		return rf(ctx, body)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, client.PMMInstanceCreateParams) *client.PMMInstance); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, client.MonitoringInstanceCreateParams) *client.MonitoringInstance); ok {
 		r0 = rf(ctx, body)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*client.PMMInstance)
+			r0 = ret.Get(0).(*client.MonitoringInstance)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, client.PMMInstanceCreateParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, client.MonitoringInstanceCreateParams) error); ok {
 		r1 = rf(ctx, body)
 	} else {
 		r1 = ret.Error(1)
@@ -66,20 +66,20 @@ func (_m *mockEverestClientConnector) CreatePMMInstance(ctx context.Context, bod
 	return r0, r1
 }
 
-// GetPMMInstance provides a mock function with given fields: ctx, pmmInstanceID
-func (_m *mockEverestClientConnector) GetPMMInstance(ctx context.Context, pmmInstanceID string) (*client.PMMInstance, error) {
+// GetMonitoringInstance provides a mock function with given fields: ctx, pmmInstanceID
+func (_m *mockEverestClientConnector) GetMonitoringInstance(ctx context.Context, pmmInstanceID string) (*client.MonitoringInstance, error) {
 	ret := _m.Called(ctx, pmmInstanceID)
 
-	var r0 *client.PMMInstance
+	var r0 *client.MonitoringInstance
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*client.PMMInstance, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*client.MonitoringInstance, error)); ok {
 		return rf(ctx, pmmInstanceID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *client.PMMInstance); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) *client.MonitoringInstance); ok {
 		r0 = rf(ctx, pmmInstanceID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*client.PMMInstance)
+			r0 = ret.Get(0).(*client.MonitoringInstance)
 		}
 	}
 
@@ -92,20 +92,20 @@ func (_m *mockEverestClientConnector) GetPMMInstance(ctx context.Context, pmmIns
 	return r0, r1
 }
 
-// ListPMMInstances provides a mock function with given fields: ctx
-func (_m *mockEverestClientConnector) ListPMMInstances(ctx context.Context) ([]client.PMMInstance, error) {
+// ListMonitoringInstances provides a mock function with given fields: ctx
+func (_m *mockEverestClientConnector) ListMonitoringInstances(ctx context.Context) ([]client.MonitoringInstance, error) {
 	ret := _m.Called(ctx)
 
-	var r0 []client.PMMInstance
+	var r0 []client.MonitoringInstance
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]client.PMMInstance, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) ([]client.MonitoringInstance, error)); ok {
 		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []client.PMMInstance); ok {
+	if rf, ok := ret.Get(0).(func(context.Context) []client.MonitoringInstance); ok {
 		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]client.PMMInstance)
+			r0 = ret.Get(0).([]client.MonitoringInstance)
 		}
 	}
 
@@ -142,6 +142,20 @@ func (_m *mockEverestClientConnector) RegisterKubernetesCluster(ctx context.Cont
 	}
 
 	return r0, r1
+}
+
+// SetKubernetesClusterMonitoring provides a mock function with given fields: ctx, kubernetesID, body
+func (_m *mockEverestClientConnector) SetKubernetesClusterMonitoring(ctx context.Context, kubernetesID string, body client.KubernetesClusterMonitoring) error {
+	ret := _m.Called(ctx, kubernetesID, body)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, client.KubernetesClusterMonitoring) error); ok {
+		r0 = rf(ctx, kubernetesID, body)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // newMockEverestClientConnector creates a new instance of mockEverestClientConnector. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

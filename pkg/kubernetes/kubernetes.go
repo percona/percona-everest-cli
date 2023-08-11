@@ -730,8 +730,8 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 	return k.client.DeleteObject(obj)
 }
 
-// ProvisionMonitoring provisions PMM monitoring and creates a VM Agent instance.
-func (k *Kubernetes) ProvisionMonitoring(namespace, k8sSecretID, pmmPublicAddress string) error {
+// ProvisionMonitoring provisions PMM monitoring.
+func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 	for _, path := range k.victoriaMetricsCRDFiles() {
 		file, err := data.OLMCRDs.ReadFile(path)
 		if err != nil {
@@ -757,22 +757,6 @@ func (k *Kubernetes) ProvisionMonitoring(namespace, k8sSecretID, pmmPublicAddres
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}
 	}
-
-	return k.deployVMAgent(namespace, k8sSecretID, pmmPublicAddress)
-}
-
-func (k *Kubernetes) deployVMAgent(namespace, secretName, pmmPublicAddress string) error {
-	k.l.Debug("Applying VMAgent spec")
-	vmagent, err := vmAgentSpec(namespace, secretName, pmmPublicAddress)
-	if err != nil {
-		return errors.Wrap(err, "cannot generate VMAgent spec")
-	}
-
-	err = k.client.ApplyObject(vmagent)
-	if err != nil {
-		return errors.Wrap(err, "cannot apply VMAgent spec")
-	}
-	k.l.Debug("VMAgent spec has been applied")
 
 	return nil
 }

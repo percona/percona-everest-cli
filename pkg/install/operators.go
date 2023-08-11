@@ -18,18 +18,12 @@
 package install
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/google/uuid"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
@@ -51,8 +45,8 @@ type Operators struct {
 	everestClient everestClientConnector
 	kubeClient    *kubernetes.Kubernetes
 
-	// apiKeySecretID stores name of a secret with PMM API key.
-	apiKeySecretID string
+	// monitoringInstanceName stores the resolved monitoring instance name.
+	monitoringInstanceName string
 }
 
 const (
@@ -121,6 +115,9 @@ type (
 	MonitoringConfig struct {
 		// Enable is true if monitoring shall be enabled.
 		Enable bool
+		// InstanceName stores PMM instance name from Everest.
+		// If provided, the other monitoring configuration is ignored.
+		InstanceName string `mapstructure:"instance-name"`
 		// Type stores the type of monitoring to be used.
 		Type MonitoringType
 		// PMM stores configuration for PMM monitoring type.
@@ -145,9 +142,6 @@ type (
 		Username string
 		// Password stores password for authentication against PMM.
 		Password string
-		// InstanceID stores PMM instance ID from Everest.
-		// If provided, Endpoint, Username and Password are ignored.
-		InstanceID string `mapstructure:"instance-id"`
 	}
 
 	// ChannelConfig stores configuration for operator channels.
@@ -205,7 +199,7 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
-	if err := o.validateConfig(ctx); err != nil {
+	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
 		return err
 	}
 
@@ -216,27 +210,79 @@ func (o *Operators) Run(ctx context.Context) error {
 		return err
 	}
 
+	var k *client.KubernetesCluster
 	g, gCtx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return o.connectToEverest(gCtx)
+		var err error
+		k, err = o.connectToEverest(gCtx)
+		return err
 	})
 	g.Go(func() error {
 		return o.createEverestBackupStorage(gCtx)
 	})
 
-	return g.Wait()
-}
+	if err := g.Wait(); err != nil {
+		return err
+	}
 
-func (o *Operators) validateConfig(ctx context.Context) error {
 	if o.config.Monitoring.Enable {
-		if o.apiKeySecretID == "" && o.config.Monitoring.PMM.InstanceID != "" {
-			if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-				return errors.Wrap(err, "could not retrieve PMM instance by its ID from Everest")
-			}
+		o.l.Info("Deploying VMAgent to k8s cluster")
+		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, k.Id, client.KubernetesClusterMonitoring{
+			Enable:                 true,
+			MonitoringInstanceName: o.monitoringInstanceName,
+		})
+		if err != nil {
+			return err
 		}
+		o.l.Info("VMAgent deployed successfully")
 	}
 
 	return nil
+}
+
+func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
+	if !o.config.Monitoring.Enable || o.monitoringInstanceName != "" {
+		return nil
+	}
+
+	if o.config.Monitoring.PMM.Password == "" && o.config.Monitoring.InstanceName != "" {
+		i, err := o.everestClient.GetMonitoringInstance(ctx, o.config.Monitoring.InstanceName)
+		if err != nil {
+			return errors.Wrapf(err, "could not get monitoring instance with name %s from Everest", o.config.Monitoring.InstanceName)
+		}
+		o.monitoringInstanceName = i.Name
+		return nil
+	}
+
+	if o.config.Monitoring.InstanceName == "" {
+		return errors.New("monitoring.instance-name is required when creating a new monitoring instance")
+	}
+
+	err := o.createPMMMonitoringInstance(
+		ctx, o.config.Monitoring.InstanceName, o.config.Monitoring.PMM.Endpoint,
+		o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password,
+	)
+	if err != nil {
+		return errors.Wrap(err, "could not create a new PMM monitoring instance in Everest")
+	}
+
+	o.monitoringInstanceName = o.config.Monitoring.InstanceName
+
+	return nil
+}
+
+func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, username, password string) error {
+	_, err := o.everestClient.CreateMonitoringInstance(ctx, client.MonitoringInstanceCreateParams{
+		Type: client.MonitoringInstanceCreateParamsTypePmm,
+		Name: name,
+		Url:  url,
+		Pmm: &client.PMMMonitoringInstanceSpec{
+			User:     username,
+			Password: password,
+		},
+	})
+
+	return errors.Wrap(err, "could not create a new monitoring instance")
 }
 
 func (o *Operators) configureEverestConnector() error {
@@ -316,26 +362,23 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 		o.config.Monitoring.PMM = &PMMConfig{}
 	}
 
-	if o.config.Monitoring.PMM.InstanceID == "" {
+	if o.config.Monitoring.InstanceName == "" {
 		if err := o.runMonitoringURLWizard(ctx); err != nil {
 			return err
 		}
 	} else {
-		if err := o.setPMMAPIKeySecretIDFromInstanceID(ctx); err != nil {
-			return err
-		}
 	}
 
 	return nil
 }
 
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
-	instances, err := o.everestClient.ListPMMInstances(ctx)
+	instances, err := o.everestClient.ListMonitoringInstances(ctx)
 	if err != nil {
-		o.l.Error("Could not get a list of PMM instances from Everest. " +
+		o.l.Error("Could not get a list of monitoring instances from Everest. " +
 			"Make sure Everest is running and is accessible from this computer/server.")
 
-		return errors.Wrap(err, "could not retrieve list of PMM instances")
+		return errors.Wrap(err, "could not retrieve list of monitoring instances")
 	}
 
 	if len(instances) == 0 {
@@ -344,12 +387,12 @@ func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 
 	opts := make([]string, 0, len(instances)+1)
 	for _, i := range instances {
-		opts = append(opts, i.Url)
+		opts = append(opts, i.Name)
 	}
-	opts = append(opts, "Add new PMM instance")
+	opts = append(opts, "Add new monitoring instance")
 
 	pInstance := &survey.Select{
-		Message: "Select PMM instance:",
+		Message: "Select monitoring instance:",
 		Options: opts,
 	}
 	ix := 0
@@ -361,16 +404,14 @@ func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 		return o.runMonitoringNewURLWizard()
 	}
 
-	pmm := instances[ix]
-	o.config.Monitoring.PMM.Endpoint = pmm.Url
-	o.apiKeySecretID = pmm.ApiKeySecretId
+	o.monitoringInstanceName = instances[ix].Name
 
 	return nil
 }
 
 func (o *Operators) runMonitoringNewURLWizard() error {
 	pURL := &survey.Input{
-		Message: "URL Endpoint",
+		Message: "PMM URL Endpoint",
 		Default: o.config.Monitoring.PMM.Endpoint,
 	}
 	if err := survey.AskOne(
@@ -394,11 +435,27 @@ func (o *Operators) runMonitoringNewURLWizard() error {
 	}
 
 	pPass := &survey.Password{Message: "Password"}
-	return survey.AskOne(
+	if err := survey.AskOne(
 		pPass,
 		&o.config.Monitoring.PMM.Password,
 		survey.WithValidator(survey.Required),
-	)
+	); err != nil {
+		return err
+	}
+
+	pName := &survey.Input{
+		Message: "Name for the new monitoring instance",
+		Default: o.config.Monitoring.InstanceName,
+	}
+	if err := survey.AskOne(
+		pName,
+		&o.config.Monitoring.InstanceName,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (o *Operators) runBackupWizard() error {
@@ -543,23 +600,6 @@ func (o *Operators) runOperatorsWizard() error {
 	return nil
 }
 
-func (o *Operators) setPMMAPIKeySecretIDFromInstanceID(ctx context.Context) error {
-	pmm, err := o.everestClient.GetPMMInstance(ctx, o.config.Monitoring.PMM.InstanceID)
-	if err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this computer/server.")
-		}
-
-		return err
-	}
-
-	o.apiKeySecretID = pmm.ApiKeySecretId
-
-	return nil
-}
-
 // provisionNamespace provisions a namespace for Everest.
 func (o *Operators) provisionNamespace() error {
 	o.l.Infof("Creating namespace %s", o.config.Namespace)
@@ -585,7 +625,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.Enable {
-		if err := o.provisionPMMMonitoring(ctx); err != nil {
+		if err := o.provisionMonitoring(ctx); err != nil {
 			return err
 		}
 	}
@@ -668,102 +708,44 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-func (o *Operators) provisionPMMMonitoring(ctx context.Context) error {
-	l := o.l.With("action", "PMM")
-	l.Info("Setting up PMM monitoring")
-
-	if o.apiKeySecretID == "" {
-		if err := o.provisionNewPMMInstance(ctx, l); err != nil {
-			return errors.Wrap(err, "could not create a new PMM instance")
-		}
+func (o *Operators) provisionMonitoring(ctx context.Context) error {
+	l := o.l.With("action", "monitoring")
+	l.Info("Preparing k8s cluster for monitoring")
+	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
+		return errors.Wrap(err, "could not provision monitoring configuration")
 	}
 
-	l.Debugf("Using API key secret ID %s", o.apiKeySecretID)
-
-	l.Info("Provisioning monitoring in k8s cluster")
-	err := o.kubeClient.ProvisionMonitoring(
-		o.config.Namespace,
-		o.apiKeySecretID,
-		o.config.Monitoring.PMM.Endpoint,
-	)
-	if err != nil {
-		return errors.Wrap(err, "could not provision PMM Monitoring")
-	}
-
-	l.Info("PMM Monitoring has been provisioned successfully")
-
-	return nil
-}
-
-func (o *Operators) provisionNewPMMInstance(ctx context.Context, l *zap.SugaredLogger) error {
-	if o.config.Monitoring.PMM.Endpoint == "" || o.config.Monitoring.PMM.Username == "" {
-		return errors.New("PMM endpoint or username is empty")
-	}
-
-	account := fmt.Sprintf("everest-pmm-%s", uuid.NewString())
-	l.Info("Creating a new API key in PMM")
-
-	apiKey, err := o.createPMMApiKey(ctx, account, "")
-	if err != nil {
-		return errors.Wrap(err, "could not create PMM API key")
-	}
-
-	l.Infof("New API key with name %q has been created", account)
-
-	l.Info("Creating PMM instance in Everest")
-	pmm, err := o.everestClient.CreatePMMInstance(ctx, client.PMMInstanceCreateParams{
-		Url:    o.config.Monitoring.PMM.Endpoint,
-		ApiKey: apiKey,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not create PMM instance in Everest")
-	}
-	l.Infof("PMM instance %s has been created in Everest", *pmm.Id)
-
-	if pmm.Id == nil || *pmm.Id == "" {
-		return errors.New("PMM instance ID is empty")
-	}
-
-	l.Info("Creating secret in Kubernetes")
-	o.apiKeySecretID = fmt.Sprintf(secretNameTemplate, *pmm.Id)
-	err = o.kubeClient.CreatePMMSecret(o.config.Namespace, o.apiKeySecretID, map[string][]byte{
-		"username": []byte("api_key"),
-		"password": []byte(apiKey),
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not create secret in Kubernetes")
-	}
-	l.Infof("Secret %s has been created", o.apiKeySecretID)
+	l.Info("K8s cluster monitoring has been provisioned successfully")
 
 	return nil
 }
 
 // connectToEverest connects the k8s cluster to Everest.
-func (o *Operators) connectToEverest(ctx context.Context) error {
+func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesCluster, error) {
 	if err := o.prepareServiceAccount(); err != nil {
-		return errors.Wrap(err, "could not prepare a service account")
+		return nil, errors.Wrap(err, "could not prepare a service account")
 	}
 
 	o.l.Info("Generating kubeconfig")
 	kubeconfig, err := o.getServiceAccountKubeConfig(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get a new kubeconfig file for a service account")
+		return nil, errors.Wrap(err, "could not get a new kubeconfig file for a service account")
 	}
 
 	o.l.Info("Connecting your Kubernetes cluster to Everest")
 
-	_, err = o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
+	k, err := o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
 		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
 		Name:       o.config.Name,
 		Namespace:  &o.config.Namespace,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
+		return nil, errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
 	}
 
 	o.l.Info("Connected Kubernetes cluster to Everest")
 
-	return nil
+	return k, nil
 }
 
 func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
@@ -864,6 +846,16 @@ func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"*"},
 		},
 		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"monitoringconfigs"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"operator.victoriametrics.com"},
+			Resources: []string{"vmagents"},
+			Verbs:     []string{"*"},
+		},
+		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
 			Verbs:     []string{"*"},
@@ -921,60 +913,4 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	}
 
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
-}
-
-func (o *Operators) createPMMApiKey(ctx context.Context, name string, token string) (string, error) {
-	apiKey := map[string]string{
-		"name": name,
-		"role": "Admin",
-	}
-	b, err := json.Marshal(apiKey)
-	if err != nil {
-		return "", err
-	}
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		fmt.Sprintf("%s/graph/api/auth/keys", o.config.Monitoring.PMM.Endpoint),
-		bytes.NewReader(b),
-	)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	if token == "" {
-		req.SetBasicAuth(o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password)
-	} else {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-
-	defer resp.Body.Close() //nolint:errcheck
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode >= http.StatusBadRequest {
-		var pmmErr *pmmErrorMessage
-		if err := json.Unmarshal(data, &pmmErr); err != nil {
-			return "", errors.Wrapf(err, "PMM returned an unknown error. HTTP status code %d", resp.StatusCode)
-		}
-		return "", errors.Errorf("PMM returned an error with message: %s", pmmErr.Message)
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(data, &m); err != nil {
-		return "", err
-	}
-	key, ok := m["key"].(string)
-	if !ok {
-		return "", errors.New("cannot unmarshal key in createAdminToken")
-	}
-
-	return key, nil
 }

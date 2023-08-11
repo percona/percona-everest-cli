@@ -56,7 +56,7 @@ func TestOperators_validateConfig(t *testing.T) {
 					Monitoring: MonitoringConfig{
 						Enable: true,
 						PMM: &PMMConfig{
-							InstanceID: "123",
+							InstanceName: "123",
 						},
 					},
 				},
@@ -71,10 +71,10 @@ func TestOperators_validateConfig(t *testing.T) {
 					Monitoring: MonitoringConfig{
 						Enable: true,
 						PMM: &PMMConfig{
-							InstanceID: "123",
-							Endpoint:   "http://localhost",
-							Username:   "admin",
-							Password:   "admin",
+							InstanceName: "123",
+							Endpoint:     "http://localhost",
+							Username:     "admin",
+							Password:     "admin",
 						},
 					},
 				},
@@ -100,7 +100,7 @@ func TestOperators_validateConfig(t *testing.T) {
 					Monitoring: MonitoringConfig{
 						Enable: true,
 						PMM: &PMMConfig{
-							InstanceID: "not-found",
+							InstanceName: "not-found",
 						},
 					},
 				},

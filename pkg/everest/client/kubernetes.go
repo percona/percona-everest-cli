@@ -67,7 +67,7 @@ func (e *Everest) UnregisterKubernetesCluster(
 	kubernetesID string,
 	body client.UnregisterKubernetesClusterJSONRequestBody,
 ) error {
-	var res interface{}
+	res := &struct{}{}
 	err := makeRequest(
 		ctx, func(
 			ctx context.Context,
@@ -77,6 +77,26 @@ func (e *Everest) UnregisterKubernetesCluster(
 			return e.cl.UnregisterKubernetesCluster(ctx, kubernetesID, body, r...)
 		},
 		kubernetesID, res, errors.New("cannot unregister Kubernetes cluster due to Everest error"),
+	)
+	return err
+}
+
+// SetKubernetesClusterMonitoring configures Kubernetes cluster monitoring.
+func (e *Everest) SetKubernetesClusterMonitoring(
+	ctx context.Context,
+	kubernetesID string,
+	body client.SetKubernetesClusterMonitoringJSONRequestBody,
+) error {
+	res := &struct{}{}
+	err := makeRequest(
+		ctx, func(
+			ctx context.Context,
+			kubernetesID string,
+			r ...client.RequestEditorFn,
+		) (*http.Response, error) {
+			return e.cl.SetKubernetesClusterMonitoring(ctx, kubernetesID, body, r...)
+		},
+		kubernetesID, res, errors.New("cannot configure Kubernetes cluster monitoring due to Everest error"),
 	)
 	return err
 }
