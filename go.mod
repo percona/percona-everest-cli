@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.7
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
-	github.com/percona/everest-operator v0.0.4
+	github.com/percona/everest-operator v0.0.7
 	github.com/percona/percona-everest-backend v0.0.0-20230728110357-ee24daaef7b8
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
@@ -88,7 +88,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/onsi/gomega v1.27.8 // indirect
+	github.com/onsi/gomega v1.27.10 // indirect
 	github.com/operator-framework/operator-registry v1.17.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
