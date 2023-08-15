@@ -162,12 +162,6 @@ type (
 	}
 )
 
-type pmmErrorMessage struct {
-	Message string `json:"message"`
-}
-
-const secretNameTemplate = "everest-%s"
-
 // NewOperators returns a new Operators struct.
 func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 	cli := &Operators{
@@ -206,6 +200,10 @@ func (o *Operators) Run(ctx context.Context) error {
 		return err
 	}
 
+	return o.performProvisioning(ctx)
+}
+
+func (o *Operators) performProvisioning(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
@@ -369,7 +367,6 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 		if err := o.runMonitoringURLWizard(ctx); err != nil {
 			return err
 		}
-	} else {
 	}
 
 	return nil
@@ -628,7 +625,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx); err != nil {
+		if err := o.provisionMonitoring(); err != nil {
 			return err
 		}
 	}
@@ -711,7 +708,7 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-func (o *Operators) provisionMonitoring(ctx context.Context) error {
+func (o *Operators) provisionMonitoring() error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
 	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
@@ -801,7 +798,7 @@ func (o *Operators) prepareServiceAccount() error {
 
 	o.l.Info("Creating cluster role for Everest service account")
 	err = o.kubeClient.CreateClusterRole(
-		o.config.Namespace, everestServiceAccountRole, o.serviceAccountClusterRolePolicyRules(),
+		everestServiceAccountRole, o.serviceAccountClusterRolePolicyRules(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "could not create cluster role")
