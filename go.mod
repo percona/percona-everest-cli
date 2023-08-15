@@ -2,8 +2,6 @@ module github.com/percona/percona-everest-cli
 
 go 1.21
 
-replace github.com/percona/percona-everest-backend => ../percona-everest-backend
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/go-logr/zapr v1.2.4
