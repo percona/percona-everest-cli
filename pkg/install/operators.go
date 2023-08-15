@@ -115,9 +115,12 @@ type (
 	MonitoringConfig struct {
 		// Enable is true if monitoring shall be enabled.
 		Enable bool
-		// InstanceName stores PMM instance name from Everest.
+		// InstanceName stores monitoring instance name from Everest.
 		// If provided, the other monitoring configuration is ignored.
 		InstanceName string `mapstructure:"instance-name"`
+		// NewInstanceName defines name for a new monitoring instance
+		// if it's created.
+		NewInstanceName string `mapstructure:"new-instance-name"`
 		// Type stores the type of monitoring to be used.
 		Type MonitoringType
 		// PMM stores configuration for PMM monitoring type.
@@ -245,7 +248,7 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 		return nil
 	}
 
-	if o.config.Monitoring.PMM.Password == "" && o.config.Monitoring.InstanceName != "" {
+	if o.config.Monitoring.InstanceName != "" {
 		i, err := o.everestClient.GetMonitoringInstance(ctx, o.config.Monitoring.InstanceName)
 		if err != nil {
 			return errors.Wrapf(err, "could not get monitoring instance with name %s from Everest", o.config.Monitoring.InstanceName)
@@ -254,12 +257,12 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 		return nil
 	}
 
-	if o.config.Monitoring.InstanceName == "" {
+	if o.config.Monitoring.NewInstanceName == "" {
 		return errors.New("monitoring.instance-name is required when creating a new monitoring instance")
 	}
 
 	err := o.createPMMMonitoringInstance(
-		ctx, o.config.Monitoring.InstanceName, o.config.Monitoring.PMM.Endpoint,
+		ctx, o.config.Monitoring.NewInstanceName, o.config.Monitoring.PMM.Endpoint,
 		o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password,
 	)
 	if err != nil {
@@ -445,11 +448,11 @@ func (o *Operators) runMonitoringNewURLWizard() error {
 
 	pName := &survey.Input{
 		Message: "Name for the new monitoring instance",
-		Default: o.config.Monitoring.InstanceName,
+		Default: o.config.Monitoring.NewInstanceName,
 	}
 	if err := survey.AskOne(
 		pName,
-		&o.config.Monitoring.InstanceName,
+		&o.config.Monitoring.NewInstanceName,
 		survey.WithValidator(survey.Required),
 	); err != nil {
 		return err
