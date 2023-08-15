@@ -26,110 +26,167 @@ import (
 	"go.uber.org/zap"
 )
 
-const apiSecret = "api-secret"
+const (
+	iName    = "monitoring-instance"
+	iDefault = "default"
+)
 
-func TestOperators_validateConfig(t *testing.T) {
+func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 	t.Parallel()
-
-	type fields struct {
-		config         OperatorsConfig
-		everestClient  everestClientConnector
-		apiKeySecretID string
-	}
-
-	m := &mockEverestClientConnector{}
-	m.Mock.On("GetPMMInstance", mock.Anything, "123").Return(&client.PMMInstance{ApiKeySecretId: apiSecret}, nil)
-	m.Mock.On("GetPMMInstance", mock.Anything, "not-found").Return(nil, errors.New("not found"))
-
-	tests := []struct {
-		name               string
-		fields             fields
-		errContains        string
-		wantAPIKeySecretID string
-	}{
-		{
-			name:               "shall work with PMM instance-id",
-			wantAPIKeySecretID: apiSecret,
-			fields: fields{
-				everestClient: m,
-				config: OperatorsConfig{
-					Monitoring: MonitoringConfig{
-						Enable: true,
-						PMM: &PMMConfig{
-							InstanceName: "123",
-						},
-					},
-				},
-			},
-		},
-		{
-			name:               "shall prefer PMM instance-id",
-			wantAPIKeySecretID: apiSecret,
-			fields: fields{
-				everestClient: m,
-				config: OperatorsConfig{
-					Monitoring: MonitoringConfig{
-						Enable: true,
-						PMM: &PMMConfig{
-							InstanceName: "123",
-							Endpoint:     "http://localhost",
-							Username:     "admin",
-							Password:     "admin",
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "shall not throw on monitoring enabled with no API key or instance ID",
-			fields: fields{
-				config: OperatorsConfig{
-					Monitoring: MonitoringConfig{
-						Enable: true,
-						PMM:    &PMMConfig{},
-					},
-				},
-			},
-		},
-		{
-			name:        "shall throw on instance ID not found",
-			errContains: "could not retrieve PMM instance by its ID",
-			fields: fields{
-				everestClient: m,
-				config: OperatorsConfig{
-					Monitoring: MonitoringConfig{
-						Enable: true,
-						PMM: &PMMConfig{
-							InstanceName: "not-found",
-						},
-					},
-				},
-			},
-		},
-	}
 
 	l, err := zap.NewDevelopment()
 	require.NoError(t, err)
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	t.Run("shall work with monitoring disabled", func(t *testing.T) {
+		t.Parallel()
 
-			o := &Operators{
-				l:              l.Sugar(),
-				config:         tt.fields.config,
-				everestClient:  tt.fields.everestClient,
-				apiKeySecretID: tt.fields.apiKeySecretID,
-			}
-			err := o.validateConfig(context.Background())
-			if err != nil && tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-				t.Errorf("Operators.validateConfig() error = %v, errContains %v", err, tt.errContains)
-			}
+		m := &mockEverestClientConnector{}
+		defer m.AssertExpectations(t)
 
-			if tt.wantAPIKeySecretID != "" && o.apiKeySecretID != tt.wantAPIKeySecretID {
-				t.Errorf("Operators.apiKeySecretID = %v, expected %v", o.apiKeySecretID, tt.wantAPIKeySecretID)
-			}
-		})
-	}
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable: false,
+				},
+			},
+			everestClient:          m,
+			monitoringInstanceName: iDefault,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, iDefault, o.monitoringInstanceName)
+	})
+
+	t.Run("shall work with monitoring instance name", func(t *testing.T) {
+		t.Parallel()
+
+		m := &mockEverestClientConnector{}
+		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
+		defer m.AssertExpectations(t)
+
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable:       true,
+					InstanceName: "123",
+				},
+			},
+			everestClient: m,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, iName, o.monitoringInstanceName)
+	})
+
+	t.Run("shall fail with monitoring instance name not found", func(t *testing.T) {
+		t.Parallel()
+
+		m := &mockEverestClientConnector{}
+		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(nil, errors.New("not-found"))
+		defer m.AssertExpectations(t)
+
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable:       true,
+					InstanceName: "123",
+				},
+			},
+			everestClient: m,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "not-found"))
+	})
+
+	t.Run("shall prefer monitoring instance name", func(t *testing.T) {
+		t.Parallel()
+
+		m := &mockEverestClientConnector{}
+		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
+		defer m.AssertExpectations(t)
+
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable:       true,
+					InstanceName: "123",
+					PMM: &PMMConfig{
+						Endpoint: "http://localhost",
+						Username: "admin",
+						Password: "admin",
+					},
+				},
+			},
+			everestClient: m,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, iName, o.monitoringInstanceName)
+	})
+
+	t.Run("shall fail without new instance name defined when creating a new instance", func(t *testing.T) {
+		t.Parallel()
+
+		m := &mockEverestClientConnector{}
+		defer m.AssertExpectations(t)
+
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable: true,
+				},
+			},
+			everestClient: m,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "monitoring.new-instance-name is required"))
+	})
+
+	t.Run("shall create a new PMM instance", func(t *testing.T) {
+		t.Parallel()
+
+		m := &mockEverestClientConnector{}
+		m.Mock.On("CreateMonitoringInstance", mock.Anything, client.MonitoringInstanceCreateParams{
+			Type: client.MonitoringInstanceCreateParamsTypePmm,
+			Name: "new-instance",
+			Url:  "http://monitoring-url",
+			Pmm: &client.PMMMonitoringInstanceSpec{
+				User:     "user",
+				Password: "pass",
+			},
+		}).Return(&client.MonitoringInstance{}, nil)
+		defer m.AssertExpectations(t)
+
+		o := &Operators{
+			l: l.Sugar(),
+			config: OperatorsConfig{
+				Monitoring: MonitoringConfig{
+					Enable:          true,
+					NewInstanceName: "new-instance",
+					PMM: &PMMConfig{
+						Endpoint: "http://monitoring-url",
+						Username: "user",
+						Password: "pass",
+					},
+				},
+			},
+			everestClient: m,
+		}
+
+		err := o.resolveMonitoringInstanceName(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, "new-instance", o.monitoringInstanceName)
+	})
 }

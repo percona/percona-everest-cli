@@ -258,7 +258,7 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.NewInstanceName == "" {
-		return errors.New("monitoring.instance-name is required when creating a new monitoring instance")
+		return errors.New("monitoring.new-instance-name is required when creating a new monitoring instance")
 	}
 
 	err := o.createPMMMonitoringInstance(
@@ -269,7 +269,7 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 		return errors.Wrap(err, "could not create a new PMM monitoring instance in Everest")
 	}
 
-	o.monitoringInstanceName = o.config.Monitoring.InstanceName
+	o.monitoringInstanceName = o.config.Monitoring.NewInstanceName
 
 	return nil
 }

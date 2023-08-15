@@ -21,6 +21,10 @@ linters-settings:
   unparam:
     check-exported: true
 
+  revive:
+    rules:
+      - name: if-return
+        disabled: true
   gci:
     sections:
       - standard # Captures all standard packages if they do not match another section.
