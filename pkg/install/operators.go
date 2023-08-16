@@ -864,6 +864,16 @@ func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"*"},
 		},
 		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"monitoringconfigs"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"operator.victoriametrics.com"},
+			Resources: []string{"vmagents"},
+			Verbs:     []string{"*"},
+		},
+		{
 			APIGroups: []string{""},
 			Resources: []string{"secrets"},
 			Verbs:     []string{"*"},
