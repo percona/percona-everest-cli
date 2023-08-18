@@ -173,8 +173,8 @@ func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 	if err != nil {
 		var u *url.Error
 		if errors.As(err, &u) {
-			cli.l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this computer/server.")
+			cli.l.Error("Could not connect to Kubernetes. " +
+				"Make sure Kubernetes is running and is accessible from this computer/server.")
 		}
 		return nil, err
 	}
@@ -375,10 +375,8 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 	instances, err := o.everestClient.ListMonitoringInstances(ctx)
 	if err != nil {
-		o.l.Error("Could not get a list of monitoring instances from Everest. " +
+		return errors.Wrap(err, "Could not get a list of monitoring instances from Everest. "+
 			"Make sure Everest is running and is accessible from this computer/server.")
-
-		return errors.Wrap(err, "could not retrieve list of monitoring instances")
 	}
 
 	if len(instances) == 0 {
