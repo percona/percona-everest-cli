@@ -65,13 +65,16 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
+	cmd.Flags().String("monitoring.instance-name", "",
+		"Monitoring instance name from Everest. If defined, other monitoring configuration is ignored",
+	)
+	cmd.Flags().String("monitoring.new-instance-name", "",
+		"Name for a new monitoring instance if it's going to be created",
+	)
 	cmd.Flags().String("monitoring.type", "pmm", "Monitoring type")
 	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
-	cmd.Flags().String("monitoring.pmm.password", "password", "PMM password")
-	cmd.Flags().String("monitoring.pmm.instance-id", "",
-		"PMM instance ID from Everest. If defined, the flags endpoint, username and password are ignored",
-	)
+	cmd.Flags().String("monitoring.pmm.password", "", "PMM password")
 
 	cmd.Flags().Bool("backup.enable", false, "Enable backups")
 	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
@@ -95,12 +98,13 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))           //nolint:errcheck,gosec
 
-	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                   //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                       //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint"))       //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))       //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))       //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.instance-id", cmd.Flags().Lookup("monitoring.pmm.instance-id")) //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                       //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.new-instance-name", cmd.Flags().Lookup("monitoring.new-instance-name")) //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                           //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint"))           //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
+	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
 
 	viper.BindPFlag("backup.enable", cmd.Flags().Lookup("backup.enable"))         //nolint:errcheck,gosec
 	viper.BindPFlag("backup.endpoint", cmd.Flags().Lookup("backup.endpoint"))     //nolint:errcheck,gosec

@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -730,8 +729,8 @@ func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 	return k.client.DeleteObject(obj)
 }
 
-// ProvisionMonitoring provisions PMM monitoring and creates a VM Agent instance.
-func (k *Kubernetes) ProvisionMonitoring(namespace, k8sSecretID, pmmPublicAddress string) error {
+// ProvisionMonitoring provisions PMM monitoring.
+func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 	for _, path := range k.victoriaMetricsCRDFiles() {
 		file, err := data.OLMCRDs.ReadFile(path)
 		if err != nil {
@@ -757,22 +756,6 @@ func (k *Kubernetes) ProvisionMonitoring(namespace, k8sSecretID, pmmPublicAddres
 			return errors.Wrapf(err, "cannot apply file: %q", path)
 		}
 	}
-
-	return k.deployVMAgent(namespace, k8sSecretID, pmmPublicAddress)
-}
-
-func (k *Kubernetes) deployVMAgent(namespace, secretName, pmmPublicAddress string) error {
-	k.l.Debug("Applying VMAgent spec")
-	vmagent, err := vmAgentSpec(namespace, secretName, pmmPublicAddress)
-	if err != nil {
-		return errors.Wrap(err, "cannot generate VMAgent spec")
-	}
-
-	err = k.client.ApplyObject(vmagent)
-	if err != nil {
-		return errors.Wrap(err, "cannot apply VMAgent spec")
-	}
-	k.l.Debug("VMAgent spec has been applied")
 
 	return nil
 }
@@ -844,97 +827,4 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 	}
 
 	return nil
-}
-
-const specVMAgent = `
-{
-	"kind": "VMAgent",
-	"apiVersion": "operator.victoriametrics.com/v1beta1",
-	"metadata": {
-		"generateName": %[4]s,
-		"namespace": %[3]s,
-		"creationTimestamp": null,
-		"labels": {
-			"app.kubernetes.io/managed-by": "everest",
-			"everest.percona.com/type": "monitoring"
-		}
-	},
-	"spec": {
-		"image": {},
-		"replicaCount": 1,
-		"resources": {
-			"limits": {
-				"cpu": "500m",
-				"memory": "850Mi"
-			},
-			"requests": {
-				"cpu": "250m",
-				"memory": "350Mi"
-			}
-		},
-		"remoteWrite": [
-			{
-				"url": %[2]s,
-				"basicAuth": {
-					"username": {
-						"name": %[1]s,
-						"key": "username"
-					},
-					"password": {
-						"name": %[1]s,
-						"key": "password"
-					}
-				},
-				"tlsConfig": {
-					"ca": {},
-					"cert": {},
-					"insecureSkipVerify": true
-				}
-			}
-		],
-		"selectAllByDefault": true,
-		"serviceScrapeSelector": {},
-		"serviceScrapeNamespaceSelector": {},
-		"podScrapeSelector": {},
-		"podScrapeNamespaceSelector": {},
-		"probeSelector": {},
-		"probeNamespaceSelector": {},
-		"staticScrapeSelector": {},
-		"staticScrapeNamespaceSelector": {},
-		"arbitraryFSAccessThroughSMs": {},
-		"extraArgs": {
-			"memory.allowedPercent": "40"
-		}
-	}
-}`
-
-func vmAgentSpec(namespace, secretName, address string) (runtime.Object, error) { //nolint:ireturn
-	jName, err := json.Marshal("everest-pmm-")
-	if err != nil {
-		return nil, err
-	}
-
-	jSecret, err := json.Marshal(secretName)
-	if err != nil {
-		return nil, err
-	}
-
-	jAddress, err := json.Marshal(address + "/victoriametrics/api/v1/write")
-	if err != nil {
-		return nil, err
-	}
-
-	jNamespace, err := json.Marshal(namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	manifest := fmt.Sprintf(specVMAgent, jSecret, jAddress, jNamespace, jName)
-
-	o, _, err := unstructured.UnstructuredJSONScheme.Decode([]byte(manifest), nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return o, nil
 }

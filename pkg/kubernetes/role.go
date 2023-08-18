@@ -64,7 +64,7 @@ func (k *Kubernetes) CreateRoleBinding(namespace, name, roleName, serviceAccount
 }
 
 // CreateClusterRole creates a new cluster role.
-func (k *Kubernetes) CreateClusterRole(namespace, name string, rules []rbac.PolicyRule) error {
+func (k *Kubernetes) CreateClusterRole(name string, rules []rbac.PolicyRule) error {
 	m := &rbac.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",

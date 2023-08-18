@@ -24,15 +24,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// CreatePMMInstance creates a new PMM instance.
-func (e *Everest) CreatePMMInstance(
+// CreateMonitoringInstance creates a new monitoring instance.
+func (e *Everest) CreateMonitoringInstance(
 	ctx context.Context,
-	body client.CreatePMMInstanceJSONRequestBody,
-) (*client.PMMInstance, error) {
-	res := &client.PMMInstance{}
+	body client.CreateMonitoringInstanceJSONRequestBody,
+) (*client.MonitoringInstance, error) {
+	res := &client.MonitoringInstance{}
 	err := makeRequest(
-		ctx, e.cl.CreatePMMInstance,
-		body, res, errors.New("cannot create PMM instance due to Everest error"),
+		ctx, e.cl.CreateMonitoringInstance,
+		body, res, errors.New("cannot create monitoring instance due to Everest error"),
 	)
 	if err != nil {
 		return nil, err
@@ -41,12 +41,12 @@ func (e *Everest) CreatePMMInstance(
 	return res, nil
 }
 
-// GetPMMInstance retrieves a PMM instance by its ID.
-func (e *Everest) GetPMMInstance(ctx context.Context, pmmInstanceID string) (*client.PMMInstance, error) {
-	res := &client.PMMInstance{}
+// GetMonitoringInstance retrieves a monitoring instance by its name.
+func (e *Everest) GetMonitoringInstance(ctx context.Context, name string) (*client.MonitoringInstance, error) {
+	res := &client.MonitoringInstance{}
 	err := makeRequest(
-		ctx, e.cl.GetPMMInstance,
-		pmmInstanceID, res, errors.New("cannot retrieve PMM instance due to Everest error"),
+		ctx, e.cl.GetMonitoringInstance,
+		name, res, errors.New("cannot retrieve monitoring instance due to Everest error"),
 	)
 	if err != nil {
 		return nil, err
@@ -55,18 +55,18 @@ func (e *Everest) GetPMMInstance(ctx context.Context, pmmInstanceID string) (*cl
 	return res, nil
 }
 
-// ListPMMInstances lists PMM instances.
-func (e *Everest) ListPMMInstances(ctx context.Context) ([]client.PMMInstance, error) {
-	res := []client.PMMInstance{}
+// ListMonitoringInstances lists monitoring instances.
+func (e *Everest) ListMonitoringInstances(ctx context.Context) ([]client.MonitoringInstance, error) {
+	res := []client.MonitoringInstance{}
 	err := makeRequest(
 		ctx, func(
 			ctx context.Context,
 			_ struct{},
 			r ...client.RequestEditorFn,
 		) (*http.Response, error) {
-			return e.cl.ListPMMInstances(ctx, r...)
+			return e.cl.ListMonitoringInstances(ctx, r...)
 		},
-		struct{}{}, &res, errors.New("cannot list PMM instances due to Everest error"),
+		struct{}{}, &res, errors.New("cannot list monitoring instances due to Everest error"),
 	)
 	if err != nil {
 		return nil, err

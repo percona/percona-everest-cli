@@ -34,13 +34,19 @@ type everestClientConnector interface {
 		body client.CreateBackupStorageJSONRequestBody,
 	) (*client.BackupStorage, error)
 
-	CreatePMMInstance(
+	CreateMonitoringInstance(
 		ctx context.Context,
-		body client.CreatePMMInstanceJSONRequestBody,
-	) (*client.PMMInstance, error)
-	GetPMMInstance(
+		body client.CreateMonitoringInstanceJSONRequestBody,
+	) (*client.MonitoringInstance, error)
+	GetMonitoringInstance(
 		ctx context.Context,
 		pmmInstanceID string,
-	) (*client.PMMInstance, error)
-	ListPMMInstances(ctx context.Context) ([]client.PMMInstance, error)
+	) (*client.MonitoringInstance, error)
+	ListMonitoringInstances(ctx context.Context) ([]client.MonitoringInstance, error)
+
+	SetKubernetesClusterMonitoring(
+		ctx context.Context,
+		kubernetesID string,
+		body client.SetKubernetesClusterMonitoringJSONRequestBody,
+	) error
 }
