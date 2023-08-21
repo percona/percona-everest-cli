@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.7
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
-	github.com/percona/everest-operator v0.0.8
+	github.com/percona/everest-operator v0.0.9
 	github.com/percona/percona-everest-backend v0.0.0-20230818111738-310b23304a9e
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0
