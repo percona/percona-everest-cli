@@ -228,13 +228,26 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 
 	if o.config.Monitoring.Enable {
 		o.l.Info("Deploying VMAgent to k8s cluster")
-		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, k.Id, client.KubernetesClusterMonitoring{
-			Enable:                 true,
-			MonitoringInstanceName: o.monitoringInstanceName,
+
+		// We retry for a bit since the MonitoringConfig may not be properly
+		// deployed yet and we get a HTTP 500 in this case.
+		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
+			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, k.Id, client.KubernetesClusterMonitoring{
+				Enable:                 true,
+				MonitoringInstanceName: o.monitoringInstanceName,
+			})
+			if err != nil {
+				o.l.Debug(errors.Wrap(err, "Could not enable Kubernetes cluster monitoring"))
+				return false, nil
+			}
+
+			return true, nil
 		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "could not enable Kubernetes cluster monitoring")
 		}
+
 		o.l.Info("VMAgent deployed successfully")
 	}
 
