@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
+	"github.com/percona/percona-everest-cli/commands/common"
 	"github.com/percona/percona-everest-cli/pkg/install"
 )
 
@@ -47,7 +48,7 @@ func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			if err := op.Run(cmd.Context()); err != nil {
-				if !errors.Is(err, install.ErrExitWithError) {
+				if !errors.Is(err, common.ErrExitWithError) {
 					l.Error(err)
 				}
 				os.Exit(1)

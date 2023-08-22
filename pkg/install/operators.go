@@ -33,6 +33,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
@@ -64,10 +65,6 @@ const (
 	everestServiceAccountTokenSecret = "everest-admin-token"
 	operatorInstallThreads           = 1
 )
-
-// ErrExitWithError is returned when the command shall exit with non-zero status code
-// but not print the error message.
-var ErrExitWithError = errors.New("ErrExitWithError")
 
 type (
 	// MonitoringType identifies type of monitoring to be used.
@@ -209,7 +206,7 @@ func (o *Operators) Run(ctx context.Context) error {
 			l.Error("Could not connect to Everest. " +
 				"Make sure Everest is running and is accessible from this computer/server.",
 			)
-			return ErrExitWithError
+			return common.ErrExitWithError
 		}
 
 		return errors.Wrap(err, "could not check connection to Everest")
@@ -423,7 +420,7 @@ func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
 		l.Error("Could not get a list of monitoring instances from Everest. " +
 			"Make sure Everest is running and is accessible from this computer/server.")
-		return ErrExitWithError
+		return common.ErrExitWithError
 	}
 
 	if len(instances) == 0 {

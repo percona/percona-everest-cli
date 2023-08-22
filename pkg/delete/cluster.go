@@ -25,6 +25,8 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/percona/percona-everest-cli/commands/common"
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
@@ -119,7 +121,12 @@ This will delete all monitoring resources deployed by Everest from the Kubernete
 		Force: &c.config.Force,
 	})
 	if err != nil {
-		return err
+		if !errors.Is(err, everestClient.ErrEverest) {
+			return err
+		}
+		l := c.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error(err)
+		return common.ErrExitWithError
 	}
 
 	c.l.Infof("Kubernetes cluster %q has been deleted successfully", c.config.Name)
