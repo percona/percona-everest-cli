@@ -19,11 +19,13 @@ package client
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,7 +47,10 @@ func (c *Client) DeleteAllMonitoringResources(ctx context.Context, namespace str
 
 	for _, o := range c.monitoringResourceTypesForRemoval() {
 		if err := cl.DeleteAllOf(ctx, o, opts...); err != nil {
-			return err
+			var discoveryError *discovery.ErrGroupDiscoveryFailed
+			if ok := errors.As(err, &discoveryError); !ok {
+				return err
+			}
 		}
 	}
 
