@@ -419,7 +419,7 @@ func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 
 		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
 		l.Error("Could not get a list of monitoring instances from Everest. " +
-			"Make sure Everest is running and is accessible from this computer/server.")
+			"Make sure Everest is running and is accessible from this machine.")
 		return common.ErrExitWithError
 	}
 
