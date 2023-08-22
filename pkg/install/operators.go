@@ -65,6 +65,10 @@ const (
 	operatorInstallThreads           = 1
 )
 
+// ErrExitWithError is returned when the command shall exit with non-zero status code
+// but not print the error message.
+var ErrExitWithError = errors.New("ErrExitWithError")
+
 type (
 	// MonitoringType identifies type of monitoring to be used.
 	MonitoringType string
@@ -196,11 +200,32 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
+	if err := o.checkEverestConnection(ctx); err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+
+			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+			l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this computer/server.",
+			)
+			return ErrExitWithError
+		}
+
+		return errors.Wrap(err, "could not check connection to Everest")
+	}
+
 	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
 		return err
 	}
 
 	return o.performProvisioning(ctx)
+}
+
+func (o *Operators) checkEverestConnection(ctx context.Context) error {
+	o.l.Info("Checking connection to Everest")
+	_, err := o.everestClient.ListMonitoringInstances(ctx)
+	return err
 }
 
 func (o *Operators) performProvisioning(ctx context.Context) error {
@@ -388,8 +413,17 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 	instances, err := o.everestClient.ListMonitoringInstances(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Could not get a list of monitoring instances from Everest. "+
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+		} else {
+			o.l.Error(err)
+		}
+
+		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error("Could not get a list of monitoring instances from Everest. " +
 			"Make sure Everest is running and is accessible from this computer/server.")
+		return ErrExitWithError
 	}
 
 	if len(instances) == 0 {
