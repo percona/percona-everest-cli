@@ -21,10 +21,12 @@ import (
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
+	"github.com/percona/percona-everest-cli/commands/common"
 	"github.com/percona/percona-everest-cli/pkg/delete"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 )
@@ -54,7 +56,9 @@ func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			if err := op.Run(cmd.Context()); err != nil {
-				l.Error(err)
+				if !errors.Is(err, common.ErrExitWithError) {
+					l.Error(err)
+				}
 				os.Exit(1)
 			}
 		},

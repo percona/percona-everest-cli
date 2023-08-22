@@ -33,6 +33,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
@@ -196,11 +197,32 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
+	if err := o.checkEverestConnection(ctx); err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+
+			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+			l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this machine.",
+			)
+			return common.ErrExitWithError
+		}
+
+		return errors.Wrap(err, "could not check connection to Everest")
+	}
+
 	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
 		return err
 	}
 
 	return o.performProvisioning(ctx)
+}
+
+func (o *Operators) checkEverestConnection(ctx context.Context) error {
+	o.l.Info("Checking connection to Everest")
+	_, err := o.everestClient.ListMonitoringInstances(ctx)
+	return err
 }
 
 func (o *Operators) performProvisioning(ctx context.Context) error {
@@ -388,8 +410,17 @@ func (o *Operators) runMonitoringConfigWizard(ctx context.Context) error {
 func (o *Operators) runMonitoringURLWizard(ctx context.Context) error {
 	instances, err := o.everestClient.ListMonitoringInstances(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Could not get a list of monitoring instances from Everest. "+
-			"Make sure Everest is running and is accessible from this computer/server.")
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+		} else {
+			o.l.Error(err)
+		}
+
+		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error("Could not get a list of monitoring instances from Everest. " +
+			"Make sure Everest is running and is accessible from this machine.")
+		return common.ErrExitWithError
 	}
 
 	if len(instances) == 0 {

@@ -32,6 +32,9 @@ type Everest struct {
 	cl *client.Client
 }
 
+// ErrEverest is an error coming from Everest where Everest provided an error message.
+var ErrEverest = errors.New("")
+
 // NewEverest returns new Everest.
 func NewEverest(everestClient *client.Client) *Everest {
 	return &Everest{
@@ -86,6 +89,7 @@ func processErrorResponse(res *http.Response, err error) error {
 	msg := fmt.Sprintf("unknown error (status %d)", res.StatusCode)
 	if errMsg.Message != nil {
 		msg = fmt.Sprintf("%s (status %d)", *errMsg.Message, res.StatusCode)
+		return fmt.Errorf("%w%s: %w", ErrEverest, msg, err)
 	}
 
 	return errors.Wrap(err, msg)
