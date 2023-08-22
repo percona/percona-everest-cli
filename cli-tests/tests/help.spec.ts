@@ -21,14 +21,14 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'Usage:',
-      'everest [command]',
+      'everestctl [command]',
       'Available Commands:',
       'completion Generate the autocompletion script for the specified shell',
       'help Help about any command',
       'install',
       'Flags:',
       '-h, --help help for everest',
-      'Use "everest [command] --help" for more information about a command.',
+      'Use "everestctl [command] --help" for more information about a command.',
     ]);
   });
 
@@ -38,14 +38,14 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'Usage:',
-      'everest [command]',
+      'everestctl [command]',
       'Available Commands:',
       'completion Generate the autocompletion script for the specified shell',
       'help Help about any command',
       'install',
       'Flags:',
       '-h, --help help for everest',
-      'Use "everest [command] --help" for more information about a command.',
+      'Use "everestctl [command] --help" for more information about a command.',
     ]);
   });
 
@@ -54,10 +54,10 @@ test.describe('Everest CLI "--help" validation', async () => {
 
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
-      'Generate the autocompletion script for everest for the specified shell.',
+      'Generate the autocompletion script for everestctl for the specified shell.',
       "See each sub-command's help for details on how to use the generated script.",
       'Usage:',
-      'everest completion [command]',
+      'everestctl completion [command]',
       'Available Commands:',
       'bash Generate the autocompletion script for bash',
       'fish Generate the autocompletion script for fish',
@@ -65,7 +65,7 @@ test.describe('Everest CLI "--help" validation', async () => {
       'zsh Generate the autocompletion script for zsh',
       'Flags:',
       '-h, --help help for completion',
-      'Use "everest completion [command] --help" for more information about a command.',
+      'Use "everestctl completion [command] --help" for more information about a command.',
     ]);
   });
 
@@ -76,18 +76,6 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.outContainsNormalizedMany([
       'Generate the autocompletion script for the bash shell.',
       "This script depends on the 'bash-completion' package.",
-      "If it is not installed already, you can install it via your OS's package manager.",
-      'To load completions in your current shell session:',
-      'source <(everest completion bash)',
-      'To load completions for every new session, execute once:',
-      '#### Linux:',
-      'everest completion bash > /etc/bash_completion.d/everest',
-      '#### macOS:',
-      'everest completion bash > $(brew --prefix)/etc/bash_completion.d/everest',
-      'You will need to start a new shell for this setup to take effect.',
-      'Usage:',
-      'everest completion bash',
-      'Flags:',
       '-h, --help help for bash',
       '--no-descriptions disable completion descriptions',
     ]);
@@ -99,12 +87,12 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'Usage:',
-      'everest install [command]',
+      'everestctl install [command]',
       'Available Commands:',
       'operators',
       'Flags:',
       '-h, --help help for install',
-      'Use "everest install [command] --help" for more information about a command.',
+      'Use "everestctl install [command] --help" for more information about a command.',
     ]);
   });
 
