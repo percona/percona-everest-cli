@@ -118,7 +118,7 @@ This will delete all monitoring resources deployed by Everest from the Kubernete
 
 	c.l.Infof("Deleting Kubernetes cluster %q from Everest", c.config.Name)
 	err := c.everestClient.UnregisterKubernetesCluster(ctx, c.kubernetes.id, client.UnregisterKubernetesClusterParams{
-		Force: &c.config.Force,
+		Force: c.config.Force,
 	})
 	if err != nil {
 		if !errors.Is(err, everestClient.ErrEverest) {
