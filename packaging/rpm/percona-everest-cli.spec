@@ -54,5 +54,5 @@ rm -rf $RPM_BUILD_ROOT
 %license LICENSE
 
 %changelog
-* Tue Aug 15 2023 Vadim Yalovets <vadim.yalovets> 0.1-1
+* Tue Aug 15 2023 Vadim Yalovets <vadim.yalovets> 0.1.0-1
 - Initial build for percona-everest-cli

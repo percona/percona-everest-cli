@@ -122,7 +122,6 @@ get_sources(){
     fi
     REVISION=$(git rev-parse --short HEAD)
     echo "REVISION=${REVISION}" >> ${WORKDIR}/everest-cli.properties
-    cp packaging/LICENSE .
     mkdir debian
     cd debian/
     cp ../packaging/debian/control .
@@ -479,7 +478,7 @@ REPO="http://github.com/percona/percona-everest-cli"
 PRODUCT=percona-everest-cli
 DEBUG=0
 parse_arguments PICK-ARGS-FROM-ARGV "$@"
-VERSION='0.1'
+VERSION='0.1.0'
 RELEASE='1'
 PRODUCT_FULL=${PRODUCT}-${VERSION}-${RELEASE}
 

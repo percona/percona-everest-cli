@@ -2,7 +2,7 @@ Source: percona-everest-cli
 Maintainer: Percona Development Team <info@percona.com>
 Section: misc
 Priority: optional
-Standards-Version: 0.1
+Standards-Version: 0.1.0
 
 
 Package: percona-everest-cli
