@@ -1,0 +1,14 @@
+Source: percona-everest-cli
+Maintainer: Percona Development Team <info@percona.com>
+Section: misc
+Priority: optional
+Standards-Version: 0.1
+
+
+Package: percona-everest-cli
+Architecture: any
+Depends: percona-everest-cli
+Description: This tool is a CLI client for Percona Everest and has the following features:
+ Provisioning of Percona Everest on Kubernetes clusters,
+ CLI client for Percona Everest that helps you manage database clusters
+ It is released under the Apache 2.0 license.
