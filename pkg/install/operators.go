@@ -319,7 +319,11 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 		},
 	})
 
-	return errors.Join(err, errors.New("could not create a new monitoring instance"))
+	if err != nil {
+		return errors.Join(err, errors.New("could not create a new monitoring instance"))
+	}
+
+	return nil
 }
 
 func (o *Operators) configureEverestConnector() error {
