@@ -24,6 +24,8 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
@@ -45,6 +47,8 @@ type k8sCluster struct {
 	id string
 	// namespace stores everest namespace in the k8s cluster.
 	namespace string
+	// uid stores k8s UID of the namespace.
+	uid string
 }
 
 // ClusterConfig stores configuration for the Cluster command.
@@ -114,12 +118,8 @@ This will delete all monitoring resources deployed by Everest from the Kubernete
 		return errors.New("could not find Kubernetes cluster in Everest")
 	}
 
-	// kubeClient can be nil in case the k8s cluster is not available
-	if c.kubeClient != nil {
-		c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
-		if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
-			return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
-		}
+	if err := c.deleteK8sResources(ctx); err != nil {
+		return err
 	}
 
 	c.l.Infof("Deleting Kubernetes cluster %q from Everest", c.config.Name)
@@ -161,6 +161,7 @@ func (c *Cluster) populateKubernetesCluster(ctx context.Context) error {
 		c.kubernetes = &k8sCluster{
 			id:        cluster.Id,
 			namespace: cluster.Namespace,
+			uid:       cluster.Uid,
 		}
 	}
 
@@ -210,4 +211,61 @@ func (c *Cluster) lookupKubernetesCluster(ctx context.Context, name string) (*cl
 	}
 
 	return nil, errors.New("could not find Kubernetes cluster in Everest by its name")
+}
+
+func (c *Cluster) checkNamespaceUIDMistmatch(ctx context.Context) error {
+	ns, err := c.kubeClient.GetNamespace(ctx, c.kubernetes.namespace)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return errors.Wrap(err, "could not get namespace from Kubernetes")
+	}
+
+	c.l.Debugf("ns.UID = %s, everest.UID = %s", string(ns.UID), c.kubernetes.uid)
+	if k8serrors.IsNotFound(err) || ns.UID != types.UID(c.kubernetes.uid) {
+		if err := c.confirmNamespaceMismatch(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) confirmNamespaceMismatch() error {
+	msg := "The provided kubeconfig does not seem to match the Kubernetes cluster Everest is using. " +
+		"Please make sure you're working with the correct Kubernetes cluster."
+	fmt.Printf("\n%s\n\n", msg) //nolint:forbidigo
+
+	if !c.config.AssumeYes {
+		confirm := &survey.Confirm{
+			Message: "Are you sure you're working with the correct Kubernetes cluster?",
+		}
+		prompt := false
+		if err := survey.AskOne(confirm, &prompt); err != nil {
+			return err
+		}
+
+		if !prompt {
+			c.l.Info("Exiting")
+			return errors.New("interrupt")
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) deleteK8sResources(ctx context.Context) error {
+	// kubeClient can be nil in case the k8s cluster is not available
+	if c.kubeClient == nil {
+		return nil
+	}
+
+	if err := c.checkNamespaceUIDMistmatch(ctx); err != nil {
+		return err
+	}
+
+	c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
+	if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
+		return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
+	}
+
+	return nil
 }

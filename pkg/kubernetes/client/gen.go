@@ -15,5 +15,5 @@
 
 package client
 
-//go:generate ../../../bin/ifacemaker -f client.go -f monitoring.go -s Client -i KubeClientConnector -p client -o kubeclient_interface.go
+//go:generate ../../../bin/ifacemaker -f client.go -f monitoring.go -f namespace.go -s Client -i KubeClientConnector -p client -o kubeclient_interface.go
 //go:generate ../../../bin/mockery --name=KubeClientConnector --case=snake --inpackage
