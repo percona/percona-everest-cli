@@ -922,6 +922,11 @@ func (o *Operators) serviceAccountClusterRolePolicyRules() []rbacv1.PolicyRule {
 			Resources: []string{"pods"},
 			Verbs:     []string{"list"},
 		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumes"},
+			Verbs:     []string{"list"},
+		},
 	}
 }
 
