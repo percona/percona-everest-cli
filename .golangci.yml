@@ -9,8 +9,8 @@ linters-settings:
         - $all
         - "!$test"
         deny:
-          - pkg: errors
-            desc: use "github.com/pkg/errors" instead
+          - pkg: github.com/pkg/errors
+            desc: use "errors" instead
 
   goimports:
     local-prefixes: github.com/percona/percona-everest-cli
@@ -38,6 +38,7 @@ linters:
     - exhaustruct      # not useful
     - exhaustivestruct # annoying and duplicates exhaustruct
     - gomnd            # not useful
+    - goerr113         # we're using errorlint instead
     - maligned         # deprecated, replaced by fieldalignment. We're ok wasting a couple bytes now
     - nlreturn         # too many empty lines makes methods too long
     - varnamelen       # it's useful sometime to have a one-letter name

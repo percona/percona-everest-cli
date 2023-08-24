@@ -18,10 +18,10 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 )
 
 // RegisterKubernetesCluster registers a new Kubernetes cluster.

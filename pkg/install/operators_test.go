@@ -16,11 +16,11 @@ package install
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
