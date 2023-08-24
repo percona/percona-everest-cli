@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -36,7 +37,6 @@ import (
 	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
 	packageServerClient "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/client/clientset/versioned"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -165,12 +165,12 @@ func NewFromKubeConfig(kubeconfig string, l *zap.SugaredLogger) (*Client, error)
 	path := strings.ReplaceAll(kubeconfig, "~", home)
 	fileData, err := os.ReadFile(path) //nolint:gosec
 	if err != nil {
-		return nil, errors.Wrap(err, "could not read kubeconfig file")
+		return nil, errors.Join(err, errors.New("could not read kubeconfig file"))
 	}
 
 	clientConfig, err := clientcmd.Load(fileData)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not parse kubeconfig file")
+		return nil, errors.Join(err, errors.New("could not parse kubeconfig file"))
 	}
 
 	config, err := clientcmd.RESTConfigFromKubeConfig(fileData)
@@ -233,7 +233,7 @@ func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
 
 	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig, rcl)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create dynamic rest mapper")
+		return nil, errors.Join(err, errors.New("failed to create dynamic rest mapper"))
 	}
 
 	cl, err := client.New(c.restConfig, client.Options{
@@ -241,7 +241,7 @@ func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
 		Mapper: rm,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create client")
+		return nil, errors.Join(err, errors.New("failed to create client"))
 	}
 	return cl, nil
 }
@@ -259,7 +259,7 @@ func (c *Client) GetSecretsForServiceAccount(ctx context.Context, accountName st
 	}
 
 	if len(serviceAccount.Secrets) == 0 {
-		return nil, errors.Errorf("no secrets available for namespace %s", c.namespace)
+		return nil, fmt.Errorf("no secrets available for namespace %s", c.namespace)
 	}
 
 	return c.clientset.CoreV1().Secrets(c.namespace).Get(
@@ -775,7 +775,7 @@ func (c Client) pollCsvPhaseSucceeded(ctx context.Context, key types.NamespacedN
 		//nolint:exhaustive
 		switch curPhase {
 		case v1alpha1.CSVPhaseFailed:
-			return false, errors.Errorf("csv failed: reason: %q, message: %q", csv.Status.Reason, csv.Status.Message)
+			return false, fmt.Errorf("csv failed: reason: %q, message: %q", csv.Status.Reason, csv.Status.Message)
 		case v1alpha1.CSVPhaseSucceeded:
 			return true, nil
 		default:
@@ -830,7 +830,7 @@ func (c *Client) getKubeclient() (client.Client, error) { //nolint:ireturn
 
 	rm, err := apiutil.NewDynamicRESTMapper(c.restConfig, rcl)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create dynamic rest mapper")
+		return nil, errors.Join(err, errors.New("failed to create dynamic rest mapper"))
 	}
 
 	cl, err := client.New(c.restConfig, client.Options{
@@ -838,7 +838,7 @@ func (c *Client) getKubeclient() (client.Client, error) { //nolint:ireturn
 		Mapper: rm,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create client")
+		return nil, errors.Join(err, errors.New("failed to create client"))
 	}
 	return cl, nil
 }
@@ -920,7 +920,7 @@ func (c Client) checkPodErrors(
 	}
 
 	if err := kubeclient.List(ctx, podList, &options); err != nil {
-		return errors.Wrap(err, "error getting Pods")
+		return errors.Join(err, errors.New("error getting Pods"))
 	}
 
 	for _, p := range podList.Items {
@@ -1003,7 +1003,7 @@ func (c *Client) CreateNamespace(name string) error {
 func (c *Client) GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	if namespace == "" {
@@ -1017,7 +1017,7 @@ func (c *Client) GetOperatorGroup(ctx context.Context, namespace, name string) (
 func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	if namespace == "" {
@@ -1047,7 +1047,7 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 ) (*v1alpha1.Subscription, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	subscription := &v1alpha1.Subscription{
@@ -1089,7 +1089,7 @@ func (c *Client) GetSubscription(ctx context.Context, namespace, name string) (*
 
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().Subscriptions(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -1102,7 +1102,7 @@ func (c *Client) ListSubscriptions(ctx context.Context, namespace string) (*v1al
 
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().Subscriptions(namespace).List(ctx, metav1.ListOptions{})
@@ -1115,7 +1115,7 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().InstallPlans(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -1141,7 +1141,7 @@ func (c *Client) GetPackageManifest(ctx context.Context, name string) (*packagev
 	namespace := "olm"
 	operatorClient, err := packageServerClient.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1().PackageManifests(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -1158,7 +1158,7 @@ func (c *Client) UpdateInstallPlan(
 
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().InstallPlans(namespace).Update(ctx, installPlan, metav1.UpdateOptions{})
@@ -1199,7 +1199,7 @@ func (c *Client) GetClusterServiceVersion(
 ) (*v1alpha1.ClusterServiceVersion, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(key.Namespace).Get(ctx, key.Name, metav1.GetOptions{})
@@ -1212,7 +1212,7 @@ func (c *Client) ListClusterServiceVersion(
 ) (*v1alpha1.ClusterServiceVersionList, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot create an operator client instance")
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
 	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(namespace).List(ctx, metav1.ListOptions{})

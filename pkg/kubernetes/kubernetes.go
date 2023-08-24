@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -29,7 +31,6 @@ import (
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -324,7 +325,7 @@ func (k *Kubernetes) GetLogs(
 
 	stdout, err := k.client.GetLogs(ctx, pod, container)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't get logs")
+		return nil, errors.Join(err, errors.New("couldn't get logs"))
 	}
 
 	if stdout == "" {
@@ -338,7 +339,7 @@ func (k *Kubernetes) GetLogs(
 func (k *Kubernetes) GetEvents(ctx context.Context, pod string) ([]string, error) {
 	stdout, err := k.client.GetEvents(ctx, pod)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't describe pod")
+		return nil, errors.Join(err, errors.New("couldn't describe pod"))
 	}
 
 	lines := strings.Split(stdout, "\n")
@@ -382,7 +383,7 @@ func IsNodeInCondition(node corev1.Node, conditionType corev1.NodeConditionType)
 func (k *Kubernetes) GetWorkerNodes(ctx context.Context) ([]corev1.Node, error) {
 	nodes, err := k.client.GetNodes(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get nodes of Kubernetes cluster")
+		return nil, errors.Join(err, errors.New("could not get nodes of Kubernetes cluster"))
 	}
 	forbidenTaints := map[string]corev1.TaintEffect{
 		"node.cloudprovider.kubernetes.io/uninitialized": corev1.TaintEffectNoSchedule,
@@ -437,7 +438,7 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
 	}
 
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "packageserver"}); err != nil {
-		return errors.Wrap(err, "error while waiting for deployment rollout")
+		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
 	return nil
@@ -457,11 +458,11 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 		log.Printf("Waiting for subscription/%s to install CSV", subscriptionKey.Name)
 		csvKey, err := k.client.GetSubscriptionCSV(ctx, subscriptionKey)
 		if err != nil {
-			return errors.Errorf("subscription/%s failed to install CSV: %v", subscriptionKey.Name, err)
+			return fmt.Errorf("subscription/%s failed to install CSV: %w", subscriptionKey.Name, err)
 		}
 		log.Printf("Waiting for clusterserviceversion/%s to reach 'Succeeded' phase", csvKey.Name)
 		if err := k.client.DoCSVWait(ctx, csvKey); err != nil {
-			return errors.Errorf("clusterserviceversion/%s failed to reach 'Succeeded' phase", csvKey.Name)
+			return fmt.Errorf("clusterserviceversion/%s failed to reach 'Succeeded' phase", csvKey.Name)
 		}
 	}
 
@@ -472,14 +473,14 @@ func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Uns
 func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
-		return errors.Wrapf(err, "failed to read percona catalog file")
+		return errors.Join(err, errors.New("failed to read percona catalog file"))
 	}
 
 	if err := k.client.ApplyFile(data); err != nil {
-		return errors.Wrapf(err, "cannot apply percona catalog file")
+		return errors.Join(err, errors.New("cannot apply percona catalog file"))
 	}
 	if err := k.client.DoPackageWait(ctx, "everest-operator"); err != nil {
-		return errors.Wrapf(err, "timeout waiting for package")
+		return errors.Join(err, errors.New("timeout waiting for package"))
 	}
 	return nil
 }
@@ -498,25 +499,25 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 
 		data, err := fs.ReadFile(data.OLMCRDs, f)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to read %q file", f)
+			return nil, errors.Join(err, fmt.Errorf("failed to read %q file", f))
 		}
 
 		applyFile := func(ctx context.Context) (bool, error) {
 			k.l.Debugf("Applying %q file", f)
 			if err := k.client.ApplyFile(data); err != nil {
-				k.l.Warn(errors.Wrapf(err, "cannot apply %q file", f))
+				k.l.Warn(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
 				return false, nil
 			}
 			return true, nil
 		}
 
 		if err := wait.PollUntilContextTimeout(ctx, time.Second, 30*time.Second, true, applyFile); err != nil {
-			return nil, errors.Wrapf(err, "cannot apply %q file", f)
+			return nil, errors.Join(err, fmt.Errorf("cannot apply %q file", f))
 		}
 
 		r, err := decodeResources(data)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot decode resources in %q", f)
+			return nil, errors.Join(err, fmt.Errorf("cannot decode resources in %q", f))
 		}
 		resources = append(resources, r...)
 	}
@@ -529,10 +530,10 @@ func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
 		Namespace: olmNamespace,
 		Name:      "olm-operator",
 	}); err != nil {
-		return errors.Wrap(err, "error while waiting for deployment rollout")
+		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "catalog-operator"}); err != nil {
-		return errors.Wrap(err, "error while waiting for deployment rollout")
+		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
 	return nil
@@ -596,14 +597,17 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual,
 	)
 	if err != nil {
-		return errors.Wrap(err, "cannot create a subscription to install the operator")
+		return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
 	}
 
 	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
 		k.l.Debugf("Polling subscription %s/%s", req.Namespace, req.Name)
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
-		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
-			return false, errors.Wrapf(err, "cannot get an install plan for the operator subscription: %q", req.Name)
+		if err != nil {
+			return false, errors.Join(err, fmt.Errorf("cannot get an install plan for the operator subscription: %q", req.Name))
+		}
+		if subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
+			return false, nil
 		}
 
 		return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
@@ -692,12 +696,12 @@ func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string)
 		return nil, err
 	}
 	if subs == nil || subs.Status.Install == nil || subs.Status.Install.Name == "" {
-		return nil, errors.Errorf("cannot get subscription for %q operator", name)
+		return nil, fmt.Errorf("cannot get subscription for %q operator", name)
 	}
 
 	ip, err := k.client.GetInstallPlan(ctx, namespace, subs.Status.Install.Name)
 	if err != nil {
-		return nil, errors.Wrapf(err, "cannot get install plan to upgrade %q", name)
+		return nil, errors.Join(err, fmt.Errorf("cannot get install plan to upgrade %q", name))
 	}
 
 	return ip, err
@@ -741,7 +745,7 @@ func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 			k.l.Debugf("Applying file %s", path)
 			newFile, err := k.applyTemplateCustomization(namespace, file)
 			if err != nil {
-				return errors.Wrapf(err, "cannot apply customizations to file: %q", path)
+				return errors.Join(err, fmt.Errorf("cannot apply customizations to file: %q", path))
 			}
 
 			err = k.client.ApplyFile(newFile)
@@ -753,7 +757,7 @@ func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 			break
 		}
 		if err != nil {
-			return errors.Wrapf(err, "cannot apply file: %q", path)
+			return errors.Join(err, fmt.Errorf("cannot apply file: %q", path))
 		}
 	}
 

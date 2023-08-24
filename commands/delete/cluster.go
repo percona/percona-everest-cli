@@ -17,11 +17,11 @@
 package delete //nolint:predeclared
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"

@@ -18,11 +18,11 @@ package delete //nolint:predeclared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -118,7 +118,7 @@ This will delete all monitoring resources deployed by Everest from the Kubernete
 	if c.kubeClient != nil {
 		c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
 		if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
-			return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
+			return errors.Join(err, errors.New("could not delete monitoring resources from the Kubernetes cluster"))
 		}
 	}
 
