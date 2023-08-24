@@ -92,5 +92,9 @@ func processErrorResponse(res *http.Response, err error) error {
 		return fmt.Errorf("%w%s: %w", ErrEverest, msg, err)
 	}
 
-	return errors.Join(err, errors.New(msg))
+	if err != nil {
+		return errors.Join(err, errors.New(msg))
+	}
+
+	return errors.New("generic response error")
 }

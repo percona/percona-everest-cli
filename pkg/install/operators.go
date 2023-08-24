@@ -318,7 +318,6 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 			Password: password,
 		},
 	})
-
 	if err != nil {
 		return errors.Join(err, errors.New("could not create a new monitoring instance"))
 	}

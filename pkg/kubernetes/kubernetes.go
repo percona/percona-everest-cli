@@ -603,8 +603,11 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
 		k.l.Debugf("Polling subscription %s/%s", req.Namespace, req.Name)
 		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
-		if err != nil || subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
+		if err != nil {
 			return false, errors.Join(err, fmt.Errorf("cannot get an install plan for the operator subscription: %q", req.Name))
+		}
+		if subs == nil || (subs != nil && subs.Status.InstallPlanRef == nil) {
+			return false, nil
 		}
 
 		return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
