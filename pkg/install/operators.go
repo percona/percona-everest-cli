@@ -20,13 +20,14 @@ package install
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -209,7 +210,7 @@ func (o *Operators) Run(ctx context.Context) error {
 			return common.ErrExitWithError
 		}
 
-		return errors.Wrap(err, "could not check connection to Everest")
+		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
 
 	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
@@ -260,14 +261,14 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 				MonitoringInstanceName: o.monitoringInstanceName,
 			})
 			if err != nil {
-				o.l.Debug(errors.Wrap(err, "Could not enable Kubernetes cluster monitoring"))
+				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
 				return false, nil
 			}
 
 			return true, nil
 		})
 		if err != nil {
-			return errors.Wrap(err, "could not enable Kubernetes cluster monitoring")
+			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
 		}
 
 		o.l.Info("VMAgent deployed successfully")
@@ -284,7 +285,7 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 	if o.config.Monitoring.InstanceName != "" {
 		i, err := o.everestClient.GetMonitoringInstance(ctx, o.config.Monitoring.InstanceName)
 		if err != nil {
-			return errors.Wrapf(err, "could not get monitoring instance with name %s from Everest", o.config.Monitoring.InstanceName)
+			return errors.Join(err, fmt.Errorf("could not get monitoring instance with name %s from Everest", o.config.Monitoring.InstanceName))
 		}
 		o.monitoringInstanceName = i.Name
 		return nil
@@ -299,7 +300,7 @@ func (o *Operators) resolveMonitoringInstanceName(ctx context.Context) error {
 		o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password,
 	)
 	if err != nil {
-		return errors.Wrap(err, "could not create a new PMM monitoring instance in Everest")
+		return errors.Join(err, errors.New("could not create a new PMM monitoring instance in Everest"))
 	}
 
 	o.monitoringInstanceName = o.config.Monitoring.NewInstanceName
@@ -317,8 +318,11 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 			Password: password,
 		},
 	})
+	if err != nil {
+		return errors.Join(err, errors.New("could not create a new monitoring instance"))
+	}
 
-	return errors.Wrap(err, "could not create a new monitoring instance")
+	return nil
 }
 
 func (o *Operators) configureEverestConnector() error {
@@ -647,7 +651,7 @@ func (o *Operators) provisionNamespace() error {
 	o.l.Infof("Creating namespace %s", o.config.Namespace)
 	err := o.kubeClient.CreateNamespace(o.config.Namespace)
 	if err != nil {
-		return errors.Wrap(err, "could not provision namespace")
+		return errors.Join(err, errors.New("could not provision namespace"))
 	}
 
 	o.l.Infof("Namespace %s has been created", o.config.Namespace)
@@ -754,7 +758,7 @@ func (o *Operators) provisionMonitoring() error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
 	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
-		return errors.Wrap(err, "could not provision monitoring configuration")
+		return errors.Join(err, errors.New("could not provision monitoring configuration"))
 	}
 
 	l.Info("K8s cluster monitoring has been provisioned successfully")
@@ -765,13 +769,13 @@ func (o *Operators) provisionMonitoring() error {
 // connectToEverest connects the k8s cluster to Everest.
 func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesCluster, error) {
 	if err := o.prepareServiceAccount(); err != nil {
-		return nil, errors.Wrap(err, "could not prepare a service account")
+		return nil, errors.Join(err, errors.New("could not prepare a service account"))
 	}
 
 	o.l.Info("Generating kubeconfig")
 	kubeconfig, err := o.getServiceAccountKubeConfig(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get a new kubeconfig file for a service account")
+		return nil, errors.Join(err, errors.New("could not get a new kubeconfig file for a service account"))
 	}
 
 	o.l.Info("Connecting your Kubernetes cluster to Everest")
@@ -782,7 +786,7 @@ func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesClu
 		Namespace:  &o.config.Namespace,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "could not register a new Kubernetes cluster with Everest")
+		return nil, errors.Join(err, errors.New("could not register a new Kubernetes cluster with Everest"))
 	}
 
 	o.l.Info("Connected Kubernetes cluster to Everest")
@@ -807,7 +811,7 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 		Region:     o.config.Backup.Region,
 	})
 	if err != nil {
-		return errors.Wrap(err, "could not create a new backup storage in Everest")
+		return errors.Join(err, errors.New("could not create a new backup storage in Everest"))
 	}
 
 	o.l.Info("Created a new backup storage in Everest")
@@ -818,13 +822,13 @@ func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
 func (o *Operators) prepareServiceAccount() error {
 	o.l.Info("Creating service account for Everest")
 	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Namespace); err != nil {
-		return errors.Wrap(err, "could not create service account")
+		return errors.Join(err, errors.New("could not create service account"))
 	}
 
 	o.l.Info("Creating role for Everest service account")
 	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
 	if err != nil {
-		return errors.Wrap(err, "could not create role")
+		return errors.Join(err, errors.New("could not create role"))
 	}
 
 	o.l.Info("Binding role to Everest Service account")
@@ -835,7 +839,7 @@ func (o *Operators) prepareServiceAccount() error {
 		everestServiceAccount,
 	)
 	if err != nil {
-		return errors.Wrap(err, "could not create role binding")
+		return errors.Join(err, errors.New("could not create role binding"))
 	}
 
 	o.l.Info("Creating cluster role for Everest service account")
@@ -843,7 +847,7 @@ func (o *Operators) prepareServiceAccount() error {
 		everestServiceAccountRole, o.serviceAccountClusterRolePolicyRules(),
 	)
 	if err != nil {
-		return errors.Wrap(err, "could not create cluster role")
+		return errors.Join(err, errors.New("could not create cluster role"))
 	}
 
 	o.l.Info("Binding cluster role to Everest Service account")
@@ -854,7 +858,7 @@ func (o *Operators) prepareServiceAccount() error {
 		everestServiceAccount,
 	)
 	if err != nil {
-		return errors.Wrap(err, "could not create cluster role binding")
+		return errors.Join(err, errors.New("could not create cluster role binding"))
 	}
 
 	return nil
@@ -899,6 +903,11 @@ func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{""},
+			Resources: []string{"namespaces"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
 			Resources: []string{"secrets"},
 			Verbs:     []string{"*"},
 		},
@@ -920,6 +929,11 @@ func (o *Operators) serviceAccountClusterRolePolicyRules() []rbacv1.PolicyRule {
 		{
 			APIGroups: []string{""},
 			Resources: []string{"pods"},
+			Verbs:     []string{"list"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumes"},
 			Verbs:     []string{"list"},
 		},
 	}
@@ -951,7 +965,7 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	// We poll for the secret as it's created asynchronously
 	err = wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, checkSecretData)
 	if err != nil {
-		return "", errors.Wrap(err, "could not get token from secret for a service account")
+		return "", errors.Join(err, errors.New("could not get token from secret for a service account"))
 	}
 
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)

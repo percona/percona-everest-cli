@@ -18,11 +18,11 @@ package delete //nolint:predeclared
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -50,25 +50,28 @@ type k8sCluster struct {
 // ClusterConfig stores configuration for the Cluster command.
 type ClusterConfig struct {
 	// Name is a name of the Kubernetes cluster in Everest
-	Name string
-
+	Name    string
 	Everest struct {
 		// Endpoint stores URL to Everest.
 		Endpoint string
 	}
-
 	// KubeconfigPath is a path to a kubeconfig
 	KubeconfigPath string `mapstructure:"kubeconfig"`
-
+	// AssumeYes is true when all questions can be skipped.
+	AssumeYes bool `mapstructure:"assume-yes"`
 	// Force is true when we shall not prompt for removal.
 	Force bool
+	// IgnoreK8sUnavailable is true when unavailable Kubernetes can be ignored.
+	IgnoreK8sUnavailable bool `mapstructure:"ignore-kubernetes-unavailable"`
 }
 
 // NewCluster returns a new Cluster struct.
 func NewCluster(c ClusterConfig, everestClient everestClientConnector, l *zap.SugaredLogger) (*Cluster, error) {
 	kubeClient, err := kubernetes.New(c.KubeconfigPath, l)
 	if err != nil {
-		return nil, err
+		if !c.IgnoreK8sUnavailable {
+			return nil, err
+		}
 	}
 
 	cli := &Cluster{
@@ -87,7 +90,7 @@ func (c *Cluster) Run(ctx context.Context) error {
 		return err
 	}
 
-	if !c.config.Force {
+	if !c.config.AssumeYes {
 		msg := `You are about to delete a Kubernetes cluster from Everest.
 This will delete all monitoring resources deployed by Everest from the Kubernetes cluster. All other resources such as Database Clusters will not be affected.`
 		fmt.Printf("\n%s\n\n", msg) //nolint:forbidigo
@@ -111,14 +114,18 @@ This will delete all monitoring resources deployed by Everest from the Kubernete
 		return errors.New("could not find Kubernetes cluster in Everest")
 	}
 
-	c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
-	if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
-		return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
+	// kubeClient can be nil in case the k8s cluster is not available
+	if c.kubeClient != nil {
+		c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
+		if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
+			return errors.Join(err, errors.New("could not delete monitoring resources from the Kubernetes cluster"))
+		}
 	}
 
 	c.l.Infof("Deleting Kubernetes cluster %q from Everest", c.config.Name)
 	err := c.everestClient.UnregisterKubernetesCluster(ctx, c.kubernetes.id, client.UnregisterKubernetesClusterParams{
-		Force: &c.config.Force,
+		IgnoreKubernetesUnavailable: c.config.IgnoreK8sUnavailable,
+		Force:                       c.config.Force,
 	})
 	if err != nil {
 		if !errors.Is(err, everestClient.ErrEverest) {

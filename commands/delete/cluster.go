@@ -21,14 +21,13 @@ import (
 	"os"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"github.com/percona/percona-everest-cli/commands/common"
 	"github.com/percona/percona-everest-cli/pkg/delete"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
+	"github.com/percona/percona-everest-cli/pkg/output"
 )
 
 // NewClusterCmd returns a new cluster command.
@@ -56,9 +55,7 @@ func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 
 			if err := op.Run(cmd.Context()); err != nil {
-				if !errors.Is(err, common.ErrExitWithError) {
-					l.Error(err)
-				}
+				output.PrintError(err, l)
 				os.Exit(1)
 			}
 		},
@@ -73,14 +70,20 @@ func initClusterFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("name", "", "Kubernetes cluster name in Everest")
+	cmd.Flags().BoolP("assume-yes", "y", false, "Assume yes to all questions")
 	cmd.Flags().BoolP("force", "f", false, "Force removal in case there are database clusters running")
+	cmd.Flags().Bool("ignore-kubernetes-unavailable", false, "Remove cluster even if Kubernetes is not available")
 }
 
 func initClusterViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))             //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                         //nolint:errcheck,gosec
+	viper.BindPFlag("assume-yes", cmd.Flags().Lookup("assume-yes"))             //nolint:errcheck,gosec
 	viper.BindPFlag("force", cmd.Flags().Lookup("force"))                       //nolint:errcheck,gosec
+	viper.BindPFlag(                                                            //nolint:errcheck,gosec
+		"ignore-kubernetes-unavailable", cmd.Flags().Lookup("ignore-kubernetes-unavailable"),
+	)
 }
 
 func parseClusterConfig() (*delete.ClusterConfig, error) {

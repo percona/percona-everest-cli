@@ -19,12 +19,12 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 )
 
 // Everest is a connector to the Everest API.
@@ -46,7 +46,7 @@ func NewEverest(everestClient *client.Client) *Everest {
 func NewEverestFromURL(url string) (*Everest, error) {
 	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize everest client")
+		return nil, errors.Join(err, errors.New("could not initialize everest client"))
 	}
 	return NewEverest(everestCl), nil
 }
@@ -83,7 +83,7 @@ func makeRequest[B interface{}, R interface{}](
 func processErrorResponse(res *http.Response, err error) error {
 	errMsg := client.Error{}
 	if err := json.NewDecoder(res.Body).Decode(&errMsg); err != nil {
-		return errors.Wrapf(err, "could not decode Everest error response (status %d)", res.StatusCode)
+		return errors.Join(err, fmt.Errorf("could not decode Everest error response (status %d)", res.StatusCode))
 	}
 
 	msg := fmt.Sprintf("unknown error (status %d)", res.StatusCode)
@@ -92,5 +92,9 @@ func processErrorResponse(res *http.Response, err error) error {
 		return fmt.Errorf("%w%s: %w", ErrEverest, msg, err)
 	}
 
-	return errors.Wrap(err, msg)
+	if err != nil {
+		return errors.Join(err, errors.New(msg))
+	}
+
+	return errors.New("generic response error")
 }

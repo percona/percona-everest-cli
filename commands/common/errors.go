@@ -16,7 +16,7 @@
 // Package common contains common types for all commands.
 package common
 
-import "github.com/pkg/errors"
+import "errors"
 
 // ErrExitWithError is returned when a command shall exit with a non-zero status code
 // but not print the error message. The function returning the error is required to

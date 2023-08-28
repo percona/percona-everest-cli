@@ -27,6 +27,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/pkg/delete"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
+	"github.com/percona/percona-everest-cli/pkg/output"
 )
 
 // NewMySQLCmd returns a new MySQL command.
@@ -51,7 +52,7 @@ func NewMySQLCmd(l *zap.SugaredLogger) *cobra.Command {
 			command := delete.NewMySQL(*c, everestClConnector, l)
 
 			if err := command.Run(cmd.Context()); err != nil {
-				l.Error(err)
+				output.PrintError(err, l)
 				os.Exit(1)
 			}
 		},

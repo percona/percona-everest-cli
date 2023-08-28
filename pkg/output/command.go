@@ -18,11 +18,15 @@ package output
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/commands/common"
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 )
 
 // PrintOutput prints output as a string or json.
@@ -44,4 +48,19 @@ func PrintOutput(cmd *cobra.Command, l *zap.SugaredLogger, output interface{}) {
 	}
 
 	fmt.Println(string(out)) //nolint:forbidigo
+}
+
+// PrintError formats and prints an error to logger.
+func PrintError(err error, l *zap.SugaredLogger) {
+	if errors.Is(err, everestClient.ErrEverest) {
+		l := l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error(err)
+		return
+	}
+
+	if errors.Is(err, common.ErrExitWithError) {
+		return
+	}
+
+	l.Error(err)
 }

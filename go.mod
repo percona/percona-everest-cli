@@ -9,20 +9,19 @@ require (
 	github.com/operator-framework/api v0.17.7
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
 	github.com/percona/everest-operator v0.0.9
-	github.com/percona/percona-everest-backend v0.0.0-20230818111738-310b23304a9e
-	github.com/pkg/errors v0.9.1
+	github.com/percona/percona-everest-backend v0.0.0-20230822125334-e7a2cf143e0b
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.25.0
 	golang.org/x/sync v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.29.0-alpha.0
-	k8s.io/apiextensions-apiserver v0.29.0-alpha.0
-	k8s.io/apimachinery v0.29.0-alpha.0
-	k8s.io/cli-runtime v0.29.0-alpha.0
-	k8s.io/client-go v0.29.0-alpha.0
-	k8s.io/kubectl v0.29.0-alpha.0
+	k8s.io/api v0.28.0
+	k8s.io/apiextensions-apiserver v0.28.0
+	k8s.io/apimachinery v0.28.0
+	k8s.io/cli-runtime v0.28.0
+	k8s.io/client-go v0.28.0
+	k8s.io/kubectl v0.28.0
 	sigs.k8s.io/controller-runtime v0.15.1
 )
 
@@ -93,6 +92,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
