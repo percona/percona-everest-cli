@@ -126,7 +126,6 @@ rules:
   - perconaxtradbclusterrestores
   - perconaxtradbclusterrestores/status
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -139,7 +138,6 @@ rules:
   - perconaservermongodbrestores
   - perconaservermongodbrestores/status
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -151,12 +149,7 @@ rules:
   - perconapgclusters
   - perconapgrestores
   - perconapgbackups
-  - pgclusters
-  - pgpolicies
-  - pgreplicas
-  - pgtasks
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
