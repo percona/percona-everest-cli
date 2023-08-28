@@ -22,10 +22,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/percona/percona-everest-cli/commands/common"
-	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/commands/common"
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 )
 
 // PrintOutput prints output as a string or json.
