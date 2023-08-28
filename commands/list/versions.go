@@ -53,7 +53,7 @@ func NewVersionsCmd(l *zap.SugaredLogger) *cobra.Command {
 			command := list.NewVersions(*c, everestClConnector, l)
 			res, err := command.Run(cmd.Context())
 			if err != nil {
-				l.Error(err)
+				output.PrintError(err, l)
 				os.Exit(1)
 			}
 
