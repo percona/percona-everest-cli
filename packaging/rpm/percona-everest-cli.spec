@@ -1,5 +1,3 @@
-%global majorversion 0
-%global minorversion 1
 %global debug_package %{nil}
 %global multiarch     %{nil}
 
@@ -13,7 +11,7 @@
 
 Summary:        CLI client for Percona Everest
 Name:           percona-everest-cli
-Version:        %{majorversion}.%{minorversion}
+Version:        %{version}
 Release:        1%{?dist}
 License:        ASL 2.0
 Group:          Applications/Databases
@@ -39,18 +37,18 @@ make release
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{_bindir}
 %ifarch x86_64
-cp dist/everestctl-linux-amd64 bin/everest
+cp dist/everestctl-linux-amd64 bin/everestctl
 %endif
 %ifarch aarch64
-cp dist/everestctl-linux-arm64 bin/everest
+cp dist/everestctl-linux-arm64 bin/everestctl
 %endif
-%{__install} -p -D -m 0755 bin/everest %{buildroot}%{_bindir}/everest
+%{__install} -p -D -m 0755 bin/everestctl %{buildroot}%{_bindir}/everestctl
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
-%{_bindir}/everest
+%{_bindir}/everestctl
 %license LICENSE
 
 %changelog

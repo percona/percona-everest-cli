@@ -13,9 +13,9 @@ override_dh_auto_build:
 	@echo "RULES.$@"
 	make init && make release
 	@if [ "$(ARCH)" = "amd64" ]; then \
-		cp dist/everestctl-linux-amd64 bin/everest; \
+		cp dist/everestctl-linux-amd64 bin/everestctl; \
 	else \
-		cp dist/everestctl-linux-arm64 bin/everest; \
+		cp dist/everestctl-linux-arm64 bin/everestctl; \
 	fi
 	touch $@
 
@@ -25,7 +25,7 @@ override_dh_builddeb:
 override_dh_auto_install:
 	@echo "RULES.$@"
 	mkdir -p $(TMP)usr/bin
-	install -m 0755 bin/everest $(TMP)usr/bin/everest
+	install -m 0755 bin/everestctl $(TMP)usr/bin/everestctl
 	mkdir -p $(TMP)usr/share/doc/percona-everest-cli
 	cp -p LICENSE $(TMP)usr/share/doc/percona-everest-cli
 
