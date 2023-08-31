@@ -196,9 +196,7 @@ install_deps() {
         RHEL=$(rpm --eval %rhel)
         INSTALL_LIST+=" wget make git rpm-build rpmdevtools rpmlint"
         yum -y install ${INSTALL_LIST}
-        if [ x"$RHEL" = x8 ]; then
-            install_go
-        fi
+        install_go
     else
         export DEBIAN=$(lsb_release -sc)
         export ARCH=$(echo $(uname -m) | sed -e 's:i686:i386:g')
