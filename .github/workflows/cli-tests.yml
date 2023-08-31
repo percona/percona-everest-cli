@@ -67,7 +67,7 @@ jobs:
           minikube delete --all --purge
           rm -rf ~/.minikube
           minikube config set cpus 2
-          minikube start
+          minikube start --apiserver-name=host.docker.internal
 
       - name: Build CLI binary
         run: |
