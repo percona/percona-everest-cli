@@ -272,30 +272,38 @@ jobs:
           name: cli-tests-report
           path: cli-tests/test-report
 
-  integration_tests_all_operators:
+  integration_tests_flows:
+    strategy:
+      matrix:
+        make_target: [
+          'test-all-operators',
+          'test-mongo-operator',
+          'test-pg-operator',
+          'test-pxc-operator'
+        ]
     name: CLI Tests for all operators
     uses: ./.github/workflows/cli-tests.yml
     secrets: inherit
     with:
-      make_target: 'test-all-operators'
-
-  integration_tests_mongo_operator:
-    name: CLI Tests for mongo operator
-    uses: ./.github/workflows/cli-tests.yml
-    secrets: inherit
-    with:
-      make_target: 'test-mongo-operator'
-
-  integration_tests_pg_operator:
-    name: CLI Tests for PG operator
-    uses: ./.github/workflows/cli-tests.yml
-    secrets: inherit
-    with:
-      make_target: 'test-pg-operator'
-
-  integration_tests_pxc_operator:
-    name: CLI Tests for pxc operator
-    uses: ./.github/workflows/cli-tests.yml
-    secrets: inherit
-    with:
-      make_target: 'test-pxc-operator'
+      make_target: ${{ matrix.make_target }}
+#
+#  integration_tests_mongo_operator:
+#    name: CLI Tests for mongo operator
+#    uses: ./.github/workflows/cli-tests.yml
+#    secrets: inherit
+#    with:
+#      make_target: 'test-mongo-operator'
+#
+#  integration_tests_pg_operator:
+#    name: CLI Tests for PG operator
+#    uses: ./.github/workflows/cli-tests.yml
+#    secrets: inherit
+#    with:
+#      make_target: 'test-pg-operator'
+#
+#  integration_tests_pxc_operator:
+#    name: CLI Tests for pxc operator
+#    uses: ./.github/workflows/cli-tests.yml
+#    secrets: inherit
+#    with:
+#      make_target: 'test-pxc-operator'
