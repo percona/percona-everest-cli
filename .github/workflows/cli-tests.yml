@@ -65,11 +65,9 @@ jobs:
         run: |
           docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes
           minikube delete --all --purge
-          sudo echo "127.0.0.1  host.docker.internal" | sudo tee -a /etc/hosts
-          cat /etc/hosts
           rm -rf ~/.minikube
           minikube config set cpus 2
-          minikube start --apiserver-name=host.docker.internal
+          minikube start
 
       - name: Build CLI binary
         run: |
