@@ -87,7 +87,7 @@ jobs:
           make ${{ env.MAKE_TARGET }}
 
       - name: Collect logs from backend
-        if: ${{ steps.cli-tests.outcome != 'success' }}
+        if: ${{ always() && steps.cli-tests.outcome != 'success' }}
         run: 'docker-compose -f quickstart.yml logs'
 
       - name: Attach the report
