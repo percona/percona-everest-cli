@@ -15,6 +15,8 @@
 import { test } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
+import { apiVerifyClusterExists } from '@support/backend';
+import { cliDeleteCluster } from '@support/everest-cli';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
@@ -24,9 +26,25 @@ test.describe('Everest CLI install operators', async () => {
     // await cli.execute('minikube start --apiserver-name=host.docker.internal');
   });
 
-  test('install only postgresql-operator', async ({ page, cli }) => {
+  test('install only postgresql-operator', async ({ page, cli, request }) => {
+    const verifyClusterResources = async () => {
+      await test.step('verify installed operators in k8s', async () => {
+        const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+        await out.outContainsNormalizedMany([
+          'percona-postgresql-operator',
+          'everest-operator-controller-manager',
+        ]);
+
+        await out.outNotContains([
+          'percona-server-mongodb-operator',
+          'percona-xtradb-cluster-operator',
+        ]);
+      });
+    };
+    const clusterName = `test-${faker.number.int()}`;
+
     await test.step('run everest install operators command', async () => {
-      const clusterName = `test-${faker.number.int()}`;
       const out = await cli.everestExecSkipWizard(
         `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
@@ -41,18 +59,9 @@ test.describe('Everest CLI install operators', async () => {
 
     await page.waitForTimeout(10_000);
 
-    await test.step('verify installed operators in k8s', async () => {
-      const out = await cli.exec('kubectl get pods --namespace=percona-everest');
-
-      await out.outContainsNormalizedMany([
-        'percona-postgresql-operator',
-        'everest-operator-controller-manager',
-      ]);
-
-      await out.outNotContains([
-        'percona-server-mongodb-operator',
-        'percona-xtradb-cluster-operator',
-      ]);
-    });
+    await verifyClusterResources();
+    await apiVerifyClusterExists(request, clusterName);
+    await cliDeleteCluster(cli, request, clusterName);
+    await verifyClusterResources();
   });
 });

@@ -281,29 +281,8 @@ jobs:
           'test-pg-operator',
           'test-pxc-operator'
         ]
-    name: CLI Tests for all operators
+    name: CLI tests
     uses: ./.github/workflows/cli-tests.yml
     secrets: inherit
     with:
       make_target: ${{ matrix.make_target }}
-#
-#  integration_tests_mongo_operator:
-#    name: CLI Tests for mongo operator
-#    uses: ./.github/workflows/cli-tests.yml
-#    secrets: inherit
-#    with:
-#      make_target: 'test-mongo-operator'
-#
-#  integration_tests_pg_operator:
-#    name: CLI Tests for PG operator
-#    uses: ./.github/workflows/cli-tests.yml
-#    secrets: inherit
-#    with:
-#      make_target: 'test-pg-operator'
-#
-#  integration_tests_pxc_operator:
-#    name: CLI Tests for pxc operator
-#    uses: ./.github/workflows/cli-tests.yml
-#    secrets: inherit
-#    with:
-#      make_target: 'test-pxc-operator'
