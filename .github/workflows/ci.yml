@@ -274,6 +274,7 @@ jobs:
 
   integration_tests_flows:
     strategy:
+      fail-fast: false
       matrix:
         make_target: [
           'test-all-operators',
