@@ -15,7 +15,7 @@ test-all-operators:       ## Run mongo operator flow tests. Requires minikube in
 	npx playwright test tests/flow/all-operators.spec.ts
 
 test-mongo-operator:       ## Run mongo operator flow tests. Requires minikube installed and /etc/hosts updated
-	npx playwright test tests/flow/mongo-operator.spec.ts
+	npx playwright test tests/flow/mongodb-operator.spec.ts
 
 test-pg-operator:       ## Run pg operator flow tests. Requires minikube installed and /etc/hosts updated
 	npx playwright test tests/flow/pg-operator.spec.ts
