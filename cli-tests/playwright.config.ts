@@ -54,6 +54,11 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'flows',
+      testDir: './tests/flow',
+      retries: process.env.CI ? 0 : 0,
+    },
+    {
       name: 'cli',
       testDir: './tests',
       testIgnore: '**\/flow/**',
