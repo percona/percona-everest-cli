@@ -235,17 +235,8 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 	}
 
 	var k *client.KubernetesCluster
-	g, gCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		var err error
-		k, err = o.connectToEverest(gCtx)
-		return err
-	})
-	g.Go(func() error {
-		return o.createEverestBackupStorage(gCtx)
-	})
-
-	if err := g.Wait(); err != nil {
+	k, err := o.connectToEverest(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -274,6 +265,9 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 		o.l.Info("VMAgent deployed successfully")
 	}
 
+	if err := o.createEverestBackupStorage(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
