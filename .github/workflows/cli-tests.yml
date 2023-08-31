@@ -10,7 +10,7 @@ on:
 
 jobs:
   integration_tests:
-    name: CLI Integration Tests
+    name: CLI ${{inputs.make_target}}
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     env:
