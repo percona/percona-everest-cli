@@ -88,6 +88,7 @@ jobs:
 
       - name: Collect logs from backend
         if: ${{ always() && steps.cli-tests.outcome != 'success' }}
+        working-directory: cli-tests
         run: 'docker-compose -f quickstart.yml logs'
 
       - name: Attach the report
