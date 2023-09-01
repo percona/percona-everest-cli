@@ -13,6 +13,6 @@ export async function apiVerifyClusterExists(request: APIRequestContext, cluster
     });
 
     console.log(`Everest clusters list: 
-    ${clustersList}`);
+    ${JSON.stringify(clustersList, null, 2)}`);
   });
 }
