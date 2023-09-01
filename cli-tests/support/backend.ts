@@ -11,5 +11,8 @@ export async function apiVerifyClusterExists(request: APIRequestContext, cluster
       name: clusterName,
       namespace: 'percona-everest',
     });
+
+    console.log(`Everest clusters list: 
+    ${clustersList}`);
   });
 }
