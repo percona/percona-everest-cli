@@ -25,7 +25,7 @@ latest_release=$(curl -s https://api.github.com/repos/percona/percona-everest-cl
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | tr '[:upper:]' '[:lower:]')
 
-if [[ $os == "linux" && $arch == "x86_64" ]]
+if [[ ($os == "linux" || $os == "darwin") && $arch == "x86_64" ]]
 then
 	arch="amd64"
 fi
@@ -33,6 +33,7 @@ echo $arch
 
 
 echo "Downloading the latest release of Percona Everest CLI"
+echo "https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch"
 curl -sL  https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
 echo "Deploying Backends using docker-compose"

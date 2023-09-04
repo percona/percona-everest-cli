@@ -26,7 +26,7 @@ import (
 // MustInitLogger initializes a logger and panics in case of an error.
 func MustInitLogger(json bool) *zap.Logger {
 	lCfg := zap.NewProductionConfig()
-	lCfg.EncoderConfig = zap.NewDevelopmentEncoderConfig()
+	lCfg.EncoderConfig = zap.NewProductionEncoderConfig()
 	if !json {
 		lCfg.Encoding = "console"
 	}
