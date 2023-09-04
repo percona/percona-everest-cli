@@ -18,9 +18,9 @@ package client
 
 import (
 	"context"
+	"errors"
 
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 )
 
 // CreateBackupStorage creates a new backup storage.

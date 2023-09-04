@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap"
 
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
+	"github.com/percona/percona-everest-cli/pkg/output"
 	"github.com/percona/percona-everest-cli/pkg/provision"
 )
 
@@ -51,7 +52,7 @@ func NewMySQLCmd(l *zap.SugaredLogger) *cobra.Command {
 			command := provision.NewMySQL(*c, everestClConnector, l)
 
 			if err := command.Run(cmd.Context()); err != nil {
-				l.Error(err)
+				output.PrintError(err, l)
 				os.Exit(1)
 			}
 		},

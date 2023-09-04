@@ -19,10 +19,10 @@ package provision
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	everestv1alpha "github.com/percona/everest-operator/api/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -90,17 +90,17 @@ func (m *MySQL) Run(ctx context.Context) error {
 func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 	cpu, err := resource.ParseQuantity(m.config.CPU)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot parse cpu")
+		return nil, errors.Join(err, errors.New("cannot parse cpu"))
 	}
 
 	memory, err := resource.ParseQuantity(m.config.Memory)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot parse memory")
+		return nil, errors.Join(err, errors.New("cannot parse memory"))
 	}
 
 	disk, err := resource.ParseQuantity(m.config.Disk)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot parse disk storage")
+		return nil, errors.Join(err, errors.New("cannot parse disk storage"))
 	}
 
 	replicas := int32(m.config.Nodes)
@@ -152,7 +152,7 @@ func (m *MySQL) prepareBody() (*client.DatabaseCluster, error) {
 func (m *MySQL) convertPayload(payload everestv1alpha.DatabaseCluster) (*client.DatabaseCluster, error) {
 	bodyJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot marshal payload to json")
+		return nil, errors.Join(err, errors.New("cannot marshal payload to json"))
 	}
 
 	m.l.Debug(string(bodyJSON))
@@ -160,7 +160,7 @@ func (m *MySQL) convertPayload(payload everestv1alpha.DatabaseCluster) (*client.
 	body := &client.DatabaseCluster{}
 	err = json.Unmarshal(bodyJSON, body)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot unmarshal payload back to json")
+		return nil, errors.Join(err, errors.New("cannot unmarshal payload back to json"))
 	}
 
 	return body, nil
