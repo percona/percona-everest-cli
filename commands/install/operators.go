@@ -114,6 +114,7 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("backup.access-key", cmd.Flags().Lookup("backup.access-key")) //nolint:errcheck,gosec
 	viper.BindPFlag("backup.secret-key", cmd.Flags().Lookup("backup.secret-key")) //nolint:errcheck,gosec
 
+	viper.BindEnv("kubeconfig")
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
