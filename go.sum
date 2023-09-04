@@ -773,8 +773,8 @@ github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/9
 github.com/pelletier/go-toml v1.8.1/go.mod h1:T2/BmBdy8dvIRq1a/8aqjN41wvWlN4lrapLU/GW4pbc=
 github.com/pelletier/go-toml/v2 v2.0.9 h1:uH2qQXheeefCCkuBBSLi7jCiSmj3VRh2+Goq2N7Xxu0=
 github.com/pelletier/go-toml/v2 v2.0.9/go.mod h1:tJU2Z3ZkXwnxa4DPO899bsyIoywizdUvyaeZurnPPDc=
-github.com/percona/everest-operator v0.0.13 h1:jZ2AuHMz6D95XqF0zdXFx4WgsOmf3/Urzg45AXv3mgc=
-github.com/percona/everest-operator v0.0.13/go.mod h1:wErlSvAcmm/rrH96CyDiIALpIatw7AFmqcI38UpI9b8=
+github.com/percona/everest-operator v0.0.14 h1:b8s6MNYSV4q/ViYKOScgJDooJ9k1eRwTJxwusSKu3UQ=
+github.com/percona/everest-operator v0.0.14/go.mod h1:wErlSvAcmm/rrH96CyDiIALpIatw7AFmqcI38UpI9b8=
 github.com/percona/percona-everest-backend v0.0.0-20230822125334-e7a2cf143e0b h1:CfLklT/m9Tr/wAH31ECNcQvqCdQ8TKQk+O/AN69OfYw=
 github.com/percona/percona-everest-backend v0.0.0-20230822125334-e7a2cf143e0b/go.mod h1:FljWFuXxKrQqu3IgAV6UwWGWYaWewZ1Pn5XFrIVh174=
 github.com/perimeterx/marshmallow v1.1.4/go.mod h1:dsXbUu8CRzfYP5a87xpp0xq9S3u0Vchtcl8we9tYaXw=
