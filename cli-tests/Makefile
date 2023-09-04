@@ -11,8 +11,17 @@ install-operators:  ## Install operators to k8s
 test-cli:           ## Run all tests
 	npx playwright test --project=cli
 
-test-install-operators:       ## Run install operators tests. Requires minikube installed and /etc/hosts updated
-	npx playwright test --project=install-operators
+test-all-operators:       ## Run mongo operator flow tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test tests/flow/all-operators.spec.ts
+
+test-mongo-operator:       ## Run mongo operator flow tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test tests/flow/mongodb-operator.spec.ts
+
+test-pg-operator:       ## Run pg operator flow tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test tests/flow/pg-operator.spec.ts
+
+test-pxc-operator:       ## Run pxc operator flow tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test tests/flow/pxc-operator.spec.ts
 
 lint:               ## Run linter typescript checks
 	npm run lint:ts && npm run typecheck && echo 'Lint OK'
