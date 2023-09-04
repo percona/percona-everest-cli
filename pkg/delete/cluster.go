@@ -216,7 +216,7 @@ func (c *Cluster) lookupKubernetesCluster(ctx context.Context, name string) (*cl
 func (c *Cluster) checkNamespaceUIDMistmatch(ctx context.Context) error {
 	ns, err := c.kubeClient.GetNamespace(ctx, c.kubernetes.namespace)
 	if err != nil && !k8serrors.IsNotFound(err) {
-		return errors.Wrap(err, "could not get namespace from Kubernetes")
+		return errors.Join(err, errors.New("could not get namespace from Kubernetes"))
 	}
 
 	c.l.Debugf("ns.UID = %s, everest.UID = %s", string(ns.UID), c.kubernetes.uid)
@@ -264,7 +264,7 @@ func (c *Cluster) deleteK8sResources(ctx context.Context) error {
 
 	c.l.Infof("Deleting all Kubernetes monitoring resources in Kubernetes cluster %q", c.config.Name)
 	if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.kubernetes.namespace); err != nil {
-		return errors.Wrap(err, "could not delete monitoring resources from the Kubernetes cluster")
+		return errors.Join(err, errors.New("could not delete monitoring resources from the Kubernetes cluster"))
 	}
 
 	return nil
