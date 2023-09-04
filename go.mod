@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.7
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
-	github.com/percona/everest-operator v0.0.9
+	github.com/percona/everest-operator v0.0.14
 	github.com/percona/percona-everest-backend v0.0.0-20230822125334-e7a2cf143e0b
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
@@ -16,11 +16,11 @@ require (
 	go.uber.org/zap v1.25.0
 	golang.org/x/sync v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.28.0
+	k8s.io/api v0.28.1
 	k8s.io/apiextensions-apiserver v0.28.0
-	k8s.io/apimachinery v0.28.0
+	k8s.io/apimachinery v0.28.1
 	k8s.io/cli-runtime v0.28.0
-	k8s.io/client-go v0.28.0
+	k8s.io/client-go v0.28.1
 	k8s.io/kubectl v0.28.0
 	sigs.k8s.io/controller-runtime v0.15.1
 )
