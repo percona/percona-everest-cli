@@ -58,12 +58,25 @@ jobs:
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
 
+      - name: Checkout Everest backend repo
+        uses: percona-platform/checkout@v3
+        with:
+          token: ${{ secrets.ROBOT_TOKEN }}
+          repository: percona/percona-everest-backend
+          ref: 'main'
+          path: percona-everest-backend
+
+      - name: Run Everest backend
+        working-directory: percona-everest-backend
+        run: |
+          make local-env-up
+          make run-debug &
+
       # https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#supported-runners-and-hardware-resources
       # https://minikube.sigs.k8s.io/docs/drivers/docker/
-      - name: Configure minikube, docker and /etc/hosts
+      - name: Configure minikube
         working-directory: cli-tests
         run: |
-          docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes
           minikube delete --all --purge
           rm -rf ~/.minikube
           minikube config set cpus 2
@@ -89,7 +102,7 @@ jobs:
       - name: Collect logs from backend
         if: ${{ always() && steps.cli-tests.outcome != 'success' }}
         working-directory: cli-tests
-        run: 'docker-compose -f quickstart.yml logs'
+        run: 'echo "here should be a command to extract and save backend logs"'
 
       - name: Attach the report
         if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}
