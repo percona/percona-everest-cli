@@ -2,17 +2,17 @@
 
 if ! command -v curl &> /dev/null
 then
-	echo "curl command is not found. Please install it."
+	echo "curl command not found. Please install it."
 	exit
 fi
 if ! command -v docker &> /dev/null
 then
-	echo "docker command is not found. Please install it."
+	echo "docker command not found. Please install it."
 	exit
 fi
-if ! command -v docker-compose &> /dev/null
+if ! docker compose version &> /dev/null
 then
-	echo "docker-compose is not found. Please install it."
+	echo "docker compose (v2) not found. Please install it."
 	exit
 fi
 if ! command -v jq &> /dev/null
@@ -36,9 +36,9 @@ echo "Downloading the latest release of Percona Everest CLI"
 echo "https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch"
 curl -sL  https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
-echo "Deploying Backends using docker-compose"
+echo "Deploying Backends using docker compose"
 curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/main/quickstart.yml -o quickstart.yml
-docker-compose -f quickstart.yml up -d
+docker compose -f quickstart.yml up -d
 
 echo "Using default k8s cluster to provision everest without backups enabled and monitoring"
 echo "You can run ./everestctl for the wizard setup"
