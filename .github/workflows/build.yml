@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set release version
         run: echo "IMAGE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
