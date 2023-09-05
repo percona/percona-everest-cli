@@ -29,7 +29,6 @@ if [[ ($os == "linux" || $os == "darwin") && $arch == "x86_64" ]]
 then
 	arch="amd64"
 fi
-echo $arch
 
 
 echo "Downloading the latest release of Percona Everest CLI"
@@ -40,10 +39,17 @@ echo "Deploying Backends using docker compose"
 curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/main/quickstart.yml -o quickstart.yml
 docker compose -f quickstart.yml up -d
 
-echo "Using default k8s cluster to provision everest without backups enabled and monitoring"
-echo "You can run ./everestctl for the wizard setup"
+
+# If KUBECONFIG is set let the user know we are using it
+if [[ -n "${KUBECONFIG}" ]]; then
+	echo "Using KUBECONFIG: ${KUBECONFIG}"
+else
+	echo "KUBECONFIG is not set. Using default k8s cluster"
+fi
+
+echo "Provisioning Everest with monitoring disabled"
+echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
-echo "Also you can use --kubeconfig to specify a path for kubeconfig you want to use"
 ./everestctl install operators --backup.enable=false --everest.endpoint=http://127.0.0.1:8080  --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
 
 if [[ $os == "linux" ]]
