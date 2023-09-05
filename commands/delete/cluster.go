@@ -78,11 +78,11 @@ func initClusterFlags(cmd *cobra.Command) {
 func initClusterViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
 	viper.BindEnv("kubeconfig")
-	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))             //nolint:errcheck,gosec
-	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                         //nolint:errcheck,gosec
-	viper.BindPFlag("assume-yes", cmd.Flags().Lookup("assume-yes"))             //nolint:errcheck,gosec
-	viper.BindPFlag("force", cmd.Flags().Lookup("force"))                       //nolint:errcheck,gosec
-	viper.BindPFlag(                                                            //nolint:errcheck,gosec
+	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
+	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
+	viper.BindPFlag("assume-yes", cmd.Flags().Lookup("assume-yes")) //nolint:errcheck,gosec
+	viper.BindPFlag("force", cmd.Flags().Lookup("force"))           //nolint:errcheck,gosec
+	viper.BindPFlag(                                                //nolint:errcheck,gosec
 		"ignore-kubernetes-unavailable", cmd.Flags().Lookup("ignore-kubernetes-unavailable"),
 	)
 }
