@@ -47,7 +47,7 @@ else
 	echo "KUBECONFIG is not set. Using default k8s cluster"
 fi
 
-echo "Provisioning everest with monitoring disabled"
+echo "Provisioning Everest with monitoring disabled"
 echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
 ./everestctl install operators --backup.enable=false --everest.endpoint=http://127.0.0.1:8080  --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
