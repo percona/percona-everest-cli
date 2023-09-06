@@ -192,6 +192,10 @@ func (o *Operators) Run(ctx context.Context) error {
 		}
 	}
 
+	if o.config.Name == "" {
+		o.config.Name = o.kubeClient.ClusterName()
+	}
+
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
