@@ -78,6 +78,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("monitoring.pmm.password", "", "PMM password")
 
 	cmd.Flags().Bool("backup.enable", false, "Enable backups")
+	cmd.Flags().String("backup.name", "", "Backup name in Everest")
 	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
 	cmd.Flags().String("backup.region", "", "Backup region")
 	cmd.Flags().String("backup.bucket", "", "Backup bucket")
@@ -107,6 +108,7 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
 
+	viper.BindPFlag("backup.name", cmd.Flags().Lookup("backup.name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("backup.enable", cmd.Flags().Lookup("backup.enable"))         //nolint:errcheck,gosec
 	viper.BindPFlag("backup.endpoint", cmd.Flags().Lookup("backup.endpoint"))     //nolint:errcheck,gosec
 	viper.BindPFlag("backup.region", cmd.Flags().Lookup("backup.region"))         //nolint:errcheck,gosec
