@@ -16,5 +16,5 @@ This tool is a CLI client for Percona Everest and has the following features
 At the moment it only provisions the clusters, however a technical preview of PMM integration and registering in Percona Everest control plane features are implemented 
 
 ```
-go run cmd/percona-everest-cli/main.go --monitoring.enabled=false
+go run cmd/everest/main.go --monitoring.enabled=false
 ```
