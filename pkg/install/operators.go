@@ -186,14 +186,8 @@ func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
-	if !o.config.SkipWizard {
-		if err := o.runWizard(ctx); err != nil {
-			return err
-		}
-	}
-
-	if o.config.Name == "" {
-		o.config.Name = o.kubeClient.ClusterName()
+	if err := o.populateConfig(ctx); err != nil {
+		return err
 	}
 
 	if o.everestClient == nil {
@@ -222,6 +216,26 @@ func (o *Operators) Run(ctx context.Context) error {
 	}
 
 	return o.performProvisioning(ctx)
+}
+
+func (o *Operators) populateConfig(ctx context.Context) error {
+	if !o.config.SkipWizard {
+		if err := o.runWizard(ctx); err != nil {
+			return err
+		}
+	}
+
+	if o.config.Name == "" {
+		o.config.Name = o.kubeClient.ClusterName()
+	}
+
+	if o.config.Backup.Enable && o.config.Backup.Name == "" {
+		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error("Backup name cannot be empty if backup is enabled")
+		return common.ErrExitWithError
+	}
+
+	return nil
 }
 
 func (o *Operators) checkEverestConnection(ctx context.Context) error {
