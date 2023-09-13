@@ -12,24 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import { test } from '@fixtures';
 
-// Package commands ...
-package commands
+test.describe('Backups', async () => {
+  test('backup.name is required', async ({ page, cli, request }) => {
+    const out = await cli.everestExecSkipWizard(`install operators --backup.enable --monitoring.enable=0 --name=cluster-name`);
 
-import (
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-
-	"github.com/percona/percona-everest-cli/commands/delete"
-)
-
-func newDeleteCmd(l *zap.SugaredLogger) *cobra.Command {
-	cmd := &cobra.Command{
-		Use: "delete",
-	}
-
-	// cmd.AddCommand(delete.NewMySQLCmd(l))
-	cmd.AddCommand(delete.NewClusterCmd(l))
-
-	return cmd
-}
+    await out.exitCodeEquals(1);
+    await out.outErrContainsNormalizedMany([
+      'Backup name cannot be empty',
+    ]);
+  });
+});
