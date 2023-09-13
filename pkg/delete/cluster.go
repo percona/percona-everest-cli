@@ -175,7 +175,8 @@ func (c *Cluster) askForKubernetesCluster(ctx context.Context) error {
 	}
 
 	if len(clusters) == 0 {
-		c.l.Info("no Kubernetes clusters found")
+		l := c.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error("no Kubernetes clusters found")
 		return common.ErrExitWithError
 	}
 
