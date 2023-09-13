@@ -61,6 +61,15 @@ test.describe('Everest CLI install operators', async () => {
     await verifyClusterResources();
     await apiVerifyClusterExists(request, clusterName);
     await cliDeleteCluster(cli, request, clusterName);
+
+    await test.step('try to delete cluster again', async () => {
+      const out = await cli.everestExecSilent('delete cluster');
+
+      await out.exitCodeEquals(1);
+      await out.outErrContainsNormalizedMany([
+        'no Kubernetes clusters found',
+      ]);
+    });
     await verifyClusterResources();
   });
 });
