@@ -1,15 +1,15 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: percona-dbaas-catalog
+  name: percona-everest-catalog
   namespace: olm
 spec:
-  displayName: Percona DBaaS Catalog
+  displayName: Percona Everest Catalog
   publisher: Percona
   sourceType: grpc
   grpcPodConfig:
     securityContextConfig: restricted
-  image: docker.io/percona/dbaas-catalog:latest
+  image: docker.io/percona/everest-catalog:latest
   updateStrategy:
     registryPoll:
       interval: 45m
