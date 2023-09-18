@@ -54,7 +54,7 @@ type Operators struct {
 const (
 	catalogSourceNamespace           = "olm"
 	operatorGroup                    = "percona-operators-group"
-	catalogSource                    = "percona-dbaas-catalog"
+	catalogSource                    = "percona-everest-catalog"
 	everestOperatorName              = "everest-operator"
 	pxcOperatorName                  = "percona-xtradb-cluster-operator"
 	psmdbOperatorName                = "percona-server-mongodb-operator"
