@@ -245,6 +245,10 @@ func (o *Operators) checkEverestConnection(ctx context.Context) error {
 }
 
 func (o *Operators) performProvisioning(ctx context.Context) error {
+	if err := o.checkPreviousInstallations(ctx); err != nil {
+		return err
+	}
+
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
@@ -661,12 +665,31 @@ func (o *Operators) runOperatorsWizard() error {
 // provisionNamespace provisions a namespace for Everest.
 func (o *Operators) provisionNamespace() error {
 	o.l.Infof("Creating namespace %s", o.config.Namespace)
+
 	err := o.kubeClient.CreateNamespace(o.config.Namespace)
 	if err != nil {
 		return errors.Join(err, errors.New("could not provision namespace"))
 	}
 
 	o.l.Infof("Namespace %s has been created", o.config.Namespace)
+	return nil
+}
+
+func (o *Operators) checkPreviousInstallations(ctx context.Context) error {
+	// check if the current cluster already registered in Everest (by its uid)
+	// if it's NOT registred, run the below check:
+
+	o.l.Info("Checking existing Everest components")
+	namespaces, err := o.kubeClient.ListNamespaces(ctx)
+	if err != nil {
+		return errors.Join(err, errors.New("could not list namespaces"))
+	}
+	for _, ns := range namespaces {
+		if ns == o.config.Namespace {
+			return errors.New("please clean up the old installation of Everest first")
+		}
+	}
+
 	return nil
 }
 
@@ -791,6 +814,9 @@ func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesClu
 	}
 
 	o.l.Info("Connecting your Kubernetes cluster to Everest")
+
+	// list clusters
+	// check the current uid is there, if so, skip the registration
 
 	k, err := o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
 		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),

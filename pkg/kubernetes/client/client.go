@@ -999,6 +999,21 @@ func (c *Client) CreateNamespace(name string) error {
 	return c.ApplyObject(n)
 }
 
+// ListNamespaces lists the existing namespaces.
+func (c *Client) ListNamespaces(ctx context.Context) ([]string, error) {
+	list, err := c.clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	namespaces := make([]string, 0, len(list.Items))
+	for _, ns := range list.Items {
+		namespaces = append(namespaces, ns.Name)
+	}
+
+	return namespaces, nil
+}
+
 // GetOperatorGroup retrieves an operator group details by namespace and name.
 func (c *Client) GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)

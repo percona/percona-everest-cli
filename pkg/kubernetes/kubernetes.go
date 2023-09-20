@@ -574,6 +574,11 @@ func (k *Kubernetes) CreateNamespace(name string) error {
 	return k.client.CreateNamespace(name)
 }
 
+// ListNamespaces creates a new namespace.
+func (k *Kubernetes) ListNamespaces(ctx context.Context) ([]string, error) {
+	return k.client.ListNamespaces(ctx)
+}
+
 // InstallOperatorRequest holds the fields to make an operator install request.
 type InstallOperatorRequest struct {
 	Namespace              string

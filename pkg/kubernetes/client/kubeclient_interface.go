@@ -69,6 +69,8 @@ type KubeClientConnector interface {
 	DoRolloutWait(ctx context.Context, key types.NamespacedName) error
 	// CreateNamespace creates a new namespace.
 	CreateNamespace(name string) error
+	// ListNamespaces lists the existing namespaces
+	ListNamespaces(ctx context.Context) ([]string, error)
 	// GetOperatorGroup retrieves an operator group details by namespace and name.
 	GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
 	// CreateOperatorGroup creates an operator group to be used as part of a subscription.
