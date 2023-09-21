@@ -36,7 +36,7 @@ echo "https://github.com/percona/percona-everest-cli/releases/download/${latest_
 curl -sL  https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
 echo "Deploying Backends using docker compose"
-curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/v0.3.0/quickstart.yml -o quickstart.yml
+curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/release-0.3.0/deploy/quickstart-compose.yml -o quickstart.yml
 docker compose -f quickstart.yml up -d
 
 
