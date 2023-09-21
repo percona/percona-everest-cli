@@ -39,6 +39,9 @@ echo "Deploying Backends using docker compose"
 curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/main/quickstart.yml -o quickstart.yml
 docker compose -f quickstart.yml up -d
 
+while ! curl -s http://127.0.0.1:8080 &> /dev/null ; do
+	sleep 0.2
+done
 
 # If KUBECONFIG is set let the user know we are using it
 if [[ -n "${KUBECONFIG}" ]]; then
