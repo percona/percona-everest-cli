@@ -25,6 +25,8 @@ import (
 	"net/url"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
@@ -32,6 +34,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -786,6 +789,14 @@ func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesClu
 	}
 	for _, cluster := range clusters {
 		if cluster.Name == o.config.Name {
+			ns, err := o.kubeClient.GetNamespace(ctx, cluster.Namespace)
+			if err != nil && !k8serrors.IsNotFound(err) {
+				return nil, errors.Join(err, errors.New("could not get namespace from Kubernetes"))
+			}
+
+			if ns.UID != types.UID(cluster.Uid) {
+				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new kubernetes cluster using the existing name. Please unregister the existing kubernetes cluster first")
+			}
 			// Cluster is already registered. Do nothing
 			return &cluster, nil
 		}
