@@ -25,8 +25,6 @@ import (
 	"net/url"
 	"time"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
@@ -34,6 +32,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
