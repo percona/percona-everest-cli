@@ -785,9 +785,9 @@ func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesClu
 		return nil, errors.Join(err, errors.New("could not list kubernetes clusters"))
 	}
 	for _, cluster := range clusters {
-		if cluster.Name == &o.config.Name {
+		if cluster.Name == o.config.Name {
 			// Cluster is already registered. Do nothing
-			return cluster, nil
+			return &cluster, nil
 		}
 	}
 	if err := o.prepareServiceAccount(); err != nil {
