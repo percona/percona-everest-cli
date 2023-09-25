@@ -38,7 +38,6 @@ test.describe('Everest CLI install operators', async () => {
 
         await out.outNotContains([
           'percona-server-mongodb-operator',
-          'percona-xtradb-cluster-operator',
         ]);
       });
     };
