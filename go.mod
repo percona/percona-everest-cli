@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.17.7
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
-	github.com/percona/everest-operator v0.0.14
+	github.com/percona/everest-operator v0.3.0
 	github.com/percona/percona-everest-backend v0.0.0-20230904131442-de59f4ddb234
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
@@ -113,7 +113,7 @@ require (
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
