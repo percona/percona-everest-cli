@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - release-[0-9]+.[0-9]+.[0-9]+*
-      - EVEREST-429-release-ci
 
 jobs:
   build:
@@ -12,22 +11,25 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Set release version
+      - name: Define release branch name
         run: |
-          semantic_version=${github.ref_name#"release-"}
-          echo "IMAGE_TAG=v${semantic_version}" >> $GITHUB_ENV
+          echo "RELEASE_BRANCH_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Define tag name
+        run: |
+          echo "IMAGE_TAG=v${RELEASE_BRANCH_NAME#"release-"}" >> $GITHUB_ENV
 
       - name: test
         run: echo "${IMAGE_TAG}"
 
-#      - name: Build binaries
-#        run: make release
-#
-#      - name: Create release with binaries
-#        uses: softprops/action-gh-release@v1
-#        with:
-#          prerelease: true
-#          files: |
-#            dist/*
-#        env:
-#          GITHUB_TOKEN: ${{ github.token }}
+      - name: Build binaries
+        run: make release
+
+      - name: Create release with binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          files: |
+            dist/*
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
