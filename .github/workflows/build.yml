@@ -19,9 +19,6 @@ jobs:
         run: |
           echo "IMAGE_TAG=v${RELEASE_BRANCH_NAME#"release-"}" >> $GITHUB_ENV
 
-      - name: test
-        run: echo "${IMAGE_TAG}"
-
       - name: Build binaries
         run: make release
 
@@ -29,6 +26,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
+          tag_name: ${{ env.IMAGE_TAG }}
           files: |
             dist/*
         env:
