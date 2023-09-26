@@ -2,7 +2,7 @@ name: Release CLI artifacts
 on:
   push:
     tags:
-      - v*
+      - release-*
 
 jobs:
   build:
@@ -20,7 +20,7 @@ jobs:
       - name: Create release with binaries
         uses: softprops/action-gh-release@v1
         with:
-          draft: true
+          prerelease: true
           files: |
             dist/*
         env:
