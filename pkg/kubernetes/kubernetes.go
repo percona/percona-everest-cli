@@ -86,7 +86,7 @@ const (
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
 
 	pollInterval = 1 * time.Second
-	pollDuration = 150 * time.Second
+	pollDuration = 300 * time.Second
 )
 
 // ErrEmptyVersionTag Got an empty version tag from GitHub API.
