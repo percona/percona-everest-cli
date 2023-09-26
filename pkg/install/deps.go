@@ -25,6 +25,9 @@ import (
 //go:generate ../../bin/mockery --name=everestClientConnector --case=snake --inpackage --testonly
 
 type everestClientConnector interface {
+	ListKubernetesClusters(
+		ctx context.Context,
+	) ([]client.KubernetesCluster, error)
 	RegisterKubernetesCluster(
 		ctx context.Context,
 		body client.RegisterKubernetesClusterJSONRequestBody,
