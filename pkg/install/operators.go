@@ -794,7 +794,7 @@ func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesClu
 			}
 
 			if ns.UID != types.UID(cluster.Uid) {
-				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new kubernetes cluster using the existing name. Please unregister the existing kubernetes cluster first")
+				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new Kubernetes cluster using an existing name. Please unregister the existing Kubernetes cluster first")
 			}
 			// Cluster is already registered. Do nothing
 			return &cluster, nil
