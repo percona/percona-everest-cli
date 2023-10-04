@@ -832,3 +832,41 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 
 	return nil
 }
+
+func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
+	pod, err := k.getEverestOperatorPod(ctx, namespace)
+	if err != nil {
+		return err
+	}
+	podUid := pod.UID
+	err = k.client.DeletePod(ctx, namespace, pod.Name)
+	if err != nil {
+		return err
+	}
+
+	return wait.PollImmediate(5*time.Second, time.Minute, func() (done bool, err error) {
+		pod, err := k.getEverestOperatorPod(ctx, namespace)
+		if pod.UID != podUid && err != nil {
+			return false, nil
+		}
+		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
+	})
+}
+
+func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string) (corev1.Pod, error) {
+	podList, err := k.client.GetPods(ctx, namespace, &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"app.kubernetes.io/name": "everest-operator",
+		},
+	})
+	if err != nil {
+		return corev1.Pod{}, err
+	}
+	if len(podList.Items) == 0 {
+		return corev1.Pod{}, errors.New("no instances of everest-opeator are running")
+	}
+	if len(podList.Items) > 1 {
+		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
+	}
+	return podList.Items[0], nil
+}

@@ -52,6 +52,8 @@ type KubeClientConnector interface {
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods.
 	GetPods(ctx context.Context, namespace string, labelSelector *metav1.LabelSelector) (*corev1.PodList, error)
+	// GetPods returns list of pods.
+	DeletePod(ctx context.Context, namespace, name string) error
 	// GetNodes returns list of nodes.
 	GetNodes(ctx context.Context) (*corev1.NodeList, error)
 	// GetLogs returns logs for pod.

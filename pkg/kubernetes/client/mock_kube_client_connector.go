@@ -177,6 +177,20 @@ func (_m *MockKubeClientConnector) DeleteObject(obj runtime.Object) error {
 	return r0
 }
 
+// DeletePod provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) DeletePod(ctx context.Context, namespace string, name string) error {
+	ret := _m.Called(ctx, namespace, name)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, namespace, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DoCSVWait provides a mock function with given fields: ctx, key
 func (_m *MockKubeClientConnector) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
 	ret := _m.Called(ctx, key)
