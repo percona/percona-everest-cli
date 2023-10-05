@@ -62,6 +62,7 @@ test.describe('Everest CLI install operators', async () => {
     await apiVerifyClusterExists(request, clusterName);
 
     await test.step('re-run everest install operators command', async () => {
+      await page.waitForTimeout(60_000);
       const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await operator.assertSuccess();
 
