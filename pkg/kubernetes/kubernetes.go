@@ -89,8 +89,11 @@ const (
 	pollDuration = 300 * time.Second
 )
 
-// ErrEmptyVersionTag Got an empty version tag from GitHub API.
-var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github")
+var (
+	// ErrEmptyVersionTag Got an empty version tag from GitHub API.
+	ErrEmptyVersionTag       error = errors.New("got an empty version tag from Github")
+	errNoEverestOperatorPods       = errors.New("no instances of everest-operator are running")
+)
 
 // Kubernetes is a client for Kubernetes.
 type Kubernetes struct {
@@ -834,10 +837,19 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 }
 
 func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
-	pod, err := k.getEverestOperatorPod(ctx, namespace)
-	if err != nil {
-		return err
-	}
+	var pod corev1.Pod
+	err := wait.PollImmediate(5*time.Second, time.Minute, func() (done bool, err error) {
+
+		p, err := k.getEverestOperatorPod(ctx, namespace)
+		if err != nil {
+			if errors.Is(err, errNoEverestOperatorPods) {
+				return false, nil
+			}
+			return false, err
+		}
+		pod = p
+		return true, nil
+	})
 	podUid := pod.UID
 	err = k.client.DeletePod(ctx, namespace, pod.Name)
 	if err != nil {
@@ -863,7 +875,7 @@ func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string
 		return corev1.Pod{}, err
 	}
 	if len(podList.Items) == 0 {
-		return corev1.Pod{}, errors.New("no instances of everest-opeator are running")
+		return corev1.Pod{}, errNoEverestOperatorPods
 	}
 	if len(podList.Items) > 1 {
 		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
