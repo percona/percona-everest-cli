@@ -71,7 +71,7 @@ test.describe('Everest CLI install operators', async () => {
       const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await restartedOperator.assertSuccess();
 
-      expect(await operator.getStdOutLines()[0]).not.toEqual(await restartedOperator.getStdoutLines()[0]);
+      expect(operator.getStdOutLines()[0]).not.toEqual(restartedOperator.getStdoutLines()[0]);
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'percona-xtradb-cluster-operator operator has been installed',
