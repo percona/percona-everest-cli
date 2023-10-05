@@ -836,10 +836,10 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 	return nil
 }
 
+// RestartEverestOperator restarts everest pod.
 func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
 	var pod corev1.Pod
-	err := wait.PollImmediate(5*time.Second, time.Minute, func() (done bool, err error) {
-
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		p, err := k.getEverestOperatorPod(ctx, namespace)
 		if err != nil {
 			if errors.Is(err, errNoEverestOperatorPods) {
@@ -850,16 +850,19 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 		pod = p
 		return true, nil
 	})
-	podUid := pod.UID
+	if err != nil {
+		return err
+	}
+	podUID := pod.UID
 	err = k.client.DeletePod(ctx, namespace, pod.Name)
 	if err != nil {
 		return err
 	}
 
-	return wait.PollImmediate(5*time.Second, time.Minute, func() (done bool, err error) {
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		pod, err := k.getEverestOperatorPod(ctx, namespace)
-		if pod.UID != podUid && err != nil {
-			return false, nil
+		if pod.UID != podUID && err != nil {
+			return false, err
 		}
 		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
 	})

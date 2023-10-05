@@ -490,7 +490,7 @@ func (c *Client) GetPods(
 	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
 }
 
-// GetPods returns list of pods.
+// DeletePod deletes a pod by given name in the given namespace.
 func (c *Client) DeletePod(ctx context.Context, namespace, name string) error {
 	return c.clientset.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }

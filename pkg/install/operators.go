@@ -1008,5 +1008,4 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 
 func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
 	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
-
 }
