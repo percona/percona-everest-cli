@@ -861,8 +861,11 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		pod, err := k.getEverestOperatorPod(ctx, namespace)
-		if pod.UID != podUID && err != nil {
+		if err != nil {
 			return false, err
+		}
+		if podUID != pod.UID {
+			return false, nil
 		}
 		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
 	})
