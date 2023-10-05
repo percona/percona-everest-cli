@@ -869,10 +869,13 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 }
 
 func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string) (corev1.Pod, error) {
-	podList, err := k.client.GetPods(ctx, namespace, &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"app.kubernetes.io/name": "everest-operator",
-		},
+	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name": "everest-operator",
+			},
+		}),
+		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
 		return corev1.Pod{}, err

@@ -825,6 +825,32 @@ func (_m *MockKubeClientConnector) ListDatabaseClusters(ctx context.Context) (*a
 	return r0, r1
 }
 
+// ListPods provides a mock function with given fields: ctx, namespace, options
+func (_m *MockKubeClientConnector) ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	ret := _m.Called(ctx, namespace, options)
+
+	var r0 *corev1.PodList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.ListOptions) (*corev1.PodList, error)); ok {
+		return rf(ctx, namespace, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.ListOptions) *corev1.PodList); ok {
+		r0 = rf(ctx, namespace, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.PodList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, metav1.ListOptions) error); ok {
+		r1 = rf(ctx, namespace, options)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListSecrets provides a mock function with given fields: ctx
 func (_m *MockKubeClientConnector) ListSecrets(ctx context.Context) (*corev1.SecretList, error) {
 	ret := _m.Called(ctx)
