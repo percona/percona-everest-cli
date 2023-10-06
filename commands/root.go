@@ -36,6 +36,8 @@ func NewRootCmd(l *zap.SugaredLogger) *cobra.Command {
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose mode")
 	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
 
+	rootCmd.AddCommand(newLoginCmd(l))
+
 	rootCmd.AddCommand(newInstallCmd(l))
 	// rootCmd.AddCommand(newProvisionCmd(l))
 	rootCmd.AddCommand(newListCmd(l))
