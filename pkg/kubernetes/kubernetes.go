@@ -864,7 +864,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 		if err != nil {
 			return false, err
 		}
-		if podUID != pod.UID {
+		if podUID == pod.UID {
 			return false, nil
 		}
 		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
