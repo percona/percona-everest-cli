@@ -735,7 +735,10 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 		return err
 	}
 
-	return o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)()
+	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
+		return err
+	}
+	return o.restartEverestOperatorPod(ctx)
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
@@ -1001,4 +1004,8 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	}
 
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
+}
+
+func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
+	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
 }

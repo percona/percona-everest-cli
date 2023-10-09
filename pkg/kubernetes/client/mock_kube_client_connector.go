@@ -177,6 +177,20 @@ func (_m *MockKubeClientConnector) DeleteObject(obj runtime.Object) error {
 	return r0
 }
 
+// DeletePod provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) DeletePod(ctx context.Context, namespace string, name string) error {
+	ret := _m.Called(ctx, namespace, name)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, namespace, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DoCSVWait provides a mock function with given fields: ctx, key
 func (_m *MockKubeClientConnector) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
 	ret := _m.Called(ctx, key)
@@ -804,6 +818,32 @@ func (_m *MockKubeClientConnector) ListDatabaseClusters(ctx context.Context) (*a
 
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListPods provides a mock function with given fields: ctx, namespace, options
+func (_m *MockKubeClientConnector) ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	ret := _m.Called(ctx, namespace, options)
+
+	var r0 *corev1.PodList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.ListOptions) (*corev1.PodList, error)); ok {
+		return rf(ctx, namespace, options)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, metav1.ListOptions) *corev1.PodList); ok {
+		r0 = rf(ctx, namespace, options)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*corev1.PodList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, metav1.ListOptions) error); ok {
+		r1 = rf(ctx, namespace, options)
 	} else {
 		r1 = ret.Error(1)
 	}
