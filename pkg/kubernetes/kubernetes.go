@@ -64,6 +64,7 @@ const (
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
+	postgresDeploymentName       = "percona-postgresql-operator"
 	everestDeploymentName        = "everest-operator-controller-manager"
 	psmdbOperatorContainerName   = "percona-server-mongodb-operator"
 	pxcOperatorContainerName     = "percona-xtradb-cluster-operator"
@@ -509,7 +510,7 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 			k.l.Debugf("Applying %q file", f)
 			if err := k.client.ApplyFile(data); err != nil {
 				k.l.Debug(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
-				k.l.Warn(fmt.Errorf("cannot apply %q file. Reapplying it...", f))
+				k.l.Warn(fmt.Errorf("cannot apply %q file. Reapplying it", f))
 				return false, nil
 			}
 			return true, nil
@@ -616,8 +617,15 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 
 		return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
 	})
+	if err != nil {
+		return err
+	}
+	deploymentName := req.Name
+	if req.Name == "everest-operator" {
+		deploymentName = everestDeploymentName
+	}
 
-	return err
+	return k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: req.Namespace, Name: deploymentName})
 }
 
 func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installPlanName string) (bool, error) {
@@ -891,4 +899,20 @@ func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string
 		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
 	}
 	return podList.Items[0], nil
+}
+
+// ListEngineDeploymentNames returns a string array containing found engine deployments for the Everest.
+func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace string) ([]string, error) {
+	names := []string{}
+	deploymentList, err := k.client.ListDeployments(ctx, namespace)
+	if err != nil {
+		return names, err
+	}
+	for _, deployment := range deploymentList.Items {
+		switch deployment.Name {
+		case pxcDeploymentName, psmdbDeploymentName, everestDeploymentName, postgresDeploymentName:
+			names = append(names, deployment.Name)
+		}
+	}
+	return names, nil
 }

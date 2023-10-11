@@ -711,6 +711,10 @@ func (o *Operators) provisionOLM(ctx context.Context) error {
 }
 
 func (o *Operators) provisionOperators(ctx context.Context) error {
+	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -738,7 +742,14 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
 		return err
 	}
-	return o.restartEverestOperatorPod(ctx)
+	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
+	if len(deploymentsBefore) != len(deploymentsAfter) {
+		return o.restartEverestOperatorPod(ctx)
+	}
+	return nil
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
