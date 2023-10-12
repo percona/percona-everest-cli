@@ -54,14 +54,14 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'install-operators',
-      testDir: './tests/install',
+      name: 'flows',
+      testDir: './tests/flow',
       retries: process.env.CI ? 0 : 0,
     },
     {
       name: 'cli',
       testDir: './tests',
-      testIgnore: '**\/install/**',
+      testIgnore: '**\/flow/**',
     }
   ]
 });

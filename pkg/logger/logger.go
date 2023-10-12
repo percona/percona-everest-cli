@@ -18,15 +18,21 @@ package logger
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // MustInitLogger initializes a logger and panics in case of an error.
 func MustInitLogger(json bool) *zap.Logger {
 	lCfg := zap.NewProductionConfig()
-	lCfg.EncoderConfig = zap.NewDevelopmentEncoderConfig()
+	lCfg.EncoderConfig = zap.NewProductionEncoderConfig()
+	lCfg.EncoderConfig.TimeKey = "T"
+	lCfg.EncoderConfig.EncodeTime = zapcore.TimeEncoder(func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString(t.UTC().Format("2006-01-02T15:04:05Z0700"))
+	})
 	if !json {
 		lCfg.Encoding = "console"
 	}

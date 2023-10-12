@@ -86,11 +86,14 @@ const (
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
 
 	pollInterval = 1 * time.Second
-	pollDuration = 150 * time.Second
+	pollDuration = 300 * time.Second
 )
 
-// ErrEmptyVersionTag Got an empty version tag from GitHub API.
-var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github")
+var (
+	// ErrEmptyVersionTag Got an empty version tag from GitHub API.
+	ErrEmptyVersionTag       error = errors.New("got an empty version tag from Github")
+	errNoEverestOperatorPods       = errors.New("no instances of everest-operator are running")
+)
 
 // Kubernetes is a client for Kubernetes.
 type Kubernetes struct {
@@ -505,7 +508,8 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 		applyFile := func(ctx context.Context) (bool, error) {
 			k.l.Debugf("Applying %q file", f)
 			if err := k.client.ApplyFile(data); err != nil {
-				k.l.Warn(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
+				k.l.Debug(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
+				k.l.Warn(fmt.Errorf("cannot apply %q file. Reapplying it...", f))
 				return false, nil
 			}
 			return true, nil
@@ -832,4 +836,60 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 	}
 
 	return nil
+}
+
+// RestartEverestOperator restarts everest pod.
+func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
+	var pod corev1.Pod
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
+		p, err := k.getEverestOperatorPod(ctx, namespace)
+		if err != nil {
+			if errors.Is(err, errNoEverestOperatorPods) {
+				return false, nil
+			}
+			return false, err
+		}
+		pod = p
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+	podUID := pod.UID
+	err = k.client.DeletePod(ctx, namespace, pod.Name)
+	if err != nil {
+		return err
+	}
+
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
+		pod, err := k.getEverestOperatorPod(ctx, namespace)
+		if err != nil {
+			return false, err
+		}
+		if podUID == pod.UID {
+			return false, nil
+		}
+		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
+	})
+}
+
+func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string) (corev1.Pod, error) {
+	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name": "everest-operator",
+			},
+		}),
+		FieldSelector: "status.phase=Running",
+	})
+	if err != nil {
+		return corev1.Pod{}, err
+	}
+	if len(podList.Items) == 0 {
+		return corev1.Pod{}, errNoEverestOperatorPods
+	}
+	if len(podList.Items) > 1 {
+		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
+	}
+	return podList.Items[0], nil
 }

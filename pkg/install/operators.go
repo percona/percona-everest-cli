@@ -32,6 +32,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -54,7 +56,7 @@ type Operators struct {
 const (
 	catalogSourceNamespace           = "olm"
 	operatorGroup                    = "percona-operators-group"
-	catalogSource                    = "percona-dbaas-catalog"
+	catalogSource                    = "percona-everest-catalog"
 	everestOperatorName              = "everest-operator"
 	pxcOperatorName                  = "percona-xtradb-cluster-operator"
 	psmdbOperatorName                = "percona-server-mongodb-operator"
@@ -186,10 +188,8 @@ func NewOperators(c OperatorsConfig, l *zap.SugaredLogger) (*Operators, error) {
 
 // Run runs the operators installation process.
 func (o *Operators) Run(ctx context.Context) error {
-	if !o.config.SkipWizard {
-		if err := o.runWizard(ctx); err != nil {
-			return err
-		}
+	if err := o.populateConfig(ctx); err != nil {
+		return err
 	}
 
 	if o.everestClient == nil {
@@ -220,6 +220,26 @@ func (o *Operators) Run(ctx context.Context) error {
 	return o.performProvisioning(ctx)
 }
 
+func (o *Operators) populateConfig(ctx context.Context) error {
+	if !o.config.SkipWizard {
+		if err := o.runWizard(ctx); err != nil {
+			return err
+		}
+	}
+
+	if o.config.Name == "" {
+		o.config.Name = o.kubeClient.ClusterName()
+	}
+
+	if o.config.Backup.Enable && o.config.Backup.Name == "" {
+		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+		l.Error("Backup name cannot be empty if backup is enabled")
+		return common.ErrExitWithError
+	}
+
+	return nil
+}
+
 func (o *Operators) checkEverestConnection(ctx context.Context) error {
 	o.l.Info("Checking connection to Everest")
 	_, err := o.everestClient.ListMonitoringInstances(ctx)
@@ -235,17 +255,8 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 	}
 
 	var k *client.KubernetesCluster
-	g, gCtx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		var err error
-		k, err = o.connectToEverest(gCtx)
-		return err
-	})
-	g.Go(func() error {
-		return o.createEverestBackupStorage(gCtx)
-	})
-
-	if err := g.Wait(); err != nil {
+	k, err := o.connectToEverest(ctx)
+	if err != nil {
 		return err
 	}
 
@@ -274,6 +285,9 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 		o.l.Info("VMAgent deployed successfully")
 	}
 
+	if err := o.createEverestBackupStorage(ctx); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -721,7 +735,10 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 		return err
 	}
 
-	return o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)()
+	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
+		return err
+	}
+	return o.restartEverestOperatorPod(ctx)
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
@@ -768,6 +785,24 @@ func (o *Operators) provisionMonitoring() error {
 
 // connectToEverest connects the k8s cluster to Everest.
 func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesCluster, error) {
+	clusters, err := o.everestClient.ListKubernetesClusters(ctx)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not list kubernetes clusters"))
+	}
+	for _, cluster := range clusters {
+		if cluster.Name == o.config.Name {
+			ns, err := o.kubeClient.GetNamespace(ctx, cluster.Namespace)
+			if err != nil && !k8serrors.IsNotFound(err) {
+				return nil, errors.Join(err, errors.New("could not get namespace from Kubernetes"))
+			}
+
+			if ns.UID != types.UID(cluster.Uid) {
+				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new Kubernetes cluster using an existing name. Please unregister the existing Kubernetes cluster first")
+			}
+			// Cluster is already registered. Do nothing
+			return &cluster, nil
+		}
+	}
 	if err := o.prepareServiceAccount(); err != nil {
 		return nil, errors.Join(err, errors.New("could not prepare a service account"))
 	}
@@ -969,4 +1004,8 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	}
 
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
+}
+
+func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
+	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
 }

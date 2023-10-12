@@ -52,6 +52,10 @@ type KubeClientConnector interface {
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods.
 	GetPods(ctx context.Context, namespace string, labelSelector *metav1.LabelSelector) (*corev1.PodList, error)
+	// ListPods lists pods.
+	ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error)
+	// DeletePod deletes a pod by given name in the given namespace.
+	DeletePod(ctx context.Context, namespace, name string) error
 	// GetNodes returns list of nodes.
 	GetNodes(ctx context.Context) (*corev1.NodeList, error)
 	// GetLogs returns logs for pod.
@@ -100,4 +104,6 @@ type KubeClientConnector interface {
 	DeleteFile(fileBytes []byte) error
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
+	// GetNamespace returns a namespace.
+	GetNamespace(ctx context.Context, name string) (*corev1.Namespace, error)
 }

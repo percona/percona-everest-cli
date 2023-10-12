@@ -65,7 +65,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
-	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
+	cmd.Flags().BoolP("monitoring.enable", "m", false, "Enable monitoring")
 	cmd.Flags().String("monitoring.instance-name", "",
 		"Monitoring instance name from Everest. If defined, other monitoring configuration is ignored",
 	)
@@ -78,6 +78,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("monitoring.pmm.password", "", "PMM password")
 
 	cmd.Flags().Bool("backup.enable", false, "Enable backups")
+	cmd.Flags().String("backup.name", "", "Backup name in Everest")
 	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
 	cmd.Flags().String("backup.region", "", "Backup region")
 	cmd.Flags().String("backup.bucket", "", "Backup bucket")
@@ -107,6 +108,7 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
 
+	viper.BindPFlag("backup.name", cmd.Flags().Lookup("backup.name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("backup.enable", cmd.Flags().Lookup("backup.enable"))         //nolint:errcheck,gosec
 	viper.BindPFlag("backup.endpoint", cmd.Flags().Lookup("backup.endpoint"))     //nolint:errcheck,gosec
 	viper.BindPFlag("backup.region", cmd.Flags().Lookup("backup.region"))         //nolint:errcheck,gosec
@@ -114,6 +116,7 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("backup.access-key", cmd.Flags().Lookup("backup.access-key")) //nolint:errcheck,gosec
 	viper.BindPFlag("backup.secret-key", cmd.Flags().Lookup("backup.secret-key")) //nolint:errcheck,gosec
 
+	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec

@@ -23,8 +23,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -38,6 +40,17 @@ func (c *Client) DeleteAllMonitoringResources(ctx context.Context, namespace str
 
 	if namespace == "" {
 		namespace = c.namespace
+	}
+	crd := &unstructured.Unstructured{}
+	crd.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "apiextensions.k8s.io",
+		Kind:    "CustomResourceDefinition",
+		Version: "v1",
+	})
+	err = cl.Get(ctx, types.NamespacedName{Name: "vmagents.operator.victoriametrics.com"}, crd)
+	if err != nil && k8serrors.IsNotFound(err) {
+		// Nothing to do here. Monitoring does not exists in the cluster.
+		return nil
 	}
 
 	opts := []client.DeleteAllOfOption{

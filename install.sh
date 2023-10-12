@@ -2,17 +2,17 @@
 
 if ! command -v curl &> /dev/null
 then
-	echo "curl command is not found. Please install it."
+	echo "curl command not found. Please install it."
 	exit
 fi
 if ! command -v docker &> /dev/null
 then
-	echo "docker command is not found. Please install it."
+	echo "docker command not found. Please install it."
 	exit
 fi
-if ! command -v docker-compose &> /dev/null
+if ! docker compose version &> /dev/null
 then
-	echo "docker-compose is not found. Please install it."
+	echo "docker compose (v2) not found. Please install it."
 	exit
 fi
 if ! command -v jq &> /dev/null
@@ -25,24 +25,34 @@ latest_release=$(curl -s https://api.github.com/repos/percona/percona-everest-cl
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | tr '[:upper:]' '[:lower:]')
 
-if [[ $os == "linux" && $arch == "x86_64" ]]
+if [[ ($os == "linux" || $os == "darwin") && $arch == "x86_64" ]]
 then
 	arch="amd64"
 fi
-echo $arch
 
 
 echo "Downloading the latest release of Percona Everest CLI"
+echo "https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch"
 curl -sL  https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
-echo "Deploying Backends using docker-compose"
-curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/main/quickstart.yml -o quickstart.yml
-docker-compose -f quickstart.yml up -d
+echo "Deploying Backends using docker compose"
+curl -sL  https://raw.githubusercontent.com/percona/percona-everest-backend/main/deploy/quickstart-compose.yml -o quickstart.yml
+docker compose -f quickstart.yml up -d
 
-echo "Using default k8s cluster to provision everest without backups enabled and monitoring"
-echo "You can run ./everestctl for the wizard setup"
+while ! curl -s http://127.0.0.1:8080 &> /dev/null ; do
+	sleep 0.2
+done
+
+# If KUBECONFIG is set let the user know we are using it
+if [[ -n "${KUBECONFIG}" ]]; then
+	echo "Using KUBECONFIG: ${KUBECONFIG}"
+else
+	echo "KUBECONFIG is not set. Using default k8s cluster"
+fi
+
+echo "Provisioning Everest with monitoring disabled"
+echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
-echo "Also you can use --kubeconfig to specify a path for kubeconfig you want to use"
 ./everestctl install operators --backup.enable=false --everest.endpoint=http://127.0.0.1:8080  --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
 
 if [[ $os == "linux" ]]

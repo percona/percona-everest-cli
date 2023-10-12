@@ -12,8 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import { test } from '@fixtures';
 
-package client
+test.describe('Backups', async () => {
+  test('backup.name is required', async ({ page, cli, request }) => {
+    const out = await cli.everestExecSkipWizard(`install operators --backup.enable --monitoring.enable=0 --name=cluster-name`);
 
-//go:generate ../../../bin/ifacemaker -f client.go -f monitoring.go -f namespace.go -s Client -i KubeClientConnector -p client -o kubeclient_interface.go
-//go:generate ../../../bin/mockery --name=KubeClientConnector --case=snake --inpackage
+    await out.exitCodeEquals(1);
+    await out.outErrContainsNormalizedMany([
+      'Backup name cannot be empty',
+    ]);
+  });
+});
