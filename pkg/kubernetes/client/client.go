@@ -339,6 +339,14 @@ func (c *Client) GetDeployment(ctx context.Context, name string, namespace strin
 	return c.clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// ListDeployments returns deployment by name.
+func (c *Client) ListDeployments(ctx context.Context, namespace string) (*appsv1.DeploymentList, error) {
+	if namespace == "" {
+		namespace = c.namespace
+	}
+	return c.clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+}
+
 // GetSecret returns secret by name.
 func (c *Client) GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
