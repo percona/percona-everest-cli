@@ -9,7 +9,7 @@ spec:
   sourceType: grpc
   grpcPodConfig:
     securityContextConfig: restricted
-  image: docker.io/percona/everest-catalog:0.3.0
+  image: docker.io/percona/everest-catalog:latest
   updateStrategy:
     registryPoll:
       interval: 45m
