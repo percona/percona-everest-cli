@@ -624,6 +624,9 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	if req.Name == "everest-operator" {
 		deploymentName = everestDeploymentName
 	}
+	if req.Name == "victoriametrics-operator" {
+		deploymentName = "vm-operator-vm-operator"
+	}
 
 	return k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: req.Namespace, Name: deploymentName})
 }
