@@ -31,6 +31,7 @@ import (
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
+	everestVersion "github.com/percona/percona-everest-cli/pkg/version"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -478,6 +479,14 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
 		return errors.Join(err, errors.New("failed to read percona catalog file"))
+	}
+	o := make(map[string]interface{})
+	if err := yamlv3.Unmarshal(data, &o); err != nil {
+		return err
+	}
+
+	if err := unstructured.SetNestedField(o, everestVersion.CatalogImage(), "spec", "image"); err != nil {
+		return err
 	}
 
 	if err := k.client.ApplyFile(data); err != nil {
