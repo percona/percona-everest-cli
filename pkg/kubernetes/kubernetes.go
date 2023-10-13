@@ -488,6 +488,10 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err := unstructured.SetNestedField(o, everestVersion.CatalogImage(), "spec", "image"); err != nil {
 		return err
 	}
+	data, err = yamlv3.Marshal(o)
+	if err != nil {
+		return err
+	}
 
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Join(err, errors.New("cannot apply percona catalog file"))
