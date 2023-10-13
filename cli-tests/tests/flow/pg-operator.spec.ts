@@ -66,14 +66,14 @@ test.describe('Everest CLI install operators', async () => {
       const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await operator.assertSuccess();
 
-      const out = await cli.everestExecSkipWizard(
+      let out = await cli.everestExecSkipWizard(
         `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
       const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await restartedOperator.assertSuccess();
 
       expect(operator.getStdOutLines()[0]).not.toEqual(restartedOperator.getStdOutLines()[0]);
-      const out = await cli.everestExecSkipWizard(
+      out = await cli.everestExecSkipWizard(
         `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
 
