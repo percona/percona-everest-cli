@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	devCatalogImage     = "percona/everest-catalog:latest"
-	releaseCatalogImage = "percona/everest-catalog:%s"
+	devCatalogImage     = "docker.io/percona/everest-catalog:latest"
+	releaseCatalogImage = "docker.io/percona/everest-catalog:%s"
 )
 
 var (
