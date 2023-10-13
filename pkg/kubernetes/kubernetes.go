@@ -31,7 +31,6 @@ import (
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
-	everestVersion "github.com/percona/percona-everest-cli/pkg/version"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
@@ -48,6 +47,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
+	everestVersion "github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // ClusterType defines type of cluster.
