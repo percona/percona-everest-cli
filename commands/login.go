@@ -63,10 +63,12 @@ func newLoginCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initLoginFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
+	cmd.Flags().String("personal-access-token", "", "Provide a personal access token (PAT) directly to skip interactive sign in")
 }
 
 func initLoginViperFlags(cmd *cobra.Command) {
-	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
+	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint"))           //nolint:errcheck,gosec
+	viper.BindPFlag("personal-access-token", cmd.Flags().Lookup("personal-access-token")) //nolint:errcheck,gosec
 }
 
 func parseLoginConfig() (*login.LoginConfig, error) {

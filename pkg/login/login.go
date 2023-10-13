@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/browser"
 	"github.com/zitadel/oidc/v2/pkg/client/rp"
 	httphelper "github.com/zitadel/oidc/v2/pkg/http"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
 	"go.uber.org/zap"
 )
 
@@ -41,6 +42,8 @@ type (
 			// Endpoint stores URL to Everest.
 			Endpoint string
 		}
+		// PersonalAccessToken stores personal access token.
+		PersonalAccessToken string `mapstructure:"personal-access-token"`
 	}
 )
 
@@ -60,16 +63,29 @@ func NewLogin(c LoginConfig, everestClient everestClientConnector, l *zap.Sugare
 
 // Run runs the login command.
 func (l *Login) Run(ctx context.Context) error {
+	// TODO: figure out how to get url
+	issuer := "http://localhost:8080"
+
+	if l.config.PersonalAccessToken != "" {
+		l.l.Info("Storing token in cache")
+		token := &oidc.AccessTokenResponse{
+			TokenType:   "bearer",
+			AccessToken: l.config.PersonalAccessToken,
+			ExpiresIn:   0,
+		}
+		err := cache.StoreToken(issuer, token)
+		return err
+	}
+
 	// TODO: figure out how to get client ID. Maybe registration endpoint?
 	clientID := "235018918891159554@everest-app"
 	clientSecret := ""
-	// TODO: figure out how to get url
-	issuer := "http://localhost:8080"
 	// TODO: what scopes do we need?
 	scopes := []string{"openid"}
 
 	cookieHandler := httphelper.NewCookieHandler(key, key, httphelper.WithUnsecure())
 	options := []rp.Option{rp.WithPKCE(cookieHandler)}
+	// options := []rp.Option{}
 
 	provider, err := rp.NewRelyingPartyOIDC(issuer, clientID, clientSecret, "", scopes, options...)
 	if err != nil {
