@@ -20,10 +20,12 @@ func newVersionCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 			if !outputJSON {
 				fmt.Println(version.FullVersionInfo()) //nolint:forbidigo
+				return
 			}
 			version, err := version.FullVersionJSON()
 			if err != nil {
 				l.Errorf("could not print JSON. Error: %s", err)
+				return
 			}
 			fmt.Println(version) //nolint:forbidigo
 		},
