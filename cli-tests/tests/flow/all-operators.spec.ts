@@ -73,7 +73,7 @@ test.describe('Everest CLI install operators', async () => {
     await verifyClusterResources();
     await test.step('disable telemetry', async () => {
       // check that the telemetry IS NOT disabled by default
-      let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest');
+      let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
 
       await out.outContainsNormalizedMany([
         `- name: DISABLE_TELEMETRY
