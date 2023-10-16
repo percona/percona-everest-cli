@@ -1084,6 +1084,14 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			Channel:                channel,
 			StartingCSV:            startingCSV,
 			InstallPlanApproval:    approval,
+			Config: &v1alpha1.SubscriptionConfig{
+				Env: []corev1.EnvVar{
+					{
+						Name:  "DISABLE_TELEMETRY",
+						Value: "true",
+					},
+				},
+			},
 		},
 	}
 
