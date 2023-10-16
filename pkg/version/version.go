@@ -18,7 +18,6 @@
 package version
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -59,15 +58,4 @@ func FullVersionInfo() string {
 		"FullCommit: " + FullCommit,
 	}
 	return strings.Join(out, "\n")
-}
-
-// FullVersionJSON returns version info as JSON
-func FullVersionJSON() (string, error) {
-	res := map[string]string{
-		"projectName": ProjectName,
-		"version":     Version,
-		"fullCommit":  FullCommit,
-	}
-	data, err := json.Marshal(res)
-	return string(data), err
 }
