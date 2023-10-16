@@ -13,4 +13,6 @@ func TestCatalogImage(t *testing.T) {
 	assert.Equal(t, CatalogImage(), fmt.Sprintf(releaseCatalogImage, Version))
 	Version = "v0.3.0-1-asd-dirty"
 	assert.Equal(t, CatalogImage(), devCatalogImage)
+	Version = "c09550"
+	assert.Equal(t, CatalogImage(), devCatalogImage)
 }

@@ -20,6 +20,8 @@ package version
 import (
 	"fmt"
 	"strings"
+
+	goversion "github.com/hashicorp/go-version"
 )
 
 const (
@@ -44,7 +46,8 @@ var (
 // for the release it returns everest-catalog:X.Y.Z.
 func CatalogImage() string {
 	catalogImage = devCatalogImage
-	if !strings.Contains(Version, "dirty") && Version != "" {
+	_, err := goversion.NewSemver(Version)
+	if !strings.Contains(Version, "dirty") && Version != "" && err == nil {
 		catalogImage = fmt.Sprintf(releaseCatalogImage, Version)
 	}
 	return catalogImage
