@@ -43,9 +43,9 @@ var (
 // for dev builds it returns everest-catalog:latest
 // for the release it returns everest-catalog:X.Y.Z.
 func CatalogImage() string {
-	catalogImage = fmt.Sprintf(releaseCatalogImage, Version)
-	if strings.Contains(Version, "dirty") || Version == "" {
-		catalogImage = devCatalogImage
+	catalogImage = devCatalogImage
+	if !strings.Contains(Version, "dirty") && Version != "" {
+		catalogImage = fmt.Sprintf(releaseCatalogImage, Version)
 	}
 	return catalogImage
 }
