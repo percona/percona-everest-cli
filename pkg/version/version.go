@@ -64,7 +64,7 @@ func FullVersionInfo() string {
 	return strings.Join(out, "\n")
 }
 
-// FullVersionJSON returns version info as JSON
+// FullVersionJSON returns version info as JSON.
 func FullVersionJSON() (string, error) {
 	res := map[string]string{
 		"projectName": ProjectName,

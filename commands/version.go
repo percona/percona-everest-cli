@@ -26,7 +26,6 @@ func newVersionCmd(l *zap.SugaredLogger) *cobra.Command {
 				l.Errorf("could not print JSON. Error: %s", err)
 			}
 			fmt.Println(version) //nolint:forbidigo
-
 		},
 	}
 }
