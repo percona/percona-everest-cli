@@ -47,6 +47,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
+	everestVersion "github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // ClusterType defines type of cluster.
@@ -478,6 +479,18 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	data, err := fs.ReadFile(data.OLMCRDs, "crds/olm/percona-dbaas-catalog.yaml")
 	if err != nil {
 		return errors.Join(err, errors.New("failed to read percona catalog file"))
+	}
+	o := make(map[string]interface{})
+	if err := yamlv3.Unmarshal(data, &o); err != nil {
+		return err
+	}
+
+	if err := unstructured.SetNestedField(o, everestVersion.CatalogImage(), "spec", "image"); err != nil {
+		return err
+	}
+	data, err = yamlv3.Marshal(o)
+	if err != nil {
+		return err
 	}
 
 	if err := k.client.ApplyFile(data); err != nil {
