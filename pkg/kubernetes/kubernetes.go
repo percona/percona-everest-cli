@@ -932,3 +932,8 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 	}
 	return names, nil
 }
+
+// ApplyObject applies object.
+func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
+	return k.client.ApplyObject(obj)
+}

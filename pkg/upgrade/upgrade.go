@@ -20,9 +20,12 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"go.uber.org/zap"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/data"
@@ -82,6 +85,38 @@ func (u *Upgrade) Run(ctx context.Context) error {
 		u.l.Error(err)
 	}
 	u.l.Info("Percona Catalog has been upgraded")
+	u.l.Info("Patching subscriptions")
+	if err := u.patchSubscriptions(ctx); err != nil {
+		u.l.Error(err)
+	}
+	u.l.Info("Subscriptions have been patched")
+	return nil
+}
+
+func (u *Upgrade) patchSubscriptions(ctx context.Context) error {
+	subList, err := u.kubeClient.ListSubscriptions(ctx, u.config.Namespace)
+	if err != nil {
+		return err
+	}
+	disableTelemetryEnvVar := "DISABLE_TELEMETRY"
+	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+	if !ok || disableTelemetry != "true" {
+		disableTelemetry = "false"
+	}
+	for _, subscription := range subList.Items {
+		subscription := subscription
+		subscription.Spec.Config = &v1alpha1.SubscriptionConfig{
+			Env: []corev1.EnvVar{
+				{
+					Name:  disableTelemetryEnvVar,
+					Value: disableTelemetry,
+				},
+			},
+		}
+		if err := u.kubeClient.ApplyObject(&subscription); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
