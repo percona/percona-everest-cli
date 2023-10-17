@@ -76,7 +76,7 @@ test.describe('Everest CLI install operators', async () => {
       let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
 
       await out.outContains(
-        'name: DISABLE_TELEMETRY\n          value: "true"',
+        'name: DISABLE_TELEMETRY\n          value: "false"',
       );
 
       out = await cli.everestExecSkipWizardWithEnv('install operators --backup.enable=0 --monitoring.enable=0 --name=aaa', 'DISABLE_TELEMETRY=true');
