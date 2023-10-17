@@ -63,7 +63,6 @@ func initUpgradeFlags(cmd *cobra.Command) {
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("upgrade-olm", false, "Upgrade OLM distribution")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
-
 }
 
 func initUpgradeViperFlags(cmd *cobra.Command) {
@@ -75,8 +74,8 @@ func initUpgradeViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec
 }
 
-func parseConfig() (*upgrade.UpgradeConfig, error) {
-	c := &upgrade.UpgradeConfig{}
+func parseConfig() (*upgrade.Config, error) {
+	c := &upgrade.Config{}
 	err := viper.Unmarshal(c)
 	return c, err
 }

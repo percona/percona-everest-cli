@@ -1,3 +1,19 @@
+// percona-everest-cli
+// Copyright (C) 2023 Percona LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package upgrade implements upgrade logic for the CLI.
 package upgrade
 
 import (
@@ -6,14 +22,16 @@ import (
 	"net/url"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/percona/percona-everest-cli/data"
-	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/percona/percona-everest-cli/data"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
 type (
-	UpgradeConfig struct {
+	// Config defines configuration required for upgrade command.
+	Config struct {
 		// Name of the Kubernetes Cluster
 		Name string
 		// Namespace defines the namespace operators shall be installed to.
@@ -25,16 +43,17 @@ type (
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 	}
+	// Upgrade struct implements upgrade command.
 	Upgrade struct {
 		l *zap.SugaredLogger
 
-		config     UpgradeConfig
+		config     Config
 		kubeClient *kubernetes.Kubernetes
 	}
 )
 
 // NewUpgrade returns a new Upgrade struct.
-func NewUpgrade(c UpgradeConfig, l *zap.SugaredLogger) (*Upgrade, error) {
+func NewUpgrade(c Config, l *zap.SugaredLogger) (*Upgrade, error) {
 	cli := &Upgrade{
 		config: c,
 		l:      l.With("component", "install/operators"),
@@ -54,41 +73,50 @@ func NewUpgrade(c UpgradeConfig, l *zap.SugaredLogger) (*Upgrade, error) {
 }
 
 // Run runs the operators installation process.
-func (o *Upgrade) Run(ctx context.Context) error {
-	csv, err := o.kubeClient.GetClusterServiceVersion(ctx, types.NamespacedName{
+func (u *Upgrade) Run(ctx context.Context) error {
+	if err := u.upgradeOLM(ctx); err != nil {
+		return err
+	}
+	u.l.Info("Upgrading Percona Catalog")
+	if err := u.kubeClient.InstallPerconaCatalog(ctx); err != nil {
+		u.l.Error(err)
+	}
+	u.l.Info("Percona Catalog has been upgraded")
+	return nil
+}
+
+func (u *Upgrade) upgradeOLM(ctx context.Context) error {
+	csv, err := u.kubeClient.GetClusterServiceVersion(ctx, types.NamespacedName{
 		Name:      "packageserver",
 		Namespace: "olm",
 	})
 	if err != nil {
 		return err
 	}
-	if csv.Spec.Version.String() != data.OLMVersion {
-		if !o.config.SkipWizard {
-			if err := o.runWizard(ctx); err != nil {
-				return err
-			}
-		}
-		if o.config.UpgradeOLM {
-			o.l.Info("Upgrading OLM")
-			if err := o.kubeClient.InstallOLMOperator(ctx, true); err != nil {
-				o.l.Error(err)
-			}
-			o.l.Info("OLM has been upgraded")
+	if csv.Spec.Version.String() == data.OLMVersion {
+		// Nothing to do here. OLM is upgraded.
+		return nil
+	}
+	if !u.config.SkipWizard {
+		if err := u.runWizard(); err != nil {
+			return err
 		}
 	}
-	o.l.Info("Upgrading Percona Catalog")
-	if err := o.kubeClient.InstallPerconaCatalog(ctx); err != nil {
-		o.l.Error(err)
+	if u.config.UpgradeOLM {
+		u.l.Info("Upgrading OLM")
+		if err := u.kubeClient.InstallOLMOperator(ctx, true); err != nil {
+			u.l.Error(err)
+		}
+		u.l.Info("OLM has been upgraded")
 	}
-	o.l.Info("Percona Catalog has been upgraded")
 	return nil
 }
 
 // runWizard runs installation wizard.
-func (o *Upgrade) runWizard(ctx context.Context) error {
+func (u *Upgrade) runWizard() error {
 	pMonitor := &survey.Confirm{
 		Message: "Do you want to upgrade OLM?",
-		Default: o.config.UpgradeOLM,
+		Default: u.config.UpgradeOLM,
 	}
-	return survey.AskOne(pMonitor, &o.config.UpgradeOLM)
+	return survey.AskOne(pMonitor, &u.config.UpgradeOLM)
 }
