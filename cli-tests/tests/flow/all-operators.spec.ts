@@ -77,7 +77,7 @@ test.describe('Everest CLI install operators', async () => {
 
       await out.outContainsNormalizedMany([
         `- name: DISABLE_TELEMETRY
-          value: "false"`,
+     value: "false"`,
       ]);
 
       await cli.exec('export DISABLE_TELEMETRY=true');
@@ -94,7 +94,7 @@ test.describe('Everest CLI install operators', async () => {
       out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest');
       await out.outContainsNormalizedMany([
         `- name: DISABLE_TELEMETRY
-          value: "true"`,
+     value: "true"`,
       ]);
     });
   });
