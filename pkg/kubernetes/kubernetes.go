@@ -422,9 +422,9 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 }
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
-func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
+func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
 	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
-	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" {
+	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
 	}
