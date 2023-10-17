@@ -1107,6 +1107,7 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		Create(ctx, subscription, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
+			// XXX: Drop this after 0.7 release
 			bytes, err := json.Marshal(subscription)
 			if err != nil {
 				return nil, err
