@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,6 +22,8 @@ type (
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 		// UpgradeOLM defines do we need to upgrade OLM or not.
 		UpgradeOLM bool `mapstructure:"upgrade_olm"`
+		// SkipWizard skips wizard during installation.
+		SkipWizard bool `mapstructure:"skip-wizard"`
 	}
 	Upgrade struct {
 		l *zap.SugaredLogger
@@ -59,19 +62,20 @@ func (o *Upgrade) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = csv
-	//if csv.Spec.Version.String() != data.OLMVersion {
-	if err := o.runWizard(ctx); err != nil {
-		return err
-	}
-	if o.config.UpgradeOLM {
-		o.l.Info("Upgrading OLM")
-		if err := o.kubeClient.InstallOLMOperator(ctx, true); err != nil {
-			o.l.Error(err)
+	if csv.Spec.Version.String() != data.OLMVersion {
+		if !o.config.SkipWizard {
+			if err := o.runWizard(ctx); err != nil {
+				return err
+			}
 		}
-		o.l.Info("OLM has been upgraded")
+		if o.config.UpgradeOLM {
+			o.l.Info("Upgrading OLM")
+			if err := o.kubeClient.InstallOLMOperator(ctx, true); err != nil {
+				o.l.Error(err)
+			}
+			o.l.Info("OLM has been upgraded")
+		}
 	}
-	//}
 	o.l.Info("Upgrading Percona Catalog")
 	if err := o.kubeClient.InstallPerconaCatalog(ctx); err != nil {
 		o.l.Error(err)
