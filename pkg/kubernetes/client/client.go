@@ -1106,6 +1106,12 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		Subscriptions(namespace).
 		Create(ctx, subscription, metav1.CreateOptions{})
 	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			err := c.ApplyObject(subscription)
+			if err != nil {
+				return sub, err
+			}
+		}
 		return sub, err
 	}
 	return sub, nil
