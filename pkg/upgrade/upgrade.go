@@ -83,11 +83,13 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	u.l.Info("Upgrading Percona Catalog")
 	if err := u.kubeClient.InstallPerconaCatalog(ctx); err != nil {
 		u.l.Error(err)
+		return err
 	}
 	u.l.Info("Percona Catalog has been upgraded")
 	u.l.Info("Patching subscriptions")
 	if err := u.patchSubscriptions(ctx); err != nil {
 		u.l.Error(err)
+		return err
 	}
 	u.l.Info("Subscriptions have been patched")
 	return nil
@@ -141,6 +143,7 @@ func (u *Upgrade) upgradeOLM(ctx context.Context) error {
 		u.l.Info("Upgrading OLM")
 		if err := u.kubeClient.InstallOLMOperator(ctx, true); err != nil {
 			u.l.Error(err)
+			return err
 		}
 		u.l.Info("OLM has been upgraded")
 	}
@@ -149,9 +152,9 @@ func (u *Upgrade) upgradeOLM(ctx context.Context) error {
 
 // runWizard runs installation wizard.
 func (u *Upgrade) runWizard() error {
-	pMonitor := &survey.Confirm{
+	pOLM := &survey.Confirm{
 		Message: "Do you want to upgrade OLM?",
 		Default: u.config.UpgradeOLM,
 	}
-	return survey.AskOne(pMonitor, &u.config.UpgradeOLM)
+	return survey.AskOne(pOLM, &u.config.UpgradeOLM)
 }
