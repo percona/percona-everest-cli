@@ -27,22 +27,17 @@ import (
 
 // File holds cached data and in the format as stored on the filesystem.
 type File struct {
-	// Credentials hold cached tokens. The key is the full url to the issuer.
+	// Credentials hold cached tokens. The key is the full url to the Everest instance.
 	Credentials map[string]*oidc.AccessTokenResponse `json:"credentials,omitempty"`
 }
 
 // ReadFile returns cache stored in a file.
 func ReadFile() (*File, error) {
-	cache, err := readCacheFile()
-	if err != nil {
-		return nil, err
-	}
-
-	return cache, nil
+	return readCacheFile()
 }
 
 // StoreToken stores the provided token in file cache.
-func StoreToken(issuer string, token *oidc.AccessTokenResponse) error {
+func StoreToken(everestURL string, token *oidc.AccessTokenResponse) error {
 	cache, err := ReadFile()
 	if err != nil {
 		return err
@@ -51,7 +46,7 @@ func StoreToken(issuer string, token *oidc.AccessTokenResponse) error {
 	if cache.Credentials == nil {
 		cache.Credentials = make(map[string]*oidc.AccessTokenResponse)
 	}
-	cache.Credentials[issuer] = token
+	cache.Credentials[everestURL] = token
 
 	if err := writeCacheFile(cache); err != nil {
 		return err
