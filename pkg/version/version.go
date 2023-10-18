@@ -47,8 +47,8 @@ var (
 // for the release it returns everest-catalog:X.Y.Z.
 func CatalogImage() string {
 	catalogImage = devCatalogImage
-	_, err := goversion.NewSemver(Version)
-	if !strings.Contains(Version, "dirty") && Version != "" && err == nil {
+	v, err := goversion.NewSemver(Version)
+	if Version != "" && err == nil && v.Prerelease() == "" {
 		catalogImage = fmt.Sprintf(releaseCatalogImage, Version)
 	}
 	return catalogImage
