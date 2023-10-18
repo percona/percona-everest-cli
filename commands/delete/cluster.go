@@ -17,10 +17,8 @@
 package delete //nolint:predeclared
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/percona/percona-everest-backend/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -41,13 +39,12 @@ func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
-			everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", c.Everest.Endpoint))
+			everestClConnector, err := everestClient.NewEverestFromURL(c.Everest.Endpoint)
 			if err != nil {
 				l.Error(err)
 				os.Exit(1)
 			}
 
-			everestClConnector := everestClient.NewEverest(everestCl)
 			op, err := delete.NewCluster(*c, everestClConnector, l)
 			if err != nil {
 				l.Error(err)
