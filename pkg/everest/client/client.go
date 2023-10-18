@@ -46,9 +46,8 @@ func NewEverest(everestClient *client.Client) *Everest {
 }
 
 // NewEverestFromURL returns a new Everest from a provided URL.
-func NewEverestFromURL(url string) (*Everest, error) {
-	// TODO: figure out how to get issuer or what to do about url
-	cred, err := credentialsFromCache("http://localhost:8080")
+func NewEverestFromURL(ctx context.Context, url string) (*Everest, error) {
+	cred, err := credentialsFromCache(url)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("could not read credentials from cache"))
 
@@ -56,10 +55,9 @@ func NewEverestFromURL(url string) (*Everest, error) {
 
 	opts := []client.ClientOption{}
 	if cred != nil {
-		// TODO: fix context
-		cl := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(&oauth2.Token{
+		cl := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{
 			AccessToken: cred.AccessToken,
-			// TODO: how to refresh token
+			// TODO: do we need to refresh token?
 			TokenType: cred.TokenType,
 		}))
 		opts = append(opts, client.WithHTTPClient(cl))

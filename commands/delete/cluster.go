@@ -39,7 +39,7 @@ func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
-			everestClConnector, err := everestClient.NewEverestFromURL(c.Everest.Endpoint)
+			everestClConnector, err := everestClient.NewEverestFromURL(cmd.Context(), c.Everest.Endpoint)
 			if err != nil {
 				l.Error(err)
 				os.Exit(1)
