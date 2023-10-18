@@ -42,7 +42,7 @@ type (
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 		// UpgradeOLM defines do we need to upgrade OLM or not.
-		UpgradeOLM bool `mapstructure:"upgrade_olm"`
+		UpgradeOLM bool `mapstructure:"upgrade-olm"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 	}
@@ -59,7 +59,7 @@ type (
 func NewUpgrade(c Config, l *zap.SugaredLogger) (*Upgrade, error) {
 	cli := &Upgrade{
 		config: c,
-		l:      l.With("component", "install/operators"),
+		l:      l.With("component", "upgrade"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
