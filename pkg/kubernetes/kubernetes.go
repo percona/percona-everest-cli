@@ -867,7 +867,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		p, err := k.getEverestOperatorPod(ctx, namespace)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		pod = p
 		return true, nil
@@ -884,7 +884,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
 		pod, err := k.getEverestOperatorPod(ctx, namespace)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		if podUID == pod.UID {
 			return false, nil
