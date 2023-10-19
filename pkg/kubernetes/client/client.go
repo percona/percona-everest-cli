@@ -227,7 +227,7 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
-func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
+func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn,nolintlint
 	rcl, err := rest.HTTPClientFor(c.restConfig)
 	if err != nil {
 		return nil, err
