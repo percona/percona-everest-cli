@@ -1117,7 +1117,7 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			//	Subscriptions(namespace).
 			//	Patch(ctx, name, types.MergePatchType, bytes, metav1.PatchOptions{})
 
-			return sub, err
+			return sub, nil
 		}
 		return sub, err
 	}
