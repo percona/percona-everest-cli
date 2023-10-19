@@ -82,10 +82,7 @@ test.describe('Everest CLI install operators', async () => {
       out = await cli.everestExecSkipWizardWithEnv('upgrade', 'DISABLE_TELEMETRY=true');
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
-        'percona-xtradb-cluster-operator operator has been installed',
-        'percona-server-mongodb-operator operator has been installed',
-        'percona-postgresql-operator operator has been installed',
-        'everest-operator operator has been installed',
+        'Subscriptions have been patched  {\"component\": \"upgrade\"}'
       ]);
       // check that the telemetry IS disabled
       out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
