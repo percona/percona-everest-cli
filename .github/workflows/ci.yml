@@ -94,7 +94,7 @@ jobs:
           go_version: ${{ matrix.go-version }}
           reporter: github-pr-review
           fail_on_error: true
-          args: --timeout=2m
+          args: --timeout=5m
           cache: false
           golangci_lint_flags: "-c=.golangci.yml"
 
