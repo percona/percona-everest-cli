@@ -33,7 +33,7 @@ format:                 ## Format source code
 
 check:                  ## Run checks/linters for the whole project
 	bin/go-consistent -pedantic ./...
-	LOG_LEVEL=error bin/golangci-lint run
+	LOG_LEVEL=error bin/golangci-lint run --timeout=2m
 
 test:                   ## Run tests
 	go test -race -timeout=30s ./...
