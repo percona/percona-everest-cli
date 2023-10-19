@@ -863,37 +863,43 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 
 // RestartEverestOperator restarts everest pod.
 func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
-	var pod corev1.Pod
+	var podsToRestart []corev1.Pod
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		p, err := k.getEverestOperatorPod(ctx, namespace)
+		p, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
 			return false, err
 		}
-		pod = p
+		podsToRestart = p
 		return true, nil
 	})
 	if err != nil {
 		return err
 	}
-	podUID := pod.UID
-	err = k.client.DeletePod(ctx, namespace, pod.Name)
-	if err != nil {
-		return err
+	for _, pod := range podsToRestart {
+		err = k.client.DeletePod(ctx, namespace, pod.Name)
+		if err != nil {
+			return err
+		}
 	}
 
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		pod, err := k.getEverestOperatorPod(ctx, namespace)
+		pods, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
 			return false, err
 		}
-		if podUID == pod.UID {
-			return false, nil
+		for _, pod := range pods {
+			for _, restartedPod := range podsToRestart {
+				if restartedPod.UID == pod.UID {
+					return false, nil
+				}
+			}
+			return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
 		}
-		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
+		return false, errors.New("no pods to restart")
 	})
 }
 
-func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string) (corev1.Pod, error) {
+func (k *Kubernetes) getEverestOperatorPods(ctx context.Context, namespace string) ([]corev1.Pod, error) {
 	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{
@@ -903,15 +909,12 @@ func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string
 		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
-		return corev1.Pod{}, err
+		return []corev1.Pod{}, err
 	}
 	if len(podList.Items) == 0 {
-		return corev1.Pod{}, errNoEverestOperatorPods
+		return []corev1.Pod{}, errNoEverestOperatorPods
 	}
-	if len(podList.Items) > 1 {
-		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
-	}
-	return podList.Items[0], nil
+	return podList.Items, nil
 }
 
 // ListEngineDeploymentNames returns a string array containing found engine deployments for the Everest.
