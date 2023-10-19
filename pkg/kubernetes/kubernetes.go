@@ -923,7 +923,7 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 	}
 	for _, deployment := range deploymentList.Items {
 		switch deployment.Name {
-		case pxcDeploymentName, psmdbDeploymentName, everestDeploymentName, postgresDeploymentName:
+		case pxcDeploymentName, psmdbDeploymentName, postgresDeploymentName:
 			names = append(names, deployment.Name)
 		}
 	}
