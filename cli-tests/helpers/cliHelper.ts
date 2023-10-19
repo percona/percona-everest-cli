@@ -64,13 +64,6 @@ export class CliHelper {
     });
   }
 
-  async everestExecSkipWizardWithEnv(command, env: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    return test.step(`Run "${command}" command with env variables`, async () => {
-      return this.execute(`${env} ${this.pathToBinary} ${command} --skip-wizard`);
-    });
-  }
-
   /**
    * Silent Shell(sh) exec() wrapper to return handy {@link Output} object.
    * Provides no logs to skip huge outputs.
