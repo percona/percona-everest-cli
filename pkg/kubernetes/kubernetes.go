@@ -894,7 +894,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 					return false, nil
 				}
 			}
-			return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
+			return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil //nolint:staticcheck
 		}
 		return false, errors.New("no pods to restart")
 	})
