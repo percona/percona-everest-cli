@@ -1106,7 +1106,7 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		Subscriptions(namespace).
 		Create(ctx, subscription, metav1.CreateOptions{})
 	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
+		if apierrors.IsAlreadyExists(err) && name != "everest-operator" {
 			bytes, mErr := json.Marshal(subscription)
 			if mErr != nil {
 				return nil, err
