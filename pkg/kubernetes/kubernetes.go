@@ -888,6 +888,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 			return false, err
 		}
 		for _, pod := range pods {
+			pod := pod
 			for _, restartedPod := range podsToRestart {
 				if restartedPod.UID == pod.UID {
 					return false, nil
