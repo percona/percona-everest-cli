@@ -84,6 +84,8 @@ test.describe('Everest CLI install operators', async () => {
       await out.outErrContainsNormalizedMany([
         'Subscriptions have been patched\t{"component": "upgrade"}',
       ]);
+
+      await page.waitForTimeout(10_000);
       // check that the telemetry IS disabled
       out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
       await out.outContains(
