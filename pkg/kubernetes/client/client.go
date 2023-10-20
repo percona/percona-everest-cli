@@ -227,7 +227,7 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
-func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
+func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn,nolintlint
 	rcl, err := rest.HTTPClientFor(c.restConfig)
 	if err != nil {
 		return nil, err
@@ -1107,17 +1107,7 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		Create(ctx, subscription, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
-			bytes, err := json.Marshal(subscription)
-			if err != nil {
-				return nil, err
-			}
-
-			sub, err = operatorClient.
-				OperatorsV1alpha1().
-				Subscriptions(namespace).
-				Patch(ctx, name, types.MergePatchType, bytes, metav1.PatchOptions{})
-
-			return sub, err
+			return sub, nil
 		}
 		return sub, err
 	}

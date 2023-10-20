@@ -695,7 +695,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 
 func (o *Operators) provisionOLM(ctx context.Context) error {
 	o.l.Info("Installing Operator Lifecycle Manager")
-	if err := o.kubeClient.InstallOLMOperator(ctx); err != nil {
+	if err := o.kubeClient.InstallOLMOperator(ctx, false); err != nil {
 		o.l.Error("failed installing OLM")
 		return err
 	}

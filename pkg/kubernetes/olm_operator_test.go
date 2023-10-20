@@ -54,7 +54,7 @@ func TestInstallOlmOperator(t *testing.T) {
 		k8sclient.On("DoRolloutWait", ctx, mock.Anything).Return(nil)
 		k8sclient.On("GetSubscriptionCSV", ctx, mock.Anything).Return(types.NamespacedName{}, nil)
 		k8sclient.On("DoRolloutWait", ctx, mock.Anything).Return(nil)
-		err := olms.InstallOLMOperator(ctx)
+		err := olms.InstallOLMOperator(ctx, false)
 		assert.NoError(t, err)
 	})
 

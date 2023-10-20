@@ -23,7 +23,7 @@ import (
 	"github.com/percona/percona-everest-cli/commands/list"
 )
 
-func newListCmd(l *zap.SugaredLogger) *cobra.Command {
+func newListCmd(l *zap.SugaredLogger) *cobra.Command { //nolint:deadcode,unused
 	cmd := &cobra.Command{
 		Use: "list",
 	}
