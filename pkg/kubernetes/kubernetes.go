@@ -422,9 +422,9 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 }
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
-func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
+func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
 	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
-	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" {
+	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
 	}
@@ -863,40 +863,47 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 
 // RestartEverestOperator restarts everest pod.
 func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
-	var pod corev1.Pod
+	var podsToRestart []corev1.Pod
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		p, err := k.getEverestOperatorPod(ctx, namespace)
+		p, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
-			if errors.Is(err, errNoEverestOperatorPods) {
-				return false, nil
-			}
 			return false, err
 		}
-		pod = p
+		podsToRestart = p
 		return true, nil
 	})
 	if err != nil {
 		return err
 	}
-	podUID := pod.UID
-	err = k.client.DeletePod(ctx, namespace, pod.Name)
-	if err != nil {
-		return err
+	for _, pod := range podsToRestart {
+		err = k.client.DeletePod(ctx, namespace, pod.Name)
+		if err != nil {
+			return err
+		}
 	}
 
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		pod, err := k.getEverestOperatorPod(ctx, namespace)
+		pods, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
 			return false, err
 		}
-		if podUID == pod.UID {
-			return false, nil
+		podsStatuses := map[string]struct{}{}
+		for _, pod := range pods {
+			pod := pod
+			for _, restartedPod := range podsToRestart {
+				if restartedPod.UID == pod.UID {
+					return false, nil
+				}
+			}
+			if pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready {
+				podsStatuses[string(pod.UID)] = struct{}{}
+			}
 		}
-		return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil
+		return len(podsStatuses) == len(pods), nil
 	})
 }
 
-func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string) (corev1.Pod, error) {
+func (k *Kubernetes) getEverestOperatorPods(ctx context.Context, namespace string) ([]corev1.Pod, error) {
 	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{
@@ -906,15 +913,12 @@ func (k *Kubernetes) getEverestOperatorPod(ctx context.Context, namespace string
 		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
-		return corev1.Pod{}, err
+		return []corev1.Pod{}, err
 	}
 	if len(podList.Items) == 0 {
-		return corev1.Pod{}, errNoEverestOperatorPods
+		return []corev1.Pod{}, errNoEverestOperatorPods
 	}
-	if len(podList.Items) > 1 {
-		return corev1.Pod{}, errors.New("multiple instances of everest-operator found")
-	}
-	return podList.Items[0], nil
+	return podList.Items, nil
 }
 
 // ListEngineDeploymentNames returns a string array containing found engine deployments for the Everest.
@@ -926,9 +930,14 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 	}
 	for _, deployment := range deploymentList.Items {
 		switch deployment.Name {
-		case pxcDeploymentName, psmdbDeploymentName, everestDeploymentName, postgresDeploymentName:
+		case pxcDeploymentName, psmdbDeploymentName, postgresDeploymentName:
 			names = append(names, deployment.Name)
 		}
 	}
 	return names, nil
+}
+
+// ApplyObject applies object.
+func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
+	return k.client.ApplyObject(obj)
 }
