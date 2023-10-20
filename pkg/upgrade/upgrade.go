@@ -138,7 +138,8 @@ func (u *Upgrade) upgradeOLM(ctx context.Context) error {
 		return err
 	}
 	if foundVersion.GreaterThan(shippedVersion) {
-		return errors.New("existing deployment of OLM is newer than supported")
+		// Nothing to do here. Installed OLM is greater that we ship with the CLI.
+		return nil
 	}
 	if foundVersion.Equal(shippedVersion) {
 		// Nothing to do here. OLM is upgraded.
