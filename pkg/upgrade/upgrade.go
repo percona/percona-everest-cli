@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -130,7 +131,18 @@ func (u *Upgrade) upgradeOLM(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if csv.Spec.Version.String() == data.OLMVersion {
+	foundVersion, err := goversion.NewSemver(csv.Spec.Version.String())
+	if err != nil {
+		return err
+	}
+	shippedVersion, err := goversion.NewSemver(data.OLMVersion)
+	if err != nil {
+		return err
+	}
+	if foundVersion.GreaterThan(shippedVersion) {
+		return errors.New("existing deployment of OLM is newer than supported")
+	}
+	if foundVersion.Equal(shippedVersion) {
 		// Nothing to do here. OLM is upgraded.
 		return nil
 	}
