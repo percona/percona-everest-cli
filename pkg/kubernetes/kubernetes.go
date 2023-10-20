@@ -887,6 +887,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 		if err != nil {
 			return false, err
 		}
+		podsStatuses := map[string]struct{}{}
 		for _, pod := range pods {
 			pod := pod
 			for _, restartedPod := range podsToRestart {
@@ -894,9 +895,11 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 					return false, nil
 				}
 			}
-			return pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready, nil //nolint:staticcheck
+			if pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready {
+				podsStatuses[string(pod.UID)] = struct{}{}
+			}
 		}
-		return false, errors.New("no pods to restart")
+		return len(podsStatuses) == len(pods), nil
 	})
 }
 
