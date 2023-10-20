@@ -864,7 +864,7 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 // RestartEverestOperator restarts everest pod.
 func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
 	var podsToRestart []corev1.Pod
-	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		p, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
 			return false, err
@@ -882,7 +882,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 		}
 	}
 
-	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 		pods, err := k.getEverestOperatorPods(ctx, namespace)
 		if err != nil {
 			return false, err
