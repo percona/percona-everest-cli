@@ -242,7 +242,7 @@ jobs:
         working-directory: percona-everest-backend
         run: |
           make local-env-up
-          make run-debug &
+          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug &
 
       - name: Build CLI binary
         run: |
