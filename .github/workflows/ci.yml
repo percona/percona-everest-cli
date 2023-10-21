@@ -21,47 +21,76 @@ jobs:
       GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
       PERCONA_VERSION_SERVICE_URL: https://check-dev.percona.com/versions/v1
     steps:
-      - name: Wait for API Server
+      - name: Configure git for private modules
+        env:
+          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
+        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout Everest backend repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.ROBOT_TOKEN }}
+          repository: percona/percona-everest-backend
+          ref: 'main'
+          path: percona-everest-backend
+
+      - name: Set up Go release
+        uses: percona-platform/setup-go@v4
+        with:
+          go-version-file: './percona-everest-backend/go.mod'
+
+      - name: Run Everest backend
+        working-directory: percona-everest-backend
         run: |
-            while ! curl -sSf http://127.0.0.1:8080 > /dev/null; do
-              echo "Waiting for API server..."
-              sleep 1
-            done
-            echo "API server is available."
+          make local-env-up
+          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug &
 
 
+      - name: Set up Go release
+        uses: percona-platform/setup-go@v4
+        with:
+          go-version-file: './go.mod'
 
+      - name: Build CLI binary
+        run: |
+          make init
+          make build
 
-#      - name: Configure git for private modules
-#        env:
-#          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-#        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-#
-#      - name: Check out code into the Go module directory
-#        uses: actions/checkout@v4
-#        with:
-#          lfs: true
-#          ref: ${{ github.event.pull_request.head.sha }}
-#
-#      - name: Checkout Everest backend repo
-#        uses: actions/checkout@v4
-#        with:
-#          token: ${{ secrets.ROBOT_TOKEN }}
-#          repository: percona/percona-everest-backend
-#          ref: 'main'
-#          path: percona-everest-backend
-#
-#      - name: Set up Go release
-#        uses: percona-platform/setup-go@v4
-#        with:
-#          go-version-file: './percona-everest-backend/go.mod'
-#
-#      - name: Run Everest backend
-#        working-directory: percona-everest-backend
-#        run: |
-#          make local-env-up
-#          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug &
+      - name: Create KIND cluster
+        uses: helm/kind-action@v1.8.0
 
+      - name: Configure git for private modules
+        env:
+          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
+        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
 
+      - name: Wait for API Server to be ready
+        run: |
+          while ! curl -sSf http://127.0.0.1:8080 > /dev/null; do
+            echo "Waiting for API server..."
+            sleep 15
+          done
+          echo "API server is available."
+
+      - name: Run integration tests
+        working-directory: cli-tests
+        id: cli-tests
+        run: |
+          make init
+          make install-operators
+          make test-cli
+
+      - name: Attach the report
+        if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: cli-tests-report
+          path: cli-tests/test-report
 
 
