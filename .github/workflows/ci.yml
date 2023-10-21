@@ -21,14 +21,14 @@ jobs:
       GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
       PERCONA_VERSION_SERVICE_URL: https://check-dev.percona.com/versions/v1
     steps:
-      - name: Check URL Availability
+      - name: Wait for API Server
         run: |
-            response=$(curl --head --silent --fail -o /dev/null -w "%{http_code}" https://gogle.com)
-            if [ "$response" == "200" ]; then
-              echo "URL is available"
-            else
-              echo "URL is not available"
-            fi
+            while ! curl -sSf http://127.0.0.1:8080 > /dev/null; do
+              echo "Waiting for API server..."
+              sleep 1
+            done
+            echo "API server is available."
+
 
 
 
