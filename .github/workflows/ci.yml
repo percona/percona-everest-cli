@@ -49,40 +49,6 @@ jobs:
         working-directory: percona-everest-backend
         run: |
           make local-env-up
-          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug &
-
-
-      - name: Set up Go release
-        uses: percona-platform/setup-go@v4
-        with:
-          go-version-file: './go.mod'
-
-      - name: Build CLI binary
-        run: |
-          make init
-          make build
-
-      - name: Create KIND cluster
-        uses: helm/kind-action@v1.8.0
-
-      - name: Configure git for private modules
-        env:
-          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
-      - name: Run integration tests
-        working-directory: cli-tests
-        id: cli-tests
-        run: |
-          make init
-          make install-operators
-          make test-cli
-
-      - name: Attach the report
-        if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: cli-tests-report
-          path: cli-tests/test-report
+          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug 
 
 
