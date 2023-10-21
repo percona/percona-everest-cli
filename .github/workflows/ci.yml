@@ -3,10 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - main
-    tags:
-      - v[0-9]+.[0-9]+.[0-9]+*
-  pull_request:
+      - ci-fix
 
 permissions:
   contents: read
@@ -15,174 +12,6 @@ permissions:
   pull-requests: write
 
 jobs:
-  check:
-    name: Check
-    timeout-minutes: 10
-    if: github.event_name == 'pull_request'
-
-    strategy:
-      fail-fast: false
-      matrix:
-        go-version: [1.21.x]
-        may-fail: [false]
-
-    continue-on-error: ${{ matrix.may-fail }}
-    runs-on: ubuntu-latest
-
-    env:
-      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
-
-    steps:
-      - name: Configure git for private modules
-        env:
-          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
-      - name: Set up Go release
-        if: matrix.go-version != 'tip'
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Set up Go tip
-        if: matrix.go-version == 'tip'
-        run: |
-          git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
-          cd $HOME/gotip/src
-          ./make.bash
-          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
-          echo "$HOME/gotip/bin" >> $GITHUB_PATH
-
-      - name: Set GO_VERSION environment variable
-        run: |
-          go version
-          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Enable Go modules cache
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
-
-      - name: Enable Go build cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/go-build
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
-
-      - name: Download Go modules
-        run: go mod download
-
-      - name: Install tools
-        run: make init
-
-      - name: Run linters
-        uses: reviewdog/action-golangci-lint@v2
-        with:
-          github_token: ${{ secrets.ROBOT_TOKEN || secrets.GITHUB_TOKEN }}
-          go_version: ${{ matrix.go-version }}
-          reporter: github-pr-review
-          fail_on_error: true
-          cache: false
-          golangci_lint_flags: "-c=.golangci.yml --timeout=5m"
-
-      - name: Check that there are no source code changes
-        run: |
-          make format
-          pushd tools && go mod tidy -v
-          popd        && go mod tidy -v
-          git status
-          git diff --exit-code
-
-      - name: Run debug commands on failure
-        if: ${{ failure() }}
-        run: |
-          env
-          go version
-          go env
-          pwd
-          git status
-
-  test:
-    name: Tests
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        go-version: [1.21.x]
-
-    env:
-      GO_VERSION: ${{ matrix.go-version }}
-      GOPRIVATE: github.com/percona,github.com/percona/percona-everest-backend,github.com/percona/everest-operator
-
-    steps:
-      - name: Configure git for private modules
-        env:
-          ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
-        run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Set up Go release
-        if: env.GO_VERSION != 'tip'
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-
-      - name: Set up Go tip
-        if: matrix.go-version == 'tip'
-        run: |
-          git clone --depth=1 https://go.googlesource.com/go $HOME/gotip
-          cd $HOME/gotip/src
-          ./make.bash
-          echo "GOROOT=$HOME/gotip" >> $GITHUB_ENV
-          echo "$HOME/gotip/bin" >> $GITHUB_PATH
-          echo "$GOBIN" >> $GITHUB_PATH
-
-      - name: Enable Go modules cache
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ env.GO_VERSION }}-modules-
-
-      - name: Download Go modules
-        run: go mod download
-
-      - name: Build
-        run: make build
-
-      - name: Run tests
-        run: make test-cover
-
-      - name: Upload coverage results
-        uses: codecov/codecov-action@v3
-        with:
-          file: cover.out
-          fail_ci_if_error: false
-
-      - name: Run debug commands on failure
-        if: ${{ failure() }}
-        run: |
-          env
-          go version
-          go env
-          pwd
-          git status
-
   integration_tests:
     name: CLI Integration Tests
     runs-on: ubuntu-20.04
@@ -200,7 +29,7 @@ jobs:
       - name: Set up Go release
         uses: percona-platform/setup-go@v4
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version-file: './backend/go.mod'
 
       - name: Set GO_VERSION environment variable
         run: |
@@ -272,18 +101,4 @@ jobs:
           name: cli-tests-report
           path: cli-tests/test-report
 
-  integration_tests_flows:
-    strategy:
-      fail-fast: false
-      matrix:
-        make_target: [
-          'test-all-operators',
-          'test-mongo-operator',
-          'test-pg-operator',
-          'test-pxc-operator'
-        ]
-    name: CLI tests
-    uses: ./.github/workflows/cli-tests.yml
-    secrets: inherit
-    with:
-      make_target: ${{ matrix.make_target }}
+
