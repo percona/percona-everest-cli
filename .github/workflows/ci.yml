@@ -303,18 +303,8 @@ jobs:
           'test-pg-operator',
           'test-pxc-operator'
         ]
-    steps:
-      - name: Wait for EVEREST BE to be available
-        timeout-minutes: 15
-        run: |
-          while ! curl -sSf http://127.0.0.1:8080 > /dev/null; do
-            echo "Waiting for EVEREST BE..."
-            sleep 15
-          done
-          echo "EVEREST BE is available."
-
-      - name: CLI tests
-        uses: ./.github/workflows/cli-tests.yml
-        secrets: inherit
-        with:
-          make_target: ${{ matrix.make_target }}
+    name: CLI tests
+    uses: ./.github/workflows/cli-tests.yml
+    secrets: inherit
+    with:
+      make_target: ${{ matrix.make_target }}
