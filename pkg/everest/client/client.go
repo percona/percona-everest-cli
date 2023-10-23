@@ -25,6 +25,9 @@ import (
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
+	"github.com/percona/percona-everest-cli/pkg/cache"
+	"github.com/zitadel/oidc/v2/pkg/oidc"
+	"golang.org/x/oauth2"
 )
 
 // Everest is a connector to the Everest API.
@@ -43,12 +46,47 @@ func NewEverest(everestClient *client.Client) *Everest {
 }
 
 // NewEverestFromURL returns a new Everest from a provided URL.
-func NewEverestFromURL(url string) (*Everest, error) {
-	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url))
+func NewEverestFromURL(ctx context.Context, url string) (*Everest, error) {
+	cred, err := credentialsFromCache(url)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not read credentials from cache"))
+
+	}
+
+	opts := []client.ClientOption{}
+	if cred != nil {
+		cl := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{
+			AccessToken: cred.AccessToken,
+			// TODO: do we need to refresh token?
+			TokenType: cred.TokenType,
+		}))
+		opts = append(opts, client.WithHTTPClient(cl))
+	}
+
+	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url), opts...)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("could not initialize everest client"))
 	}
+
 	return NewEverest(everestCl), nil
+}
+
+func credentialsFromCache(issuer string) (*oidc.AccessTokenResponse, error) {
+	c, err := cache.ReadFile()
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Credentials == nil {
+		return nil, nil
+	}
+
+	token, ok := c.Credentials[issuer]
+	if !ok {
+		return nil, nil
+	}
+
+	return token, nil
 }
 
 // makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.

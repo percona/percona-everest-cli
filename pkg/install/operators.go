@@ -193,7 +193,7 @@ func (o *Operators) Run(ctx context.Context) error {
 	}
 
 	if o.everestClient == nil {
-		if err := o.configureEverestConnector(); err != nil {
+		if err := o.configureEverestConnector(ctx); err != nil {
 			return err
 		}
 	}
@@ -339,8 +339,8 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 	return nil
 }
 
-func (o *Operators) configureEverestConnector() error {
-	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
+func (o *Operators) configureEverestConnector(ctx context.Context) error {
+	cl, err := everestClient.NewEverestFromURL(ctx, o.config.Everest.Endpoint)
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (o *Operators) configureEverestConnector() error {
 
 // runWizard runs installation wizard.
 func (o *Operators) runWizard(ctx context.Context) error {
-	if err := o.runEverestWizard(); err != nil {
+	if err := o.runEverestWizard(ctx); err != nil {
 		return err
 	}
 
@@ -366,7 +366,7 @@ func (o *Operators) runWizard(ctx context.Context) error {
 	return o.runOperatorsWizard()
 }
 
-func (o *Operators) runEverestWizard() error {
+func (o *Operators) runEverestWizard(ctx context.Context) error {
 	pEndpoint := &survey.Input{
 		Message: "Everest URL",
 		Default: o.config.Everest.Endpoint,
@@ -375,7 +375,7 @@ func (o *Operators) runEverestWizard() error {
 		return err
 	}
 
-	if err := o.configureEverestConnector(); err != nil {
+	if err := o.configureEverestConnector(ctx); err != nil {
 		return err
 	}
 
