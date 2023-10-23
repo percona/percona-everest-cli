@@ -47,6 +47,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
+	everestVersion "github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // ClusterType defines type of cluster.
@@ -64,6 +65,7 @@ const (
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
+	postgresDeploymentName       = "percona-postgresql-operator"
 	everestDeploymentName        = "everest-operator-controller-manager"
 	psmdbOperatorContainerName   = "percona-server-mongodb-operator"
 	pxcOperatorContainerName     = "percona-xtradb-cluster-operator"
@@ -89,8 +91,11 @@ const (
 	pollDuration = 300 * time.Second
 )
 
-// ErrEmptyVersionTag Got an empty version tag from GitHub API.
-var ErrEmptyVersionTag error = errors.New("got an empty version tag from Github")
+var (
+	// ErrEmptyVersionTag Got an empty version tag from GitHub API.
+	ErrEmptyVersionTag       error = errors.New("got an empty version tag from Github")
+	errNoEverestOperatorPods       = errors.New("no instances of everest-operator are running")
+)
 
 // Kubernetes is a client for Kubernetes.
 type Kubernetes struct {
@@ -417,9 +422,9 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 }
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
-func (k *Kubernetes) InstallOLMOperator(ctx context.Context) error {
+func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
 	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
-	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" {
+	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
 	}
@@ -475,6 +480,18 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err != nil {
 		return errors.Join(err, errors.New("failed to read percona catalog file"))
 	}
+	o := make(map[string]interface{})
+	if err := yamlv3.Unmarshal(data, &o); err != nil {
+		return err
+	}
+
+	if err := unstructured.SetNestedField(o, everestVersion.CatalogImage(), "spec", "image"); err != nil {
+		return err
+	}
+	data, err = yamlv3.Marshal(o)
+	if err != nil {
+		return err
+	}
 
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Join(err, errors.New("cannot apply percona catalog file"))
@@ -505,7 +522,8 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 		applyFile := func(ctx context.Context) (bool, error) {
 			k.l.Debugf("Applying %q file", f)
 			if err := k.client.ApplyFile(data); err != nil {
-				k.l.Warn(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
+				k.l.Debug(errors.Join(err, fmt.Errorf("cannot apply %q file", f)))
+				k.l.Warn(fmt.Errorf("cannot apply %q file. Reapplying it", f))
 				return false, nil
 			}
 			return true, nil
@@ -612,8 +630,18 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 
 		return k.approveInstallPlan(ctx, req.Namespace, subs.Status.InstallPlanRef.Name)
 	})
+	if err != nil {
+		return err
+	}
+	deploymentName := req.Name
+	if req.Name == "everest-operator" {
+		deploymentName = everestDeploymentName
+	}
+	if req.Name == "victoriametrics-operator" {
+		deploymentName = "vm-operator-vm-operator"
+	}
 
-	return err
+	return k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: req.Namespace, Name: deploymentName})
 }
 
 func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installPlanName string) (bool, error) {
@@ -831,4 +859,85 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 	}
 
 	return nil
+}
+
+// RestartEverestOperator restarts everest pod.
+func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
+	var podsToRestart []corev1.Pod
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+		p, err := k.getEverestOperatorPods(ctx, namespace)
+		if err != nil {
+			return false, err
+		}
+		podsToRestart = p
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+	for _, pod := range podsToRestart {
+		err = k.client.DeletePod(ctx, namespace, pod.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+		pods, err := k.getEverestOperatorPods(ctx, namespace)
+		if err != nil {
+			return false, err
+		}
+		podsStatuses := map[string]struct{}{}
+		for _, pod := range pods {
+			pod := pod
+			for _, restartedPod := range podsToRestart {
+				if restartedPod.UID == pod.UID {
+					return false, nil
+				}
+			}
+			if pod.Status.Phase == corev1.PodRunning && pod.Status.ContainerStatuses[0].Ready {
+				podsStatuses[string(pod.UID)] = struct{}{}
+			}
+		}
+		return len(podsStatuses) == len(pods), nil
+	})
+}
+
+func (k *Kubernetes) getEverestOperatorPods(ctx context.Context, namespace string) ([]corev1.Pod, error) {
+	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"app.kubernetes.io/name": "everest-operator",
+			},
+		}),
+		FieldSelector: "status.phase=Running",
+	})
+	if err != nil {
+		return []corev1.Pod{}, err
+	}
+	if len(podList.Items) == 0 {
+		return []corev1.Pod{}, errNoEverestOperatorPods
+	}
+	return podList.Items, nil
+}
+
+// ListEngineDeploymentNames returns a string array containing found engine deployments for the Everest.
+func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace string) ([]string, error) {
+	names := []string{}
+	deploymentList, err := k.client.ListDeployments(ctx, namespace)
+	if err != nil {
+		return names, err
+	}
+	for _, deployment := range deploymentList.Items {
+		switch deployment.Name {
+		case pxcDeploymentName, psmdbDeploymentName, postgresDeploymentName:
+			names = append(names, deployment.Name)
+		}
+	}
+	return names, nil
+}
+
+// ApplyObject applies object.
+func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
+	return k.client.ApplyObject(obj)
 }

@@ -12,24 +12,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+import { test } from '@fixtures';
 
-// Package commands ...
-package commands
+test.describe('Everest CLI "version" validation', async () => {
+  test('version validation', async ({ cli }) => {
+    const out = await cli.everestExecSilent('version');
+    const version = await cli.exec('git describe --always --dirty|cut -b2-');
+    await version.assertSuccess();
 
-import (
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
+    await out.assertSuccess();
+    await out.outContainsNormalizedMany([
+      'ProjectName: everestctl',
+      'Version: ' + version.getStdOutLines()[0],
+    ]);
+  });
 
-	"github.com/percona/percona-everest-cli/commands/list"
-)
-
-func newListCmd(l *zap.SugaredLogger) *cobra.Command { //nolint:deadcode,unused
-	cmd := &cobra.Command{
-		Use: "list",
-	}
-
-	cmd.AddCommand(list.NewDatabaseEnginesCmd(l))
-	cmd.AddCommand(list.NewVersionsCmd(l))
-
-	return cmd
-}
+});

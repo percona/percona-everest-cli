@@ -695,7 +695,7 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 
 func (o *Operators) provisionOLM(ctx context.Context) error {
 	o.l.Info("Installing Operator Lifecycle Manager")
-	if err := o.kubeClient.InstallOLMOperator(ctx); err != nil {
+	if err := o.kubeClient.InstallOLMOperator(ctx, false); err != nil {
 		o.l.Error("failed installing OLM")
 		return err
 	}
@@ -711,6 +711,10 @@ func (o *Operators) provisionOLM(ctx context.Context) error {
 }
 
 func (o *Operators) provisionOperators(ctx context.Context) error {
+	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -735,7 +739,17 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 		return err
 	}
 
-	return o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)()
+	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
+		return err
+	}
+	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
+	if len(deploymentsBefore) != len(deploymentsAfter) {
+		return o.restartEverestOperatorPod(ctx)
+	}
+	return nil
 }
 
 func (o *Operators) installOperator(ctx context.Context, channel, operatorName string) func() error {
@@ -1001,4 +1015,8 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 	}
 
 	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
+}
+
+func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
+	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
 }

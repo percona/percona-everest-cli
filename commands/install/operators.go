@@ -65,7 +65,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
-	cmd.Flags().BoolP("monitoring.enable", "m", true, "Enable monitoring")
+	cmd.Flags().BoolP("monitoring.enable", "m", false, "Enable monitoring")
 	cmd.Flags().String("monitoring.instance-name", "",
 		"Monitoring instance name from Everest. If defined, other monitoring configuration is ignored",
 	)

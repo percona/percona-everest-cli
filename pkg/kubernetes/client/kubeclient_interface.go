@@ -40,6 +40,8 @@ type KubeClientConnector interface {
 	GetStorageClasses(ctx context.Context) (*storagev1.StorageClassList, error)
 	// GetDeployment returns deployment by name.
 	GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error)
+	// ListDeployments returns deployment by name.
+	ListDeployments(ctx context.Context, namespace string) (*appsv1.DeploymentList, error)
 	// GetSecret returns secret by name.
 	GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error)
 	// ListSecrets returns secrets.
@@ -52,6 +54,10 @@ type KubeClientConnector interface {
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods.
 	GetPods(ctx context.Context, namespace string, labelSelector *metav1.LabelSelector) (*corev1.PodList, error)
+	// ListPods lists pods.
+	ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error)
+	// DeletePod deletes a pod by given name in the given namespace.
+	DeletePod(ctx context.Context, namespace, name string) error
 	// GetNodes returns list of nodes.
 	GetNodes(ctx context.Context) (*corev1.NodeList, error)
 	// GetLogs returns logs for pod.

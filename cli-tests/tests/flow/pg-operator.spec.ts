@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { test } from '@fixtures';
+import { test, expect } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
 import { apiVerifyClusterExists } from '@support/backend';
@@ -62,9 +62,17 @@ test.describe('Everest CLI install operators', async () => {
     await apiVerifyClusterExists(request, clusterName);
 
     await test.step('re-run everest install operators command', async () => {
+      await page.waitForTimeout(60_000);
+      const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
+      await operator.assertSuccess();
+
       const out = await cli.everestExecSkipWizard(
         `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
       );
+      const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
+      await restartedOperator.assertSuccess();
+
+      expect(operator.getStdOutLines()[0]).not.toEqual(restartedOperator.getStdOutLines()[0]);
 
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([

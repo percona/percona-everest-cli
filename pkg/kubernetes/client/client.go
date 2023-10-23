@@ -84,6 +84,8 @@ const (
 
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
+
+	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
 // Each level has 2 spaces for PrefixWriter.
@@ -225,7 +227,7 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
-func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
+func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn,nolintlint
 	rcl, err := rest.HTTPClientFor(c.restConfig)
 	if err != nil {
 		return nil, err
@@ -337,6 +339,14 @@ func (c *Client) GetDeployment(ctx context.Context, name string, namespace strin
 		namespace = c.namespace
 	}
 	return c.clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// ListDeployments returns deployment by name.
+func (c *Client) ListDeployments(ctx context.Context, namespace string) (*appsv1.DeploymentList, error) {
+	if namespace == "" {
+		namespace = c.namespace
+	}
+	return c.clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 }
 
 // GetSecret returns secret by name.
@@ -488,6 +498,16 @@ func (c *Client) GetPods(
 	}
 
 	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
+}
+
+// ListPods lists pods.
+func (c *Client) ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
+	return c.clientset.CoreV1().Pods(namespace).List(ctx, options)
+}
+
+// DeletePod deletes a pod by given name in the given namespace.
+func (c *Client) DeletePod(ctx context.Context, namespace, name string) error {
+	return c.clientset.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 // GetNodes returns list of nodes.
@@ -1050,6 +1070,11 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
+	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+	if !ok || disableTelemetry != "true" {
+		disableTelemetry = "false"
+	}
+
 	subscription := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha1.SubscriptionKind,
@@ -1066,9 +1091,16 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			Channel:                channel,
 			StartingCSV:            startingCSV,
 			InstallPlanApproval:    approval,
+			Config: &v1alpha1.SubscriptionConfig{
+				Env: []corev1.EnvVar{
+					{
+						Name:  disableTelemetryEnvVar,
+						Value: disableTelemetry,
+					},
+				},
+			},
 		},
 	}
-
 	sub, err := operatorClient.
 		OperatorsV1alpha1().
 		Subscriptions(namespace).
