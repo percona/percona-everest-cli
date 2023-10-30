@@ -52,16 +52,19 @@ func NewEverestFromURL(url string) (*Everest, error) {
 	return NewEverest(everestCl), nil
 }
 
-func (e *Everest) SetConfig(config *rest.Config) error {
-	client := &http.Client{}
+func NewProxiedEverest(config *rest.Config) (*Everest, error) {
+	cl, err := client.NewClient(fmt.Sprintf("%s/api/v1/namespaces/percona-everest/services/everest/proxy/v1", config.Host))
+	if err != nil {
+		return nil, err
+	}
 	transport, err := rest.TransportFor(config)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	client.Transport = transport
-	e.cl.Client = client
-	e.cl.Server = fmt.Sprintf("%s/api/v1/namespaces/percona-everest/services/everest/proxy/v1", config.Host)
-	return nil
+	httpClient := &http.Client{Transport: transport}
+	e := NewEverest(cl)
+	e.cl.Client = httpClient
+	return e, nil
 }
 
 // makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.
@@ -82,8 +85,13 @@ func makeRequest[B interface{}, R interface{}](
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		return processErrorResponse(res, errorStatus)
 	}
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil
+	}
+	fmt.Println(string(data))
 
-	err = json.NewDecoder(res.Body).Decode(ret)
+	err = json.Unmarshal(data, ret)
 	if errors.Is(err, io.EOF) {
 		// In case the server returns no content, such as with the DELETE method,
 		// don't return an error.

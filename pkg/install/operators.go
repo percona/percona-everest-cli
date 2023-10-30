@@ -196,9 +196,11 @@ func (o *Operators) Run(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := o.everestClient.SetConfig(o.kubeClient.Config()); err != nil {
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+	if err != nil {
 		return err
 	}
+	o.everestClient = e
 
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
