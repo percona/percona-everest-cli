@@ -941,3 +941,7 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
 }
+
+func (k *Kubernetes) ProxyEverestRequest(ctx context.Context, path string) error {
+	return k.client.ProxyEverestRequest(ctx, path)
+}

@@ -929,6 +929,20 @@ func (_m *MockKubeClientConnector) ListSubscriptions(ctx context.Context, namesp
 	return r0, r1
 }
 
+// ProxyEverestRequest provides a mock function with given fields: ctx, path
+func (_m *MockKubeClientConnector) ProxyEverestRequest(ctx context.Context, path string) error {
+	ret := _m.Called(ctx, path)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, path)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // UpdateInstallPlan provides a mock function with given fields: ctx, namespace, installPlan
 func (_m *MockKubeClientConnector) UpdateInstallPlan(ctx context.Context, namespace string, installPlan *v1alpha1.InstallPlan) (*v1alpha1.InstallPlan, error) {
 	ret := _m.Called(ctx, namespace, installPlan)
