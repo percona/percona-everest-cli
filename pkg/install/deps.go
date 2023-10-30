@@ -20,11 +20,13 @@ import (
 	"context"
 
 	"github.com/percona/percona-everest-backend/client"
+	"k8s.io/client-go/rest"
 )
 
 //go:generate ../../bin/mockery --name=everestClientConnector --case=snake --inpackage --testonly
 
 type everestClientConnector interface {
+	SetConfig(*rest.Config) error
 	ListKubernetesClusters(
 		ctx context.Context,
 	) ([]client.KubernetesCluster, error)

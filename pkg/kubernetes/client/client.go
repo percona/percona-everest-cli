@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -465,6 +464,10 @@ func (c *Client) resourceClient( //nolint:ireturn
 		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
+}
+
+func (c *Client) Config() *rest.Config {
+	return c.restConfig
 }
 
 func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
@@ -1264,30 +1267,5 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 			return err
 		}
 	}
-	return nil
-}
-
-func (c *Client) ProxyEverestRequest(ctx context.Context, path string) error {
-	path = fmt.Sprintf("%s/api/v1/namespaces/percona-everest/services/everest/proxy/%s", c.restConfig.Host, path)
-	config := c.restConfig
-	client := http.Client{}
-	transport, err := rest.TransportFor(config)
-	if err != nil {
-		return err
-	}
-	client.Transport = transport
-	req, err := http.NewRequest(http.MethodGet, path, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(data))
 	return nil
 }

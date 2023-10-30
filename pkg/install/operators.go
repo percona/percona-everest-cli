@@ -191,17 +191,13 @@ func (o *Operators) Run(ctx context.Context) error {
 	if err := o.populateConfig(ctx); err != nil {
 		return err
 	}
-	if err := o.kubeClient.ProxyEverestRequest(ctx, "v1/kubernetes"); err != nil {
-		return err
-	}
-	if err := o.kubeClient.ProxyEverestRequest(ctx, "v1/kubernetes/id/database-engines"); err != nil {
-		return err
-	}
-
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
 		}
+	}
+	if err := o.everestClient.SetConfig(o.kubeClient.Config()); err != nil {
+		return err
 	}
 
 	if err := o.checkEverestConnection(ctx); err != nil {

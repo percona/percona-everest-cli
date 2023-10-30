@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 )
 
 // KubeClientConnector ...
@@ -50,6 +51,7 @@ type KubeClientConnector interface {
 	DeleteObject(obj runtime.Object) error
 	// ApplyObject applies object.
 	ApplyObject(obj runtime.Object) error
+	Config() *rest.Config
 	// GetPersistentVolumes returns Persistent Volumes available in the cluster.
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods.
@@ -104,7 +106,6 @@ type KubeClientConnector interface {
 	// DeleteFile accepts manifest file contents parses into []runtime.Object
 	// and deletes them from the cluster.
 	DeleteFile(fileBytes []byte) error
-	ProxyEverestRequest(ctx context.Context, path string) error
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.

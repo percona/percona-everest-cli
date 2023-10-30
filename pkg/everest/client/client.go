@@ -25,6 +25,7 @@ import (
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
+	"k8s.io/client-go/rest"
 )
 
 // Everest is a connector to the Everest API.
@@ -49,6 +50,18 @@ func NewEverestFromURL(url string) (*Everest, error) {
 		return nil, errors.Join(err, errors.New("could not initialize everest client"))
 	}
 	return NewEverest(everestCl), nil
+}
+
+func (e *Everest) SetConfig(config *rest.Config) error {
+	client := &http.Client{}
+	transport, err := rest.TransportFor(config)
+	if err != nil {
+		return err
+	}
+	client.Transport = transport
+	e.cl.Client = client
+	e.cl.Server = fmt.Sprintf("%s/api/v1/namespaces/percona-everest/services/everest/proxy/v1", config.Host)
+	return nil
 }
 
 // makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.

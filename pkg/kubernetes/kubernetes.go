@@ -44,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/rest"
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
@@ -144,6 +145,10 @@ func New(kubeconfigPath string, l *zap.SugaredLogger) (*Kubernetes, error) {
 		},
 		kubeconfig: kubeconfigPath,
 	}, nil
+}
+
+func (k *Kubernetes) Config() *rest.Config {
+	return k.client.Config()
 }
 
 // NewEmpty returns new Kubernetes object.
@@ -940,8 +945,4 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 // ApplyObject applies object.
 func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
-}
-
-func (k *Kubernetes) ProxyEverestRequest(ctx context.Context, path string) error {
-	return k.client.ProxyEverestRequest(ctx, path)
 }
