@@ -19,7 +19,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
@@ -65,7 +64,6 @@ func (e *Everest) ListMonitoringInstances(ctx context.Context) ([]client.Monitor
 			_ struct{},
 			r ...client.RequestEditorFn,
 		) (*http.Response, error) {
-			fmt.Println(e.cl.Server)
 			return e.cl.ListMonitoringInstances(ctx, r...)
 		},
 		struct{}{}, &res, errors.New("cannot list monitoring instances due to Everest error"),

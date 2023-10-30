@@ -85,13 +85,7 @@ func makeRequest[B interface{}, R interface{}](
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		return processErrorResponse(res, errorStatus)
 	}
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil
-	}
-	fmt.Println(string(data))
-
-	err = json.Unmarshal(data, ret)
+	err = json.NewDecoder(res.Body).Decode(ret)
 	if errors.Is(err, io.EOF) {
 		// In case the server returns no content, such as with the DELETE method,
 		// don't return an error.
