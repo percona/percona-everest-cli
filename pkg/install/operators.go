@@ -746,7 +746,7 @@ func (o *Operators) provisionOperators(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if len(deploymentsBefore) != len(deploymentsAfter) {
+	if len(deploymentsBefore) != 0 && len(deploymentsBefore) != len(deploymentsAfter) {
 		return o.restartEverestOperatorPod(ctx)
 	}
 	return nil
