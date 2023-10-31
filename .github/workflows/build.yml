@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set release version
-        run: echo "RELEASE_VERSION=${{ github.ref_name }}|cut -b2-" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=$(echo ${{ github.ref_name }}|cut -b2-)" >> $GITHUB_ENV
 
       - name: Build binaries
         run: |
