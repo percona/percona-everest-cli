@@ -191,17 +191,33 @@ func (o *Operators) Run(ctx context.Context) error {
 	if err := o.populateConfig(ctx); err != nil {
 		return err
 	}
+	if err := o.provisionNamespace(); err != nil {
+		return err
+	}
+	o.l.Info(fmt.Sprintf("Deploying everest to %s", o.config.Namespace))
+	installed, err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
+	if installed {
+		o.l.Info("Everest has been installed. Configuring connection")
+
+		e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+		if err != nil {
+			return err
+		}
+		o.everestClient = e
+	}
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
 		}
 	}
-	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+
+	err = o.performProvisioning(ctx)
 	if err != nil {
 		return err
 	}
-	o.everestClient = e
-
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
 		if errors.As(err, &u) {
@@ -216,12 +232,24 @@ func (o *Operators) Run(ctx context.Context) error {
 
 		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
-
 	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
 		return err
 	}
 
-	return o.performProvisioning(ctx)
+	if installed && !o.config.SkipWizard {
+		var expose bool
+		pExpose := &survey.Confirm{
+			Message: "Everest is not exposed and not accessible outside of the cluster. Do you want to expose it?",
+			Default: expose,
+		}
+		if err := survey.AskOne(pExpose, &expose); err != nil {
+			return err
+		}
+		if expose {
+			// Expose the service
+		}
+	}
+	return nil
 }
 
 func (o *Operators) populateConfig(ctx context.Context) error {
@@ -251,9 +279,6 @@ func (o *Operators) checkEverestConnection(ctx context.Context) error {
 }
 
 func (o *Operators) performProvisioning(ctx context.Context) error {
-	if err := o.provisionNamespace(); err != nil {
-		return err
-	}
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
@@ -372,28 +397,17 @@ func (o *Operators) runWizard(ctx context.Context) error {
 
 func (o *Operators) runEverestWizard() error {
 	pEndpoint := &survey.Input{
-		Message: "Everest URL",
+		Message: "Please provide an Everest URL. Leave it empty to deploy it automatically.",
 		Default: o.config.Everest.Endpoint,
 	}
 	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
 		return err
 	}
-
-	if err := o.configureEverestConnector(); err != nil {
-		return err
+	pNamespace := &survey.Input{
+		Message: "Namespace to deploy everest to",
+		Default: o.config.Namespace,
 	}
-
-	clusterName := o.kubeClient.ClusterName()
-	if o.config.Name != "" {
-		clusterName = o.config.Name
-	}
-
-	pName := &survey.Input{
-		Message: "Choose your Kubernetes Cluster name",
-		Default: clusterName,
-	}
-
-	return survey.AskOne(pName, &o.config.Name)
+	return survey.AskOne(pNamespace, &o.config.Namespace)
 }
 
 func (o *Operators) runMonitoringWizard(ctx context.Context) error {

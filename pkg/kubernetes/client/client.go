@@ -740,6 +740,26 @@ func (c *Client) ApplyFile(fileBytes []byte) error {
 	return nil
 }
 
+// ApplyFile accepts manifest file contents, parses into []runtime.Object
+// and applies them against the cluster.
+func (c *Client) ApplyFileNamespace(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i].(*unstructured.Unstructured)
+		if err := unstructured.SetNestedField(o.Object, namespace, "metadata", "namespace"); err != nil {
+			return err
+		}
+		err := c.ApplyObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
 	objs := []runtime.Object{}
 	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
@@ -1268,4 +1288,8 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 		}
 	}
 	return nil
+}
+
+func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
+	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }

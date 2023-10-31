@@ -69,6 +69,9 @@ type KubeClientConnector interface {
 	// ApplyFile accepts manifest file contents, parses into []runtime.Object
 	// and applies them against the cluster.
 	ApplyFile(fileBytes []byte) error
+	// ApplyFile accepts manifest file contents, parses into []runtime.Object
+	// and applies them against the cluster.
+	ApplyFileNamespace(fileBytes []byte, namespace string) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
 	// GetSubscriptionCSV retrieves a subscription CSV.
@@ -106,6 +109,7 @@ type KubeClientConnector interface {
 	// DeleteFile accepts manifest file contents parses into []runtime.Object
 	// and deletes them from the cluster.
 	DeleteFile(fileBytes []byte) error
+	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.

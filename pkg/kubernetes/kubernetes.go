@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
@@ -945,4 +947,36 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 // ApplyObject applies object.
 func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
+}
+func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
+	s, err := k.client.GetService(ctx, namespace, "percona-everest")
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return false, err
+	}
+	if s == nil {
+		return false, errors.New("could not find service for everest deployment")
+	}
+	data, err := k.getManifestData(everestVersion.ManifestURL())
+	if err != nil {
+		return false, err
+	}
+	err = k.client.ApplyFileNamespace(data, namespace)
+
+	if err != nil {
+		return false, err
+	}
+	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: "percona-everest", Namespace: namespace})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+
+}
+func (k *Kubernetes) getManifestData(manifestURL string) ([]byte, error) {
+	resp, err := http.Get(manifestURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
 }
