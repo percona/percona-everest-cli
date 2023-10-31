@@ -15,7 +15,10 @@ jobs:
         run: echo "IMAGE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make release
+        run: |
+          echo $IMAGE_TAG
+          git describe --always --dirty | cut -b2-
+          make release
 
       - name: Create release with binaries
         uses: softprops/action-gh-release@v1
