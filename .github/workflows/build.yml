@@ -12,10 +12,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set release version
-        run: echo "IMAGE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=$(echo ${{ github.ref_name }}|cut -b2-)" >> $GITHUB_ENV
 
       - name: Build binaries
-        run: make release
+        run: |
+          echo $IMAGE_TAG
+          git describe --always --dirty | cut -b2-
+          make release
 
       - name: Create release with binaries
         uses: softprops/action-gh-release@v1
