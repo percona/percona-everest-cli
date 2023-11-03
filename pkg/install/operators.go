@@ -194,6 +194,11 @@ func (o *Operators) Run(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
+
+	err = o.performProvisioning(ctx)
+	if err != nil {
+		return err
+	}
 	o.l.Info(fmt.Sprintf("Deploying everest to %s", o.config.Namespace))
 	installed, err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
 	if err != nil {
@@ -212,11 +217,6 @@ func (o *Operators) Run(ctx context.Context) error {
 		if err := o.configureEverestConnector(); err != nil {
 			return err
 		}
-	}
-
-	err = o.performProvisioning(ctx)
-	if err != nil {
-		return err
 	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
