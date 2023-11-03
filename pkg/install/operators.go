@@ -19,7 +19,6 @@ package install
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -32,8 +31,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -195,6 +192,11 @@ func (o *Operators) Run(ctx context.Context) error {
 		return err
 	}
 
+	if o.everestClient == nil {
+		if err := o.configureEverestConnector(); err != nil {
+			return err
+		}
+	}
 	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
@@ -211,11 +213,6 @@ func (o *Operators) Run(ctx context.Context) error {
 			return err
 		}
 		o.everestClient = e
-	}
-	if o.everestClient == nil {
-		if err := o.configureEverestConnector(); err != nil {
-			return err
-		}
 	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
@@ -282,12 +279,6 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 		return err
 	}
 
-	var k *client.KubernetesCluster
-	k, err := o.connectToEverest(ctx)
-	if err != nil {
-		return err
-	}
-
 	if o.config.Monitoring.Enable {
 		o.l.Info("Deploying VMAgent to k8s cluster")
 
@@ -295,7 +286,7 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 		// deployed yet and we get a HTTP 500 in this case.
 		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, k.Id, client.KubernetesClusterMonitoring{
+			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
 				Enable:                 true,
 				MonitoringInstanceName: o.monitoringInstanceName,
 			})
@@ -809,52 +800,6 @@ func (o *Operators) provisionMonitoring() error {
 	l.Info("K8s cluster monitoring has been provisioned successfully")
 
 	return nil
-}
-
-// connectToEverest connects the k8s cluster to Everest.
-func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesCluster, error) {
-	clusters, err := o.everestClient.ListKubernetesClusters(ctx)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not list kubernetes clusters"))
-	}
-	for _, cluster := range clusters {
-		if cluster.Name == o.config.Name {
-			ns, err := o.kubeClient.GetNamespace(ctx, cluster.Namespace)
-			if err != nil && !k8serrors.IsNotFound(err) {
-				return nil, errors.Join(err, errors.New("could not get namespace from Kubernetes"))
-			}
-
-			if ns.UID != types.UID(cluster.Uid) {
-				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new Kubernetes cluster using an existing name. Please unregister the existing Kubernetes cluster first")
-			}
-			// Cluster is already registered. Do nothing
-			return &cluster, nil
-		}
-	}
-	if err := o.prepareServiceAccount(); err != nil {
-		return nil, errors.Join(err, errors.New("could not prepare a service account"))
-	}
-
-	o.l.Info("Generating kubeconfig")
-	kubeconfig, err := o.getServiceAccountKubeConfig(ctx)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not get a new kubeconfig file for a service account"))
-	}
-
-	o.l.Info("Connecting your Kubernetes cluster to Everest")
-
-	k, err := o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
-		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
-		Name:       o.config.Name,
-		Namespace:  &o.config.Namespace,
-	})
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not register a new Kubernetes cluster with Everest"))
-	}
-
-	o.l.Info("Connected Kubernetes cluster to Everest")
-
-	return k, nil
 }
 
 func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
