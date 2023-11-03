@@ -195,8 +195,7 @@ func (o *Operators) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = o.performProvisioning(ctx)
-	if err != nil {
+	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
 	o.l.Info(fmt.Sprintf("Deploying everest to %s", o.config.Namespace))
