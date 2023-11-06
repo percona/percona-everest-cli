@@ -752,7 +752,38 @@ func (c *Client) ApplyFileNamespace(fileBytes []byte, namespace string) error {
 		if err := unstructured.SetNestedField(o.Object, namespace, "metadata", "namespace"); err != nil {
 			return err
 		}
-		err := c.ApplyObject(o)
+		kind, ok, err := unstructured.NestedString(o.Object, "kind")
+		if err != nil {
+			return err
+		}
+
+		if ok && kind == "ClusterRoleBinding" {
+			sub, ok, err := unstructured.NestedFieldNoCopy(o.Object, "subjects")
+			if err != nil {
+				return err
+			}
+
+			if !ok {
+				return nil
+			}
+
+			subjects, ok := sub.([]interface{})
+			if !ok {
+				return nil
+			}
+
+			for _, s := range subjects {
+				sub, ok := s.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
+					return err
+				}
+			}
+		}
+		err = c.ApplyObject(o)
 		if err != nil {
 			return err
 		}
