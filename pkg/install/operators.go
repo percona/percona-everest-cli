@@ -228,9 +228,6 @@ func (o *Operators) Run(ctx context.Context) error {
 
 		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
-	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-		return err
-	}
 
 	if installed && !o.config.SkipWizard {
 		var expose bool
@@ -280,6 +277,9 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.Enable {
+		if err := o.resolveMonitoringInstanceName(ctx); err != nil {
+			return err
+		}
 		o.l.Info("Deploying VMAgent to k8s cluster")
 
 		// We retry for a bit since the MonitoringConfig may not be properly
@@ -290,6 +290,7 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 				Enable:                 true,
 				MonitoringInstanceName: o.monitoringInstanceName,
 			})
+			fmt.Println(o.monitoringInstanceName)
 			if err != nil {
 				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
 				return false, nil
