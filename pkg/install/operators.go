@@ -191,6 +191,11 @@ func (o *Operators) Run(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+	if err != nil {
+		return err
+	}
+	o.everestClient = e
 
 	if o.everestClient == nil {
 		if err := o.configureEverestConnector(); err != nil {
