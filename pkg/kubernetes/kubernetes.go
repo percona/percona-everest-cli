@@ -869,10 +869,10 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 }
 
 // RestartEverestOperator restarts everest pod.
-func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
+func (k *Kubernetes) RestartEverest(ctx context.Context, name, namespace string) error {
 	var podsToRestart []corev1.Pod
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		p, err := k.getEverestOperatorPods(ctx, namespace)
+		p, err := k.getEverestPods(ctx, name, namespace)
 		if err != nil {
 			return false, err
 		}
@@ -890,7 +890,7 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	}
 
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, time.Minute, true, func(ctx context.Context) (bool, error) {
-		pods, err := k.getEverestOperatorPods(ctx, namespace)
+		pods, err := k.getEverestPods(ctx, name, namespace)
 		if err != nil {
 			return false, err
 		}
@@ -910,11 +910,11 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	})
 }
 
-func (k *Kubernetes) getEverestOperatorPods(ctx context.Context, namespace string) ([]corev1.Pod, error) {
+func (k *Kubernetes) getEverestPods(ctx context.Context, name, namespace string) ([]corev1.Pod, error) {
 	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				"app.kubernetes.io/name": "everest-operator",
+				"app.kubernetes.io/name": name,
 			},
 		}),
 		FieldSelector: "status.phase=Running",

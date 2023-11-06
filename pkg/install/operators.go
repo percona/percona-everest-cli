@@ -281,6 +281,9 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 			return err
 		}
 		o.l.Info("Deploying VMAgent to k8s cluster")
+		if err := o.kubeClient.RestartEverest(ctx, "percona-everest-backend", o.config.Namespace); err != nil {
+			return err
+		}
 
 		// We retry for a bit since the MonitoringConfig may not be properly
 		// deployed yet and we get a HTTP 500 in this case.
@@ -981,5 +984,5 @@ func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, er
 }
 
 func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
+	return o.kubeClient.RestartEverest(ctx, "everest-operator", o.config.Namespace)
 }
