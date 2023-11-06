@@ -281,13 +281,18 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 			return err
 		}
 		o.l.Info("Deploying VMAgent to k8s cluster")
+		e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+		if err != nil {
+			return err
+		}
+		o.everestClient = e
 		if err := o.kubeClient.RestartEverest(ctx, "percona-everest-backend", o.config.Namespace); err != nil {
 			return err
 		}
 
 		// We retry for a bit since the MonitoringConfig may not be properly
 		// deployed yet and we get a HTTP 500 in this case.
-		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
 			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
 				Enable:                 true,
