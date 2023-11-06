@@ -233,6 +233,41 @@ func (o *Operators) Run(ctx context.Context) error {
 
 		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
+	if o.config.Monitoring.Enable {
+		if err := o.resolveMonitoringInstanceName(ctx); err != nil {
+			return err
+		}
+		o.l.Info("Deploying VMAgent to k8s cluster")
+		e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
+		if err != nil {
+			return err
+		}
+		o.everestClient = e
+		if err := o.kubeClient.RestartEverest(ctx, "percona-everest-backend", o.config.Namespace); err != nil {
+			return err
+		}
+
+		// We retry for a bit since the MonitoringConfig may not be properly
+		// deployed yet and we get a HTTP 500 in this case.
+		err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
+			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
+				Enable:                 true,
+				MonitoringInstanceName: o.monitoringInstanceName,
+			})
+			if err != nil {
+				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
+				return false, nil
+			}
+
+			return true, nil
+		})
+		if err != nil {
+			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
+		}
+
+		o.l.Info("VMAgent deployed successfully")
+	}
 
 	if installed && !o.config.SkipWizard {
 		var expose bool
@@ -279,42 +314,6 @@ func (o *Operators) checkEverestConnection(ctx context.Context) error {
 func (o *Operators) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
-	}
-
-	if o.config.Monitoring.Enable {
-		if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-			return err
-		}
-		o.l.Info("Deploying VMAgent to k8s cluster")
-		e, err := everestClient.NewProxiedEverest(o.kubeClient.Config())
-		if err != nil {
-			return err
-		}
-		o.everestClient = e
-		if err := o.kubeClient.RestartEverest(ctx, "percona-everest-backend", o.config.Namespace); err != nil {
-			return err
-		}
-
-		// We retry for a bit since the MonitoringConfig may not be properly
-		// deployed yet and we get a HTTP 500 in this case.
-		err = wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
-				Enable:                 true,
-				MonitoringInstanceName: o.monitoringInstanceName,
-			})
-			if err != nil {
-				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
-				return false, nil
-			}
-
-			return true, nil
-		})
-		if err != nil {
-			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
-		}
-
-		o.l.Info("VMAgent deployed successfully")
 	}
 
 	if err := o.createEverestBackupStorage(ctx); err != nil {
