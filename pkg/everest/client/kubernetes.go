@@ -19,7 +19,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
@@ -95,7 +94,6 @@ func (e *Everest) SetKubernetesClusterMonitoring(
 			kubernetesID string,
 			r ...client.RequestEditorFn,
 		) (*http.Response, error) {
-			fmt.Println(e.cl.Server)
 			return e.cl.SetKubernetesClusterMonitoring(ctx, kubernetesID, body, r...)
 		},
 		kubernetesID, res, errors.New("cannot configure Kubernetes cluster monitoring due to Everest error"),

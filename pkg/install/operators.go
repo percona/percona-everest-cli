@@ -293,7 +293,6 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 				Enable:                 true,
 				MonitoringInstanceName: o.monitoringInstanceName,
 			})
-			fmt.Println(o.monitoringInstanceName)
 			if err != nil {
 				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
 				return false, nil
