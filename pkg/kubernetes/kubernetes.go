@@ -917,7 +917,6 @@ func (k *Kubernetes) getEverestPods(ctx context.Context, name, namespace string)
 				"app.kubernetes.io/name": name,
 			},
 		}),
-		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
 		return []corev1.Pod{}, err
