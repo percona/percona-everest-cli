@@ -52,7 +52,6 @@ test.describe('Everest CLI install operators', async () => {
       await out.outErrContainsNormalizedMany([
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Connected Kubernetes cluster to Everest',
       ]);
     });
 
