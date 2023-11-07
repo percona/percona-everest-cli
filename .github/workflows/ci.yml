@@ -230,26 +230,6 @@ jobs:
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
 
-      - name: Checkout Everest backend repo
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.ROBOT_TOKEN }}
-          repository: percona/percona-everest-backend
-          ref: 'main'
-          path: percona-everest-backend
-
-      - name: Set up Go release for Everest BE
-        uses: percona-platform/setup-go@v4
-        with:
-          go-version-file: './percona-everest-backend/go.mod'
-
-      - name: Run Everest backend
-        working-directory: percona-everest-backend
-        run: |
-          make local-env-up
-          SECRETS_ROOT_KEY=$(openssl rand -base64 32) make run-debug &
-
-
       - name: Set up Go release for CLI
         uses: percona-platform/setup-go@v4
         with:
@@ -267,16 +247,6 @@ jobs:
         env:
           ROBOT_TOKEN: ${{ secrets.ROBOT_TOKEN }}
         run: git config --global url."https://percona-platform-robot:${ROBOT_TOKEN}@github.com".insteadOf "https://github.com"
-
-      - name: Wait for EVEREST BE to be available
-        timeout-minutes: 15
-        run: |
-          while ! curl -sSf http://127.0.0.1:8080 > /dev/null; do
-            echo "Waiting for EVEREST BE..."
-            sleep 15
-          done
-          echo "EVEREST BE is available."
-
 
       - name: Run integration tests
         working-directory: cli-tests
