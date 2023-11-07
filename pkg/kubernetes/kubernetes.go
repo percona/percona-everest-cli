@@ -147,6 +147,7 @@ func New(kubeconfigPath string, l *zap.SugaredLogger) (*Kubernetes, error) {
 	}, nil
 }
 
+// Config returns *rest.Config.
 func (k *Kubernetes) Config() *rest.Config {
 	return k.client.Config()
 }
@@ -866,7 +867,7 @@ func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{},
 	return nil
 }
 
-// RestartEverestOperator restarts everest pod.
+// RestartEverest restarts everest pod.
 func (k *Kubernetes) RestartEverest(ctx context.Context, name, namespace string) error {
 	var podsToRestart []corev1.Pod
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
@@ -946,6 +947,7 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
 }
 
+// InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
 	s, err := k.client.GetService(ctx, namespace, "percona-everest")
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -954,11 +956,16 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 	if s == nil {
 		return false, errors.New("could not find service for everest deployment")
 	}
-	data, err := k.getManifestData(everestVersion.ManifestURL())
+	data, err := k.getManifestData(ctx)
 	if err != nil {
 		return false, err
 	}
-	err = k.client.ApplyFileNamespace(data, namespace)
+	newData, err := k.applyTemplateCustomization(namespace, data)
+	if err != nil {
+		return false, errors.New("cannot apply customizations to the Everest manifest file")
+	}
+
+	err = k.client.ApplyFile(newData)
 
 	if err != nil {
 		return false, err
@@ -970,11 +977,15 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 	return true, nil
 }
 
-func (k *Kubernetes) getManifestData(manifestURL string) ([]byte, error) {
-	resp, err := http.Get(manifestURL)
+func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, everestVersion.ManifestURL(), nil)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close() //nolint:errcheck
 	return io.ReadAll(resp.Body)
 }

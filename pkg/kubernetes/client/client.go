@@ -452,9 +452,7 @@ func (c *Client) retrieveMetaFromObject(obj runtime.Object) (string, string, err
 	return namespace, name, nil
 }
 
-func (c *Client) resourceClient( //nolint:ireturn
-	gv schema.GroupVersion,
-) (rest.Interface, error) {
+func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) { //nolint:ireturn
 	cfg := c.restConfig
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
@@ -466,6 +464,7 @@ func (c *Client) resourceClient( //nolint:ireturn
 	return rest.RESTClientFor(cfg)
 }
 
+// Config returns stored *rest.Config.
 func (c *Client) Config() *rest.Config {
 	return c.restConfig
 }
@@ -733,57 +732,6 @@ func (c *Client) ApplyFile(fileBytes []byte) error {
 	}
 	for i := range objs {
 		err := c.ApplyObject(objs[i])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// ApplyFile accepts manifest file contents, parses into []runtime.Object
-// and applies them against the cluster.
-func (c *Client) ApplyFileNamespace(fileBytes []byte, namespace string) error {
-	objs, err := c.getObjects(fileBytes)
-	if err != nil {
-		return err
-	}
-	for i := range objs {
-		o := objs[i].(*unstructured.Unstructured)
-		if err := unstructured.SetNestedField(o.Object, namespace, "metadata", "namespace"); err != nil {
-			return err
-		}
-		kind, ok, err := unstructured.NestedString(o.Object, "kind")
-		if err != nil {
-			return err
-		}
-
-		if ok && kind == "ClusterRoleBinding" {
-			sub, ok, err := unstructured.NestedFieldNoCopy(o.Object, "subjects")
-			if err != nil {
-				return err
-			}
-
-			if !ok {
-				return nil
-			}
-
-			subjects, ok := sub.([]interface{})
-			if !ok {
-				return nil
-			}
-
-			for _, s := range subjects {
-				sub, ok := s.(map[string]interface{})
-				if !ok {
-					continue
-				}
-
-				if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
-					return err
-				}
-			}
-		}
-		err = c.ApplyObject(o)
 		if err != nil {
 			return err
 		}
@@ -1321,6 +1269,7 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 	return nil
 }
 
+// GetService returns k8s service by provided namespace and name.
 func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
 	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }

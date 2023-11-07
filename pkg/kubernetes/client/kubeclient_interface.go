@@ -51,6 +51,7 @@ type KubeClientConnector interface {
 	DeleteObject(obj runtime.Object) error
 	// ApplyObject applies object.
 	ApplyObject(obj runtime.Object) error
+	// Config returns stored *rest.Config.
 	Config() *rest.Config
 	// GetPersistentVolumes returns Persistent Volumes available in the cluster.
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
@@ -69,9 +70,6 @@ type KubeClientConnector interface {
 	// ApplyFile accepts manifest file contents, parses into []runtime.Object
 	// and applies them against the cluster.
 	ApplyFile(fileBytes []byte) error
-	// ApplyFile accepts manifest file contents, parses into []runtime.Object
-	// and applies them against the cluster.
-	ApplyFileNamespace(fileBytes []byte, namespace string) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
 	// GetSubscriptionCSV retrieves a subscription CSV.

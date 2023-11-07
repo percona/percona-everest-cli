@@ -52,8 +52,12 @@ func NewEverestFromURL(url string) (*Everest, error) {
 	return NewEverest(everestCl), nil
 }
 
-func NewProxiedEverest(config *rest.Config) (*Everest, error) {
-	cl, err := client.NewClient(fmt.Sprintf("%s/api/v1/namespaces/percona-everest/services/everest/proxy/v1", config.Host))
+// NewProxiedEverest creates everest client by proxying requests into the k8s service using k8s api.
+// Learn more https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster-services/#manually-constructing-apiserver-proxy-urls
+//
+// This client must be used only for provisioning only.
+func NewProxiedEverest(config *rest.Config, namespace string) (*Everest, error) {
+	cl, err := client.NewClient(fmt.Sprintf("%s/api/v1/namespaces/%s/services/everest/proxy/v1", namespace, config.Host))
 	if err != nil {
 		return nil, err
 	}

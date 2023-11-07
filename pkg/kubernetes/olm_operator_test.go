@@ -22,8 +22,8 @@ import (
 
 	v1 "github.com/operator-framework/api/pkg/operators/v1"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +38,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	k8sclient := &client.MockKubeClientConnector{}
 
 	l, err := zap.NewDevelopment()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	olms := NewEmpty(l.Sugar())
 	olms.client = k8sclient
@@ -55,7 +55,7 @@ func TestInstallOlmOperator(t *testing.T) {
 		k8sclient.On("GetSubscriptionCSV", ctx, mock.Anything).Return(types.NamespacedName{}, nil)
 		k8sclient.On("DoRolloutWait", ctx, mock.Anything).Return(nil)
 		err := olms.InstallOLMOperator(ctx, false)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	//nolint:paralleltest
@@ -97,6 +97,6 @@ func TestInstallOlmOperator(t *testing.T) {
 		).Return(mockInstallPlan, nil)
 		k8sclient.On("UpdateInstallPlan", mock.Anything, subscriptionNamespace, mockInstallPlan).Return(mockInstallPlan, nil)
 		err := olms.InstallOperator(ctx, params)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }

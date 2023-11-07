@@ -42,20 +42,6 @@ func (_m *MockKubeClientConnector) ApplyFile(fileBytes []byte) error {
 	return r0
 }
 
-// ApplyFileNamespace provides a mock function with given fields: fileBytes, namespace
-func (_m *MockKubeClientConnector) ApplyFileNamespace(fileBytes []byte, namespace string) error {
-	ret := _m.Called(fileBytes, namespace)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, string) error); ok {
-		r0 = rf(fileBytes, namespace)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // ApplyObject provides a mock function with given fields: obj
 func (_m *MockKubeClientConnector) ApplyObject(obj runtime.Object) error {
 	ret := _m.Called(obj)

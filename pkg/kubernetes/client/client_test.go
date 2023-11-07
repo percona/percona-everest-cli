@@ -71,7 +71,7 @@ func TestGetSecretsForServiceAccount(t *testing.T) {
 	ctx := context.Background()
 	secret, err := client.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	assert.NotNil(t, secret, "secret is nil")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetSecretsForServiceAccountNoSecrets(t *testing.T) {
@@ -88,7 +88,7 @@ func TestGetSecretsForServiceAccountNoSecrets(t *testing.T) {
 	ctx := context.Background()
 	secret, err := client.GetSecretsForServiceAccount(ctx, "pmm-service-account")
 	assert.Nil(t, secret, "secret is not nil")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestGetServerVersion(t *testing.T) {
@@ -166,10 +166,10 @@ func TestGetPods(t *testing.T) {
 
 				pods, err := client.GetPods(context.Background(), test.inputNamespace, nil)
 				if test.err == nil {
-					assert.NoError(t, err)
-					assert.Equal(t, test.countExpectedPods, len(pods.Items))
+					require.NoError(t, err)
+					assert.Len(t, test.countExpectedPods, len(pods.Items))
 				} else {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Equal(t, test.err, err)
 				}
 			}
@@ -313,10 +313,10 @@ func TestListCRDs(t *testing.T) {
 
 				crds, err := client.ListCRDs(context.Background(), test.inputLabelSelector)
 				if test.err == nil {
-					assert.NoError(t, err)
-					assert.Equal(t, test.countExpectedCRDs, len(crds.Items))
+					require.NoError(t, err)
+					assert.Len(t, test.countExpectedCRDs, len(crds.Items))
 				} else {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Equal(t, test.err, err)
 				}
 			}
@@ -632,10 +632,10 @@ func TestListCRs(t *testing.T) {
 
 				crds, err := client.ListCRs(context.Background(), test.inputNamespace, test.inputGVR, test.inputLabelSelector)
 				if test.err == nil {
-					assert.NoError(t, err)
-					assert.Equal(t, test.countExpectedCRs, len(crds.Items))
+					require.NoError(t, err)
+					assert.Len(t, test.countExpectedCRs, len(crds.Items))
 				} else {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Equal(t, test.err, err)
 				}
 			}
