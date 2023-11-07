@@ -29,8 +29,6 @@ import (
 	"strings"
 	"time"
 
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
@@ -38,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -894,7 +893,7 @@ func (k *Kubernetes) RestartEverest(ctx context.Context, name, namespace string)
 		if err != nil {
 			return false, err
 		}
-		podsStatuses := map[string]struct{}{}
+		podsStatuses := make(map[string]struct{})
 		for _, pod := range pods {
 			pod := pod
 			for _, restartedPod := range podsToRestart {
@@ -947,6 +946,7 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
 }
+
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
 	s, err := k.client.GetService(ctx, namespace, "percona-everest")
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -969,8 +969,8 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 		return false, err
 	}
 	return true, nil
-
 }
+
 func (k *Kubernetes) getManifestData(manifestURL string) ([]byte, error) {
 	resp, err := http.Get(manifestURL)
 	if err != nil {
