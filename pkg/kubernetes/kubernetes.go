@@ -36,7 +36,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -949,7 +948,7 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
 	s, err := k.client.GetService(ctx, namespace, "percona-everest")
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return false, err
 	}
 	if s == nil {
