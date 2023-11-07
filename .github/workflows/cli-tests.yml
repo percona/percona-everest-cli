@@ -72,7 +72,7 @@ jobs:
       - name: Set up Go release for CLI
         uses: percona-platform/setup-go@v4
         with:
-          go-version-file: './go.mod'
+          go-version: ${{ matrix.go-version }}
 
       - name: Build CLI binary
         run: |
