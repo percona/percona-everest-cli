@@ -167,7 +167,7 @@ func TestGetPods(t *testing.T) {
 				pods, err := client.GetPods(context.Background(), test.inputNamespace, nil)
 				if test.err == nil {
 					require.NoError(t, err)
-					assert.Len(t, test.countExpectedPods, len(pods.Items))
+					assert.Equal(t, test.countExpectedPods, len(pods.Items)) //nolint:testifylint
 				} else {
 					require.Error(t, err)
 					assert.Equal(t, test.err, err)
@@ -314,7 +314,7 @@ func TestListCRDs(t *testing.T) {
 				crds, err := client.ListCRDs(context.Background(), test.inputLabelSelector)
 				if test.err == nil {
 					require.NoError(t, err)
-					assert.Len(t, test.countExpectedCRDs, len(crds.Items))
+					assert.Equal(t, test.countExpectedCRDs, len(crds.Items)) //nolint:testifylint
 				} else {
 					require.Error(t, err)
 					assert.Equal(t, test.err, err)
@@ -633,7 +633,7 @@ func TestListCRs(t *testing.T) {
 				crds, err := client.ListCRs(context.Background(), test.inputNamespace, test.inputGVR, test.inputLabelSelector)
 				if test.err == nil {
 					require.NoError(t, err)
-					assert.Len(t, test.countExpectedCRs, len(crds.Items))
+					assert.Equal(t, test.countExpectedCRs, len(crds.Items)) //nolint:testifylint
 				} else {
 					require.Error(t, err)
 					assert.Equal(t, test.err, err)
