@@ -43,7 +43,7 @@ test.describe('Everest CLI install operators', async () => {
 
     await test.step('run everest install operators command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install operators --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
