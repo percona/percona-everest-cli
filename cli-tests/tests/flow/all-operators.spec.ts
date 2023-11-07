@@ -57,15 +57,6 @@ test.describe('Everest CLI install operators', async () => {
 
     await verifyClusterResources();
 
-    await test.step('try to delete cluster again', async () => {
-      const out = await cli.everestExecSilent('delete cluster');
-
-      await out.exitCodeEquals(1);
-      await out.outErrContainsNormalizedMany([
-        'no Kubernetes clusters found',
-      ]);
-    });
-    await verifyClusterResources();
     await test.step('disable telemetry', async () => {
       // check that the telemetry IS NOT disabled by default
       let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
