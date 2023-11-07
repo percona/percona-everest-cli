@@ -777,12 +777,8 @@ func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 		// retry 3 times because applying vmagent spec might take some time.
 		for i := 0; i < 3; i++ {
 			k.l.Debugf("Applying file %s", path)
-			newFile, err := k.applyTemplateCustomization(namespace, file)
-			if err != nil {
-				return errors.Join(err, fmt.Errorf("cannot apply customizations to file: %q", path))
-			}
 
-			err = k.client.ApplyFile(newFile)
+			err = k.client.ApplyManifestFile(file, namespace)
 			if err != nil {
 				k.l.Debugf("%s: retrying after error: %s", path, err)
 				time.Sleep(10 * time.Second)
@@ -812,59 +808,6 @@ func (k *Kubernetes) victoriaMetricsCRDFiles() []string {
 		"crds/victoriametrics/kube-state-metrics/service.yaml",
 		"crds/victoriametrics/kube-state-metrics.yaml",
 	}
-}
-
-func (k *Kubernetes) applyTemplateCustomization(namespace string, contents []byte) ([]byte, error) {
-	o := make(map[string]interface{})
-	if err := yamlv3.Unmarshal(contents, &o); err != nil {
-		return nil, err
-	}
-
-	if err := unstructured.SetNestedField(o, namespace, "metadata", "namespace"); err != nil {
-		return nil, err
-	}
-
-	kind, ok, err := unstructured.NestedString(o, "kind")
-	if err != nil {
-		return nil, err
-	}
-
-	if ok && kind == "ClusterRoleBinding" {
-		if err := k.updateClusterRoleBindingNamespace(o, namespace); err != nil {
-			return nil, err
-		}
-	}
-
-	return yamlv3.Marshal(o)
-}
-
-func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{}, namespace string) error {
-	sub, ok, err := unstructured.NestedFieldNoCopy(o, "subjects")
-	if err != nil {
-		return err
-	}
-
-	if !ok {
-		return nil
-	}
-
-	subjects, ok := sub.([]interface{})
-	if !ok {
-		return nil
-	}
-
-	for _, s := range subjects {
-		sub, ok := s.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // RestartEverest restarts everest pod.
@@ -960,12 +903,8 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 	if err != nil {
 		return false, err
 	}
-	newData, err := k.applyTemplateCustomization(namespace, data)
-	if err != nil {
-		return false, errors.New("cannot apply customizations to the Everest manifest file")
-	}
 
-	err = k.client.ApplyFile(newData)
+	err = k.client.ApplyManifestFile(data, namespace)
 
 	if err != nil {
 		return false, err
