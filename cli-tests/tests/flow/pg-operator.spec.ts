@@ -15,7 +15,6 @@
 import { test, expect } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
-import { cliDeleteCluster } from '@support/everest-cli';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
@@ -82,8 +81,6 @@ test.describe('Everest CLI install operators', async () => {
     });
     await page.waitForTimeout(10_000);
 
-    await verifyClusterResources();
-    await cliDeleteCluster(cli, request, clusterName);
     await verifyClusterResources();
   });
 });
