@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/go-logr/zapr v1.2.4
 	github.com/hashicorp/go-version v1.6.0
-	github.com/operator-framework/api v0.17.7
+	github.com/operator-framework/api v0.19.0
 	github.com/operator-framework/operator-lifecycle-manager v0.25.0
 	github.com/percona/everest-operator v0.3.0
 	github.com/percona/percona-everest-backend v0.3.0
