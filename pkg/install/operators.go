@@ -199,20 +199,6 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 	if installed {
 		o.l.Info("Everest has been installed. Configuring connection")
 	}
-	if err := o.checkEverestConnection(ctx); err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Debug(err)
-
-			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-			l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this machine.",
-			)
-			return common.ErrExitWithError
-		}
-
-		return errors.Join(err, errors.New("could not check connection to Everest"))
-	}
 	if o.config.Monitoring.Enable {
 		if err := o.provisionMonitoring(ctx); err != nil {
 			return err
@@ -235,6 +221,20 @@ func (o *Operators) provisionMonitoring(ctx context.Context) error {
 	o.l.Info("Deploying VMAgent to k8s cluster")
 	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
 		return err
+	}
+	if err := o.checkEverestConnection(ctx); err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+
+			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+			l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this machine.",
+			)
+			return common.ErrExitWithError
+		}
+
+		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
 
 	// We retry for a bit since the MonitoringConfig may not be properly
