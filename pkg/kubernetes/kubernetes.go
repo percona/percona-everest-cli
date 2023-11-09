@@ -63,6 +63,8 @@ const (
 	ClusterTypeEKS ClusterType = "eks"
 	// ClusterTypeGeneric is a generic type.
 	ClusterTypeGeneric ClusterType = "generic"
+	//PerconaEverestDeploymentName stores the name of everest backend deployment.
+	PerconaEverestDeploymentName = "percona-everest"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
@@ -892,7 +894,7 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 
 // InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
-	s, err := k.client.GetService(ctx, namespace, "percona-everest")
+	s, err := k.client.GetService(ctx, namespace, PerconaEverestDeploymentName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, err
 	}
@@ -909,7 +911,7 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 	if err != nil {
 		return false, err
 	}
-	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: "percona-everest", Namespace: namespace})
+	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: PerconaEverestDeploymentName, Namespace: namespace})
 	if err != nil {
 		return false, err
 	}

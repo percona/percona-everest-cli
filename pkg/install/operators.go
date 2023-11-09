@@ -49,15 +49,16 @@ type Operators struct {
 }
 
 const (
-	catalogSourceNamespace = "olm"
-	operatorGroup          = "percona-operators-group"
-	catalogSource          = "percona-everest-catalog"
-	everestOperatorName    = "everest-operator"
-	pxcOperatorName        = "percona-xtradb-cluster-operator"
-	psmdbOperatorName      = "percona-server-mongodb-operator"
-	pgOperatorName         = "percona-postgresql-operator"
-	vmOperatorName         = "victoriametrics-operator"
-	operatorInstallThreads = 1
+	catalogSourceNamespace    = "olm"
+	everestBackendServiceName = "percona-everest-backend"
+	operatorGroup             = "percona-operators-group"
+	catalogSource             = "percona-everest-catalog"
+	everestOperatorName       = "everest-operator"
+	pxcOperatorName           = "percona-xtradb-cluster-operator"
+	psmdbOperatorName         = "percona-server-mongodb-operator"
+	pgOperatorName            = "percona-postgresql-operator"
+	vmOperatorName            = "victoriametrics-operator"
+	operatorInstallThreads    = 1
 )
 
 type (
@@ -239,7 +240,7 @@ func (o *Operators) provisionMonitoring(ctx context.Context) error {
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if err := o.kubeClient.RestartEverest(ctx, "percona-everest-backend", o.config.Namespace); err != nil {
+	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
 		return err
 	}
 
