@@ -29,7 +29,7 @@ const (
 	devCatalogImage     = "docker.io/percona/everest-catalog:latest"
 	releaseCatalogImage = "docker.io/percona/everest-catalog:%s"
 	devManifestURL      = "https://raw.githubusercontent.com/percona/percona-everest-backend/ebc51647a697f3e91c5fbc10dc620c363fcb1ca9/deploy/quickstart-k8s.yaml"
-	releaseManifestURL  = "https://raw.githubusercontent.com/percona/percona-everest-backend/%s/deploy/quickstart-k8s.yaml"
+	releaseManifestURL  = "https://raw.githubusercontent.com/percona/percona-everest-backend/v%s/deploy/quickstart-k8s.yaml"
 )
 
 var (
@@ -45,8 +45,8 @@ var (
 
 // CatalogImage returns a catalog image needed for the build of everestctl
 //
-// for dev builds it returns everest-catalog:latest
-// for the release it returns everest-catalog:X.Y.Z.
+// for dev builds it returns https://raw.githubusercontent.com/percona/percona-everest-backend/main/deploy/quickstart-k8s.yaml
+// for the release builds it returns https://raw.githubusercontent.com/percona/percona-everest-backend/vX.Y.Z/deploy/quickstart-k8s.yaml
 func CatalogImage() string {
 	catalogImage = devCatalogImage
 	v, err := goversion.NewSemver(Version)
