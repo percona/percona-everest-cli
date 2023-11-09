@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/percona/percona-everest-backend/client"
 	"k8s.io/client-go/rest"
@@ -57,7 +58,13 @@ func NewEverestFromURL(url string) (*Everest, error) {
 //
 // This client must be used only for provisioning only.
 func NewProxiedEverest(config *rest.Config, namespace string) (*Everest, error) {
-	cl, err := client.NewClient(fmt.Sprintf("%s/api/v1/namespaces/%s/services/everest/proxy/v1", config.Host, namespace))
+	cl, err := client.NewClient(
+		fmt.Sprintf(
+			"%s/api/v1/namespaces/%s/services/everest/proxy/v1",
+			url.PathEscape(config.Host),
+			url.PathEscape(namespace),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}
