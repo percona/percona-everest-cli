@@ -59,7 +59,6 @@ func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 }
 
 func initOperatorsFlags(cmd *cobra.Command) {
-	cmd.Flags().String("everest.endpoint", "", "Everest endpoint URL")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
@@ -89,8 +88,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 }
 
 func initOperatorsViperFlags(cmd *cobra.Command) {
-	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))           //nolint:errcheck,gosec
+	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                       //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec

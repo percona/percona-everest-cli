@@ -77,15 +77,8 @@ type (
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
 		Channel    ChannelConfig
-		Everest    EverestConfig
 		Monitoring MonitoringConfig
 		Operator   OperatorConfig
-	}
-
-	// EverestConfig stores config for Everest.
-	EverestConfig struct {
-		// Endpoint stores URL to Everest.
-		Endpoint string
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -316,20 +309,11 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 }
 
 func (o *Operators) configureEverestConnector() error {
-	if o.config.Everest.Endpoint == "" {
-		e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace)
-		if err != nil {
-			return err
-		}
-		o.everestClient = e
-		return nil
-	}
-	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace)
 	if err != nil {
 		return err
 	}
-	o.everestClient = cl
-
+	o.everestClient = e
 	return nil
 }
 
@@ -347,13 +331,6 @@ func (o *Operators) runWizard(ctx context.Context) error {
 }
 
 func (o *Operators) runEverestWizard() error {
-	pEndpoint := &survey.Input{
-		Message: "Please provide an Everest URL. Leave it empty to deploy it automatically.",
-		Default: o.config.Everest.Endpoint,
-	}
-	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
-		return err
-	}
 	pNamespace := &survey.Input{
 		Message: "Namespace to deploy everest to",
 		Default: o.config.Namespace,
