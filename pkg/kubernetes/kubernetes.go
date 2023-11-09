@@ -899,7 +899,7 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool
 		return false, errors.Join(err, errors.New("could not get everest service"))
 	}
 	if s == nil {
-		return false, errors.New("could not find service for everest deployment")
+		return false, fmt.Errorf("service %s/%s is not found", namespace, perconaEverestDeploymentName)
 	}
 	data, err := k.getManifestData(ctx)
 	if err != nil {
