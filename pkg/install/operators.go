@@ -332,7 +332,7 @@ func (o *Operators) runWizard(ctx context.Context) error {
 
 func (o *Operators) runEverestWizard() error {
 	pNamespace := &survey.Input{
-		Message: "Namespace to deploy everest to",
+		Message: "Namespace to deploy Everest to",
 		Default: o.config.Namespace,
 	}
 	return survey.AskOne(pNamespace, &o.config.Namespace)
