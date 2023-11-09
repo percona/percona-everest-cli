@@ -103,7 +103,6 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.outContainsNormalizedMany([
       'Usage:',
       'Flags:',
-      '--everest.endpoint',
       '-h, --help',
       '-k, --kubeconfig',
       '--skip-wizard',
