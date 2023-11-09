@@ -28,7 +28,7 @@ import (
 const (
 	devCatalogImage     = "docker.io/percona/everest-catalog:latest"
 	releaseCatalogImage = "docker.io/percona/everest-catalog:%s"
-	devManifestURL      = "https://raw.githubusercontent.com/percona/percona-everest-backend/d3ac61151341658f8a63caeb0a54edf5435e48b5/deploy/quickstart-k8s.yaml"
+	devManifestURL      = "https://raw.githubusercontent.com/percona/percona-everest-backend/ebc51647a697f3e91c5fbc10dc620c363fcb1ca9/deploy/quickstart-k8s.yaml"
 	releaseManifestURL  = "https://raw.githubusercontent.com/percona/percona-everest-backend/%s/deploy/quickstart-k8s.yaml"
 )
 
