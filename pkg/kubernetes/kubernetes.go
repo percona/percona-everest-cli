@@ -896,24 +896,24 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
 	s, err := k.client.GetService(ctx, namespace, perconaEverestDeploymentName)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return false, err
+		return false, errors.Join(err, errors.New("could not get everest service"))
 	}
 	if s == nil {
 		return false, errors.New("could not find service for everest deployment")
 	}
 	data, err := k.getManifestData(ctx)
 	if err != nil {
-		return false, err
+		return false, errors.Join(err, errors.New("failed downloading everest monitoring file"))
 	}
 
 	err = k.client.ApplyManifestFile(data, namespace)
 
 	if err != nil {
-		return false, err
+		return false, errors.Join(err, errors.New("failed applying manifest file"))
 	}
 	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
 	if err != nil {
-		return false, err
+		return false, errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
 	}
 	return true, nil
 }
