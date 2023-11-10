@@ -41,7 +41,7 @@ fi
 echo "Provisioning Everest with monitoring disabled"
 echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
-./everestctl install operators --everest.endpoint=http://127.0.0.1:8080  --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
+./everestctl install operators --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
 
 echo "Your provisioned Everest instance will be available at http://127.0.0.1:8080"
 echo "Exposing Everest using kubectl port-forwarding. You can expose it manually"
