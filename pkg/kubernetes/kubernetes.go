@@ -905,7 +905,10 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error
 	if err != nil {
 		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
-	return k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace}); err != nil {
+		return errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
+	}
+	return nil
 }
 
 func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {

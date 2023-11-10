@@ -32,14 +32,14 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "install",
 		Run: func(cmd *cobra.Command, args []string) {
-			initOperatorsViperFlags(cmd)
-			c := &install.OperatorsConfig{}
+			initInstallViperFlags(cmd)
+			c := &install.Config{}
 			err := viper.Unmarshal(c)
 			if err != nil {
 				os.Exit(1)
 			}
 
-			op, err := install.NewOperators(*c, l)
+			op, err := install.NewInstall(*c, l)
 			if err != nil {
 				l.Error(err)
 				os.Exit(1)
@@ -51,23 +51,23 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 		},
 	}
-	initOperatorsFlags(cmd)
+	initInstallFlags(cmd)
 
 	oCmd := &cobra.Command{
 		Use:   "operators",
 		Short: "Deprecated. Please use everestctl install instead",
 		Run: func(cmd *cobra.Command, args []string) {
-			initOperatorsViperFlags(cmd)
+			initInstallViperFlags(cmd)
 			log.Fatal("Command is deprecated. Please use `everestctl install` instead")
 		},
 	}
-	initOperatorsFlags(oCmd)
+	initInstallFlags(oCmd)
 	cmd.AddCommand(oCmd)
 
 	return cmd
 }
 
-func initOperatorsFlags(cmd *cobra.Command) {
+func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
@@ -96,7 +96,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 }
 
-func initOperatorsViperFlags(cmd *cobra.Command) {
+func initInstallViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                       //nolint:errcheck,gosec
