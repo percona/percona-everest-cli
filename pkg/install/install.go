@@ -188,7 +188,7 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 }
 
 func (o *Install) performProvisioning(ctx context.Context) error {
-	if err := o.provisionAllInstall(ctx); err != nil {
+	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
 	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
@@ -526,8 +526,8 @@ func (o *Install) provisionNamespace() error {
 	return nil
 }
 
-// provisionAllInstall provisions all configured operators to a k8s cluster.
-func (o *Install) provisionAllInstall(ctx context.Context) error {
+// provisionAllOperators provisions all configured operators to a k8s cluster.
+func (o *Install) provisionAllOperators(ctx context.Context) error {
 	o.l.Info("Started provisioning the cluster")
 
 	if err := o.provisionOLM(ctx); err != nil {
