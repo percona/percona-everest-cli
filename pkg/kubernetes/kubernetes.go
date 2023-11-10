@@ -66,7 +66,6 @@ const (
 
 	// perconaEverestDeploymentName stores the name of everest backend deployment.
 	perconaEverestDeploymentName = "percona-everest"
-	perconaEverestServiceName    = "everest"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
@@ -896,12 +895,9 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 
 // InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
 func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
-	s, err := k.client.GetService(ctx, namespace, perconaEverestServiceName)
+	d, err := k.client.GetDeployment(ctx, namespace, perconaEverestDeploymentName)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return false, errors.Join(err, errors.New("could not get everest service"))
-	}
-	if s == nil {
-		return false, fmt.Errorf("service %s/%s is not found", namespace, perconaEverestDeploymentName)
+		return false, errors.Join(err, errors.New("could not get everest deployment"))
 	}
 	data, err := k.getManifestData(ctx)
 	if err != nil {
