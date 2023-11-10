@@ -894,26 +894,18 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 }
 
 // InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
-func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
-	d, err := k.client.GetDeployment(ctx, namespace, perconaEverestDeploymentName)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return false, errors.Join(err, errors.New("could not get everest deployment"))
-	}
+func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error {
 	data, err := k.getManifestData(ctx)
 	if err != nil {
-		return false, errors.Join(err, errors.New("failed downloading everest monitoring file"))
+		return errors.Join(err, errors.New("failed downloading everest monitoring file"))
 	}
 
 	err = k.client.ApplyManifestFile(data, namespace)
 
 	if err != nil {
-		return false, errors.Join(err, errors.New("failed applying manifest file"))
+		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
-	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
-	if err != nil {
-		return false, errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
-	}
-	return true, nil
+	return k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
 }
 
 func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
