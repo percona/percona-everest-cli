@@ -58,10 +58,14 @@ func NewEverestFromURL(url string) (*Everest, error) {
 //
 // This client must be used only for provisioning only.
 func NewProxiedEverest(config *rest.Config, namespace string) (*Everest, error) {
+	host, err := url.Parse(config.Host)
+	if err != nil {
+		return nil, err
+	}
 	cl, err := client.NewClient(
 		fmt.Sprintf(
 			"%s/api/v1/namespaces/%s/services/everest/proxy/v1",
-			url.PathEscape(config.Host),
+			host,
 			url.PathEscape(namespace),
 		),
 	)
