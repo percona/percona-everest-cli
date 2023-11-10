@@ -96,8 +96,8 @@ test.describe('Everest CLI "--help" validation', async () => {
     ]);
   });
 
-  test('install operators --help', async ({ cli }) => {
-    const out = await cli.everestExecSilent('install operators --help');
+  test('install --help', async ({ cli }) => {
+    const out = await cli.everestExecSilent('install --help');
 
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
