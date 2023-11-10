@@ -51,14 +51,18 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 			}
 		},
 	}
+	initOperatorsFlags(cmd)
 
-	cmd.AddCommand(&cobra.Command{
+	oCmd := &cobra.Command{
 		Use:   "operators",
 		Short: "Deprecated. Please use everestctl install instead",
 		Run: func(cmd *cobra.Command, args []string) {
+			initOperatorsViperFlags(cmd)
 			log.Fatal("Command is deprecated. Please use `everestctl install` instead")
-		}},
-	)
+		},
+	}
+	initOperatorsFlags(oCmd)
+	cmd.AddCommand(oCmd)
 
 	return cmd
 }
