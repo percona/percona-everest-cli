@@ -191,7 +191,7 @@ func (o *Operators) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
-	o.l.Info(fmt.Sprintf("Deploying everest to %s", o.config.Namespace))
+	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
 	installed, err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
 	if err != nil {
 		return err
