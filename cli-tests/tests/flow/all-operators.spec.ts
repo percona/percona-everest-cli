@@ -15,8 +15,6 @@
 import { test } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
-import { apiVerifyClusterExists } from '@support/backend';
-import { cliDeleteCluster } from '@support/everest-cli';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
@@ -43,7 +41,7 @@ test.describe('Everest CLI install operators', async () => {
 
     await test.step('run everest install operators command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install operators --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
@@ -52,25 +50,13 @@ test.describe('Everest CLI install operators', async () => {
         'percona-server-mongodb-operator operator has been installed',
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Connected Kubernetes cluster to Everest',
       ]);
     });
 
     await page.waitForTimeout(10_000);
 
     await verifyClusterResources();
-    await apiVerifyClusterExists(request, clusterName);
-    await cliDeleteCluster(cli, request, clusterName);
 
-    await test.step('try to delete cluster again', async () => {
-      const out = await cli.everestExecSilent('delete cluster');
-
-      await out.exitCodeEquals(1);
-      await out.outErrContainsNormalizedMany([
-        'no Kubernetes clusters found',
-      ]);
-    });
-    await verifyClusterResources();
     await test.step('disable telemetry', async () => {
       // check that the telemetry IS NOT disabled by default
       let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');

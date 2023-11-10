@@ -44,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/rest"
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
@@ -62,6 +63,8 @@ const (
 	ClusterTypeEKS ClusterType = "eks"
 	// ClusterTypeGeneric is a generic type.
 	ClusterTypeGeneric ClusterType = "generic"
+	// perconaEverestDeploymentName stores the name of everest backend deployment.
+	perconaEverestDeploymentName = "percona-everest"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
@@ -144,6 +147,11 @@ func New(kubeconfigPath string, l *zap.SugaredLogger) (*Kubernetes, error) {
 		},
 		kubeconfig: kubeconfigPath,
 	}, nil
+}
+
+// Config returns *rest.Config.
+func (k *Kubernetes) Config() *rest.Config {
+	return k.client.Config()
 }
 
 // NewEmpty returns new Kubernetes object.
@@ -771,12 +779,8 @@ func (k *Kubernetes) ProvisionMonitoring(namespace string) error {
 		// retry 3 times because applying vmagent spec might take some time.
 		for i := 0; i < 3; i++ {
 			k.l.Debugf("Applying file %s", path)
-			newFile, err := k.applyTemplateCustomization(namespace, file)
-			if err != nil {
-				return errors.Join(err, fmt.Errorf("cannot apply customizations to file: %q", path))
-			}
 
-			err = k.client.ApplyFile(newFile)
+			err = k.client.ApplyManifestFile(file, namespace)
 			if err != nil {
 				k.l.Debugf("%s: retrying after error: %s", path, err)
 				time.Sleep(10 * time.Second)
@@ -808,64 +812,11 @@ func (k *Kubernetes) victoriaMetricsCRDFiles() []string {
 	}
 }
 
-func (k *Kubernetes) applyTemplateCustomization(namespace string, contents []byte) ([]byte, error) {
-	o := make(map[string]interface{})
-	if err := yamlv3.Unmarshal(contents, &o); err != nil {
-		return nil, err
-	}
-
-	if err := unstructured.SetNestedField(o, namespace, "metadata", "namespace"); err != nil {
-		return nil, err
-	}
-
-	kind, ok, err := unstructured.NestedString(o, "kind")
-	if err != nil {
-		return nil, err
-	}
-
-	if ok && kind == "ClusterRoleBinding" {
-		if err := k.updateClusterRoleBindingNamespace(o, namespace); err != nil {
-			return nil, err
-		}
-	}
-
-	return yamlv3.Marshal(o)
-}
-
-func (k *Kubernetes) updateClusterRoleBindingNamespace(o map[string]interface{}, namespace string) error {
-	sub, ok, err := unstructured.NestedFieldNoCopy(o, "subjects")
-	if err != nil {
-		return err
-	}
-
-	if !ok {
-		return nil
-	}
-
-	subjects, ok := sub.([]interface{})
-	if !ok {
-		return nil
-	}
-
-	for _, s := range subjects {
-		sub, ok := s.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// RestartEverestOperator restarts everest pod.
-func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace string) error {
+// RestartEverest restarts everest pod.
+func (k *Kubernetes) RestartEverest(ctx context.Context, name, namespace string) error {
 	var podsToRestart []corev1.Pod
 	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-		p, err := k.getEverestOperatorPods(ctx, namespace)
+		p, err := k.getEverestPods(ctx, name, namespace)
 		if err != nil {
 			return false, err
 		}
@@ -883,11 +834,11 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	}
 
 	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-		pods, err := k.getEverestOperatorPods(ctx, namespace)
+		pods, err := k.getEverestPods(ctx, name, namespace)
 		if err != nil {
 			return false, err
 		}
-		podsStatuses := map[string]struct{}{}
+		podsStatuses := make(map[string]struct{})
 		for _, pod := range pods {
 			pod := pod
 			for _, restartedPod := range podsToRestart {
@@ -903,14 +854,13 @@ func (k *Kubernetes) RestartEverestOperator(ctx context.Context, namespace strin
 	})
 }
 
-func (k *Kubernetes) getEverestOperatorPods(ctx context.Context, namespace string) ([]corev1.Pod, error) {
+func (k *Kubernetes) getEverestPods(ctx context.Context, name, namespace string) ([]corev1.Pod, error) {
 	podList, err := k.client.ListPods(ctx, namespace, metav1.ListOptions{
 		LabelSelector: metav1.FormatLabelSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				"app.kubernetes.io/name": "everest-operator",
+				"app.kubernetes.io/name": name,
 			},
 		}),
-		FieldSelector: "status.phase=Running",
 	})
 	if err != nil {
 		return []corev1.Pod{}, err
@@ -940,4 +890,43 @@ func (k *Kubernetes) ListEngineDeploymentNames(ctx context.Context, namespace st
 // ApplyObject applies object.
 func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 	return k.client.ApplyObject(obj)
+}
+
+// InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
+func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
+	s, err := k.client.GetService(ctx, namespace, perconaEverestDeploymentName)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return false, errors.Join(err, errors.New("could not get everest service"))
+	}
+	if s == nil {
+		return false, fmt.Errorf("service %s/%s is not found", namespace, perconaEverestDeploymentName)
+	}
+	data, err := k.getManifestData(ctx)
+	if err != nil {
+		return false, errors.Join(err, errors.New("failed downloading everest monitoring file"))
+	}
+
+	err = k.client.ApplyManifestFile(data, namespace)
+
+	if err != nil {
+		return false, errors.Join(err, errors.New("failed applying manifest file"))
+	}
+	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
+	if err != nil {
+		return false, errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
+	}
+	return true, nil
+}
+
+func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, everestVersion.ManifestURL(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	return io.ReadAll(resp.Body)
 }

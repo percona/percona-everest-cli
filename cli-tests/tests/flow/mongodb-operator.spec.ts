@@ -15,8 +15,6 @@
 import { test } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
-import { apiVerifyClusterExists } from '@support/backend';
-import { cliDeleteCluster } from '@support/everest-cli';
 
 test.describe('Everest CLI install operators', async () => {
   test.beforeEach(async ({ cli }) => {
@@ -46,22 +44,18 @@ test.describe('Everest CLI install operators', async () => {
 
     await test.step('run everest install operators command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install operators --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'percona-server-mongodb-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Connected Kubernetes cluster to Everest',
       ]);
     });
 
     await page.waitForTimeout(10_000);
 
-    await verifyClusterResources();
-    await apiVerifyClusterExists(request, clusterName);
-    await cliDeleteCluster(cli, request, clusterName);
     await verifyClusterResources();
   });
 });

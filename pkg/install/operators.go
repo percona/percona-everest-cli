@@ -19,7 +19,6 @@ package install
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -30,10 +29,6 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -54,19 +49,16 @@ type Operators struct {
 }
 
 const (
-	catalogSourceNamespace           = "olm"
-	operatorGroup                    = "percona-operators-group"
-	catalogSource                    = "percona-everest-catalog"
-	everestOperatorName              = "everest-operator"
-	pxcOperatorName                  = "percona-xtradb-cluster-operator"
-	psmdbOperatorName                = "percona-server-mongodb-operator"
-	pgOperatorName                   = "percona-postgresql-operator"
-	vmOperatorName                   = "victoriametrics-operator"
-	everestServiceAccount            = "everest-admin"
-	everestServiceAccountRole        = "everest-admin-role"
-	everestServiceAccountRoleBinding = "everest-admin-role-binding"
-	everestServiceAccountTokenSecret = "everest-admin-token"
-	operatorInstallThreads           = 1
+	catalogSourceNamespace    = "olm"
+	everestBackendServiceName = "percona-everest-backend"
+	operatorGroup             = "percona-operators-group"
+	catalogSource             = "percona-everest-catalog"
+	everestOperatorName       = "everest-operator"
+	pxcOperatorName           = "percona-xtradb-cluster-operator"
+	psmdbOperatorName         = "percona-server-mongodb-operator"
+	pgOperatorName            = "percona-postgresql-operator"
+	vmOperatorName            = "victoriametrics-operator"
+	operatorInstallThreads    = 1
 )
 
 type (
@@ -84,35 +76,9 @@ type (
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
-		Backup     BackupConfig
 		Channel    ChannelConfig
-		Everest    EverestConfig
 		Monitoring MonitoringConfig
 		Operator   OperatorConfig
-	}
-
-	// BackupConfig stores configuration for backup.
-	BackupConfig struct {
-		// Enable is true if backup shall be enabled.
-		Enable bool
-		// Name stores name of the backup.
-		Name string
-		// Endpoint stores URL to backup.
-		Endpoint string
-		// Bucket stores name of the bucket for backup.
-		Bucket string
-		// AccessKey stores username for backup.
-		AccessKey string `mapstructure:"access-key"`
-		// SecretKey stores password for backup.
-		SecretKey string `mapstructure:"secret-key"`
-		// Region stores region for backup.
-		Region string
-	}
-
-	// EverestConfig stores config for Everest.
-	EverestConfig struct {
-		// Endpoint stores URL to Everest.
-		Endpoint string
 	}
 
 	// MonitoringConfig stores configuration for monitoring.
@@ -191,13 +157,71 @@ func (o *Operators) Run(ctx context.Context) error {
 	if err := o.populateConfig(ctx); err != nil {
 		return err
 	}
+	if err := o.provisionNamespace(); err != nil {
+		return err
+	}
 
-	if o.everestClient == nil {
-		if err := o.configureEverestConnector(); err != nil {
+	if err := o.configureEverestConnector(); err != nil {
+		return err
+	}
+	return o.performProvisioning(ctx)
+}
+
+func (o *Operators) populateConfig(ctx context.Context) error {
+	if !o.config.SkipWizard {
+		if err := o.runWizard(ctx); err != nil {
 			return err
 		}
 	}
 
+	if o.config.Name == "" {
+		o.config.Name = o.kubeClient.ClusterName()
+	}
+
+	return nil
+}
+
+func (o *Operators) checkEverestConnection(ctx context.Context) error {
+	o.l.Info("Checking connection to Everest")
+	_, err := o.everestClient.ListMonitoringInstances(ctx)
+	return err
+}
+
+func (o *Operators) performProvisioning(ctx context.Context) error {
+	if err := o.provisionAllOperators(ctx); err != nil {
+		return err
+	}
+	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
+	installed, err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+	if err != nil {
+		return err
+	}
+	if installed {
+		o.l.Info("Everest has been installed. Configuring connection")
+	}
+	if o.config.Monitoring.Enable {
+		if err := o.provisionMonitoring(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *Operators) provisionMonitoring(ctx context.Context) error {
+	l := o.l.With("action", "monitoring")
+	l.Info("Preparing k8s cluster for monitoring")
+	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
+		return errors.Join(err, errors.New("could not provision monitoring configuration"))
+	}
+
+	l.Info("K8s cluster monitoring has been provisioned successfully")
+	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
+		return err
+	}
+	o.l.Info("Deploying VMAgent to k8s cluster")
+	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
+		return err
+	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
 		if errors.As(err, &u) {
@@ -213,81 +237,26 @@ func (o *Operators) Run(ctx context.Context) error {
 		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
 
-	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-		return err
-	}
-
-	return o.performProvisioning(ctx)
-}
-
-func (o *Operators) populateConfig(ctx context.Context) error {
-	if !o.config.SkipWizard {
-		if err := o.runWizard(ctx); err != nil {
-			return err
-		}
-	}
-
-	if o.config.Name == "" {
-		o.config.Name = o.kubeClient.ClusterName()
-	}
-
-	if o.config.Backup.Enable && o.config.Backup.Name == "" {
-		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-		l.Error("Backup name cannot be empty if backup is enabled")
-		return common.ErrExitWithError
-	}
-
-	return nil
-}
-
-func (o *Operators) checkEverestConnection(ctx context.Context) error {
-	o.l.Info("Checking connection to Everest")
-	_, err := o.everestClient.ListMonitoringInstances(ctx)
-	return err
-}
-
-func (o *Operators) performProvisioning(ctx context.Context) error {
-	if err := o.provisionNamespace(); err != nil {
-		return err
-	}
-	if err := o.provisionAllOperators(ctx); err != nil {
-		return err
-	}
-
-	var k *client.KubernetesCluster
-	k, err := o.connectToEverest(ctx)
-	if err != nil {
-		return err
-	}
-
-	if o.config.Monitoring.Enable {
-		o.l.Info("Deploying VMAgent to k8s cluster")
-
-		// We retry for a bit since the MonitoringConfig may not be properly
-		// deployed yet and we get a HTTP 500 in this case.
-		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, k.Id, client.KubernetesClusterMonitoring{
-				Enable:                 true,
-				MonitoringInstanceName: o.monitoringInstanceName,
-			})
-			if err != nil {
-				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
-				return false, nil
-			}
-
-			return true, nil
+	// We retry for a bit since the MonitoringConfig may not be properly
+	// deployed yet and we get a HTTP 500 in this case.
+	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		o.l.Debug("Trying to enable Kubernetes cluster monitoring")
+		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
+			Enable:                 true,
+			MonitoringInstanceName: o.monitoringInstanceName,
 		})
 		if err != nil {
-			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
+			o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
+			return false, nil
 		}
 
-		o.l.Info("VMAgent deployed successfully")
+		return true, nil
+	})
+	if err != nil {
+		return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
 	}
 
-	if err := o.createEverestBackupStorage(ctx); err != nil {
-		return err
-	}
+	o.l.Info("VMAgent deployed successfully")
 	return nil
 }
 
@@ -340,12 +309,11 @@ func (o *Operators) createPMMMonitoringInstance(ctx context.Context, name, url, 
 }
 
 func (o *Operators) configureEverestConnector() error {
-	cl, err := everestClient.NewEverestFromURL(o.config.Everest.Endpoint)
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace)
 	if err != nil {
 		return err
 	}
-	o.everestClient = cl
-
+	o.everestClient = e
 	return nil
 }
 
@@ -359,37 +327,15 @@ func (o *Operators) runWizard(ctx context.Context) error {
 		return err
 	}
 
-	if err := o.runBackupWizard(); err != nil {
-		return err
-	}
-
 	return o.runOperatorsWizard()
 }
 
 func (o *Operators) runEverestWizard() error {
-	pEndpoint := &survey.Input{
-		Message: "Everest URL",
-		Default: o.config.Everest.Endpoint,
+	pNamespace := &survey.Input{
+		Message: "Namespace to deploy Everest to",
+		Default: o.config.Namespace,
 	}
-	if err := survey.AskOne(pEndpoint, &o.config.Everest.Endpoint); err != nil {
-		return err
-	}
-
-	if err := o.configureEverestConnector(); err != nil {
-		return err
-	}
-
-	clusterName := o.kubeClient.ClusterName()
-	if o.config.Name != "" {
-		clusterName = o.config.Name
-	}
-
-	pName := &survey.Input{
-		Message: "Choose your Kubernetes Cluster name",
-		Default: clusterName,
-	}
-
-	return survey.AskOne(pName, &o.config.Name)
+	return survey.AskOne(pNamespace, &o.config.Namespace)
 }
 
 func (o *Operators) runMonitoringWizard(ctx context.Context) error {
@@ -518,96 +464,6 @@ func (o *Operators) runMonitoringNewURLWizard() error {
 	return nil
 }
 
-func (o *Operators) runBackupWizard() error {
-	pBackup := &survey.Confirm{
-		Message: "Do you want to enable backups?",
-		Default: o.config.Backup.Enable,
-	}
-
-	if err := survey.AskOne(pBackup, &o.config.Backup.Enable); err != nil {
-		return err
-	}
-
-	if o.config.Backup.Enable {
-		return o.runBackupConfigWizard()
-	}
-
-	return nil
-}
-
-func (o *Operators) runBackupConfigWizard() error {
-	pName := &survey.Input{
-		Message: "Name",
-		Default: o.config.Backup.Name,
-	}
-	if err := survey.AskOne(
-		pName,
-		&o.config.Backup.Name,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pURL := &survey.Input{
-		Message: "URL Endpoint",
-		Default: o.config.Backup.Endpoint,
-	}
-	if err := survey.AskOne(
-		pURL,
-		&o.config.Backup.Endpoint,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pRegion := &survey.Input{
-		Message: "Region",
-		Default: o.config.Backup.Region,
-	}
-	if err := survey.AskOne(
-		pRegion,
-		&o.config.Backup.Region,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pBucket := &survey.Input{
-		Message: "Bucket",
-		Default: o.config.Backup.Bucket,
-	}
-	if err := survey.AskOne(
-		pBucket,
-		&o.config.Backup.Bucket,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	return o.runBackupCredentialsConfigWizard()
-}
-
-func (o *Operators) runBackupCredentialsConfigWizard() error {
-	pUser := &survey.Input{
-		Message: "Access key",
-		Default: o.config.Backup.AccessKey,
-	}
-	if err := survey.AskOne(
-		pUser,
-		&o.config.Backup.AccessKey,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pPass := &survey.Password{Message: "Secret key"}
-	return survey.AskOne(
-		pPass,
-		&o.config.Backup.SecretKey,
-		survey.WithValidator(survey.Required),
-	)
-}
-
 func (o *Operators) runOperatorsWizard() error {
 	operatorOpts := []struct {
 		label    string
@@ -682,12 +538,6 @@ func (o *Operators) provisionAllOperators(ctx context.Context) error {
 
 	if err := o.provisionOperators(ctx); err != nil {
 		return err
-	}
-
-	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -782,241 +632,6 @@ func (o *Operators) installOperator(ctx context.Context, channel, operatorName s
 	}
 }
 
-func (o *Operators) provisionMonitoring() error {
-	l := o.l.With("action", "monitoring")
-	l.Info("Preparing k8s cluster for monitoring")
-	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
-		return errors.Join(err, errors.New("could not provision monitoring configuration"))
-	}
-
-	l.Info("K8s cluster monitoring has been provisioned successfully")
-
-	return nil
-}
-
-// connectToEverest connects the k8s cluster to Everest.
-func (o *Operators) connectToEverest(ctx context.Context) (*client.KubernetesCluster, error) {
-	clusters, err := o.everestClient.ListKubernetesClusters(ctx)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not list kubernetes clusters"))
-	}
-	for _, cluster := range clusters {
-		if cluster.Name == o.config.Name {
-			ns, err := o.kubeClient.GetNamespace(ctx, cluster.Namespace)
-			if err != nil && !k8serrors.IsNotFound(err) {
-				return nil, errors.Join(err, errors.New("could not get namespace from Kubernetes"))
-			}
-
-			if ns.UID != types.UID(cluster.Uid) {
-				return nil, errors.New("namespace UID mismatch. It looks like you're trying to register a new Kubernetes cluster using an existing name. Please unregister the existing Kubernetes cluster first")
-			}
-			// Cluster is already registered. Do nothing
-			return &cluster, nil
-		}
-	}
-	if err := o.prepareServiceAccount(); err != nil {
-		return nil, errors.Join(err, errors.New("could not prepare a service account"))
-	}
-
-	o.l.Info("Generating kubeconfig")
-	kubeconfig, err := o.getServiceAccountKubeConfig(ctx)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not get a new kubeconfig file for a service account"))
-	}
-
-	o.l.Info("Connecting your Kubernetes cluster to Everest")
-
-	k, err := o.everestClient.RegisterKubernetesCluster(ctx, client.CreateKubernetesClusterParams{
-		Kubeconfig: base64.StdEncoding.EncodeToString([]byte(kubeconfig)),
-		Name:       o.config.Name,
-		Namespace:  &o.config.Namespace,
-	})
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not register a new Kubernetes cluster with Everest"))
-	}
-
-	o.l.Info("Connected Kubernetes cluster to Everest")
-
-	return k, nil
-}
-
-func (o *Operators) createEverestBackupStorage(ctx context.Context) error {
-	if !o.config.Backup.Enable {
-		return nil
-	}
-
-	o.l.Info("Creating a new backup storage in Everest")
-
-	_, err := o.everestClient.CreateBackupStorage(ctx, client.CreateBackupStorageParams{
-		Type:       client.CreateBackupStorageParamsTypeS3,
-		Name:       o.config.Backup.Name,
-		BucketName: o.config.Backup.Bucket,
-		AccessKey:  o.config.Backup.AccessKey,
-		SecretKey:  o.config.Backup.SecretKey,
-		Url:        &o.config.Backup.Endpoint,
-		Region:     o.config.Backup.Region,
-	})
-	if err != nil {
-		return errors.Join(err, errors.New("could not create a new backup storage in Everest"))
-	}
-
-	o.l.Info("Created a new backup storage in Everest")
-
-	return nil
-}
-
-func (o *Operators) prepareServiceAccount() error {
-	o.l.Info("Creating service account for Everest")
-	if err := o.kubeClient.CreateServiceAccount(everestServiceAccount, o.config.Namespace); err != nil {
-		return errors.Join(err, errors.New("could not create service account"))
-	}
-
-	o.l.Info("Creating role for Everest service account")
-	err := o.kubeClient.CreateRole(o.config.Namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
-	if err != nil {
-		return errors.Join(err, errors.New("could not create role"))
-	}
-
-	o.l.Info("Binding role to Everest Service account")
-	err = o.kubeClient.CreateRoleBinding(
-		o.config.Namespace,
-		everestServiceAccountRoleBinding,
-		everestServiceAccountRole,
-		everestServiceAccount,
-	)
-	if err != nil {
-		return errors.Join(err, errors.New("could not create role binding"))
-	}
-
-	o.l.Info("Creating cluster role for Everest service account")
-	err = o.kubeClient.CreateClusterRole(
-		everestServiceAccountRole, o.serviceAccountClusterRolePolicyRules(),
-	)
-	if err != nil {
-		return errors.Join(err, errors.New("could not create cluster role"))
-	}
-
-	o.l.Info("Binding cluster role to Everest Service account")
-	err = o.kubeClient.CreateClusterRoleBinding(
-		o.config.Namespace,
-		everestServiceAccountRoleBinding,
-		everestServiceAccountRole,
-		everestServiceAccount,
-	)
-	if err != nil {
-		return errors.Join(err, errors.New("could not create cluster role binding"))
-	}
-
-	return nil
-}
-
-func (o *Operators) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
-	return []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"databaseclusters", "databaseclusterrestores"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"databaseengines"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"databaseclusterrestores"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"databaseclusterbackups"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"backupstorages"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"monitoringconfigs"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{"operator.victoriametrics.com"},
-			Resources: []string{"vmagents"},
-			Verbs:     []string{"*"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"namespaces"},
-			Verbs:     []string{"get"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"secrets"},
-			Verbs:     []string{"*"},
-		},
-	}
-}
-
-func (o *Operators) serviceAccountClusterRolePolicyRules() []rbacv1.PolicyRule {
-	return []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{"storage.k8s.io"},
-			Resources: []string{"storageclasses"},
-			Verbs:     []string{"list"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"nodes"},
-			Verbs:     []string{"get", "list"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"list"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"persistentvolumes"},
-			Verbs:     []string{"list"},
-		},
-	}
-}
-
-func (o *Operators) getServiceAccountKubeConfig(ctx context.Context) (string, error) {
-	// Create token secret
-	err := o.kubeClient.CreateServiceAccountToken(everestServiceAccount, everestServiceAccountTokenSecret, o.config.Namespace)
-	if err != nil {
-		return "", err
-	}
-
-	var secret *corev1.Secret
-	checkSecretData := func(ctx context.Context) (bool, error) {
-		o.l.Debugf("Getting secret for %s", everestServiceAccountTokenSecret)
-		s, err := o.kubeClient.GetSecret(ctx, everestServiceAccountTokenSecret, o.config.Namespace)
-		if err != nil {
-			return false, err
-		}
-
-		if _, ok := s.Data["token"]; !ok {
-			return false, nil
-		}
-
-		secret = s
-
-		return true, nil
-	}
-	// We poll for the secret as it's created asynchronously
-	err = wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, checkSecretData)
-	if err != nil {
-		return "", errors.Join(err, errors.New("could not get token from secret for a service account"))
-	}
-
-	return o.kubeClient.GenerateKubeConfigWithToken(everestServiceAccount, secret)
-}
-
 func (o *Operators) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverestOperator(ctx, o.config.Namespace)
+	return o.kubeClient.RestartEverest(ctx, "everest-operator", o.config.Namespace)
 }

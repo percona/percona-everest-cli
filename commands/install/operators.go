@@ -59,7 +59,6 @@ func NewOperatorsCmd(l *zap.SugaredLogger) *cobra.Command {
 }
 
 func initOperatorsFlags(cmd *cobra.Command) {
-	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
@@ -77,14 +76,6 @@ func initOperatorsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
 	cmd.Flags().String("monitoring.pmm.password", "", "PMM password")
 
-	cmd.Flags().Bool("backup.enable", false, "Enable backups")
-	cmd.Flags().String("backup.name", "", "Backup name in Everest")
-	cmd.Flags().String("backup.endpoint", "", "Backup endpoint URL")
-	cmd.Flags().String("backup.region", "", "Backup region")
-	cmd.Flags().String("backup.bucket", "", "Backup bucket")
-	cmd.Flags().String("backup.access-key", "", "Backup access key")
-	cmd.Flags().String("backup.secret-key", "", "Backup secret key")
-
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
 	cmd.Flags().Bool("operator.xtradb-cluster", true, "Install XtraDB Cluster operator")
@@ -97,8 +88,7 @@ func initOperatorsFlags(cmd *cobra.Command) {
 }
 
 func initOperatorsViperFlags(cmd *cobra.Command) {
-	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))           //nolint:errcheck,gosec
+	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                       //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec
@@ -107,14 +97,6 @@ func initOperatorsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
-
-	viper.BindPFlag("backup.name", cmd.Flags().Lookup("backup.name"))             //nolint:errcheck,gosec
-	viper.BindPFlag("backup.enable", cmd.Flags().Lookup("backup.enable"))         //nolint:errcheck,gosec
-	viper.BindPFlag("backup.endpoint", cmd.Flags().Lookup("backup.endpoint"))     //nolint:errcheck,gosec
-	viper.BindPFlag("backup.region", cmd.Flags().Lookup("backup.region"))         //nolint:errcheck,gosec
-	viper.BindPFlag("backup.bucket", cmd.Flags().Lookup("backup.bucket"))         //nolint:errcheck,gosec
-	viper.BindPFlag("backup.access-key", cmd.Flags().Lookup("backup.access-key")) //nolint:errcheck,gosec
-	viper.BindPFlag("backup.secret-key", cmd.Flags().Lookup("backup.secret-key")) //nolint:errcheck,gosec
 
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec

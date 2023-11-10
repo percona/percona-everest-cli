@@ -452,9 +452,7 @@ func (c *Client) retrieveMetaFromObject(obj runtime.Object) (string, string, err
 	return namespace, name, nil
 }
 
-func (c *Client) resourceClient( //nolint:ireturn
-	gv schema.GroupVersion,
-) (rest.Interface, error) {
+func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) { //nolint:ireturn
 	cfg := c.restConfig
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
@@ -464,6 +462,11 @@ func (c *Client) resourceClient( //nolint:ireturn
 		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
+}
+
+// Config returns stored *rest.Config.
+func (c *Client) Config() *rest.Config {
+	return c.restConfig
 }
 
 func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
@@ -736,8 +739,76 @@ func (c *Client) ApplyFile(fileBytes []byte) error {
 	return nil
 }
 
-func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
-	objs := []runtime.Object{}
+// ApplyManifestFile accepts manifest file contents, parses into []runtime.Object
+// and applies them against the cluster.
+func (c *Client) ApplyManifestFile(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i]
+		if err := c.applyTemplateCustomization(o, namespace); err != nil {
+			return err
+		}
+		err := c.ApplyObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namespace string) error {
+	if err := unstructured.SetNestedField(u.Object, namespace, "metadata", "namespace"); err != nil {
+		return err
+	}
+
+	kind, ok, err := unstructured.NestedString(u.Object, "kind")
+	if err != nil {
+		return err
+	}
+
+	if ok && kind == "ClusterRoleBinding" {
+		if err := c.updateClusterRoleBindingNamespace(u, namespace); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) updateClusterRoleBindingNamespace(u *unstructured.Unstructured, namespace string) error {
+	sub, ok, err := unstructured.NestedFieldNoCopy(u.Object, "subjects")
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return nil
+	}
+
+	subjects, ok := sub.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	for _, s := range subjects {
+		sub, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) getObjects(f []byte) ([]*unstructured.Unstructured, error) {
+	objs := []*unstructured.Unstructured{}
 	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
 	var err error
 	for {
@@ -1264,4 +1335,9 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 		}
 	}
 	return nil
+}
+
+// GetService returns k8s service by provided namespace and name.
+func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
+	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
