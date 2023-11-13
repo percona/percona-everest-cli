@@ -38,7 +38,7 @@ func newUninstallCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
-			op, err := uninstall.NewCluster(*c, l)
+			op, err := uninstall.NewUninstall(*c, l)
 			if err != nil {
 				l.Error(err)
 				os.Exit(1)
@@ -71,8 +71,8 @@ func initUninstallViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("force", cmd.Flags().Lookup("force"))           //nolint:errcheck,gosec
 }
 
-func parseClusterConfig() (*uninstall.ClusterConfig, error) {
-	c := &uninstall.ClusterConfig{}
+func parseClusterConfig() (*uninstall.Config, error) {
+	c := &uninstall.Config{}
 	err := viper.Unmarshal(c)
 	return c, err
 }

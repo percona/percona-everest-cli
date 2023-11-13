@@ -29,13 +29,13 @@ import (
 
 // Uninstall implements logic for the cluster command.
 type Uninstall struct {
-	config     UninstallConfig
+	config     Config
 	kubeClient *kubernetes.Kubernetes
 	l          *zap.SugaredLogger
 }
 
-// UninstallConfig stores configuration for the Uninstall command.
-type UninstallConfig struct {
+// Config stores configuration for the Uninstall command.
+type Config struct {
 	// KubeconfigPath is a path to a kubeconfig
 	KubeconfigPath string `mapstructure:"kubeconfig"`
 	// Namespace defines the namespace operators shall be installed to.
@@ -47,7 +47,7 @@ type UninstallConfig struct {
 }
 
 // NewUninstall returns a new Uninstall struct.
-func NewUninstall(c UninstallConfig, l *zap.SugaredLogger) (*Uninstall, error) {
+func NewUninstall(c Config, l *zap.SugaredLogger) (*Uninstall, error) {
 	kubeClient, err := kubernetes.New(c.KubeconfigPath, l)
 	if err != nil {
 		return nil, err
