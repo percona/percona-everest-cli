@@ -31,7 +31,7 @@ const (
 	iDefault = "default"
 )
 
-func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
+func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 	t.Parallel()
 
 	l, err := zap.NewDevelopment()
@@ -43,9 +43,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		m := &mockEverestClientConnector{}
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable: false,
 				},
@@ -66,9 +66,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable:       true,
 					InstanceName: "123",
@@ -89,9 +89,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(nil, errors.New("not-found"))
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable:       true,
 					InstanceName: "123",
@@ -112,9 +112,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable:       true,
 					InstanceName: "123",
@@ -139,9 +139,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		m := &mockEverestClientConnector{}
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable: true,
 				},
@@ -169,9 +169,9 @@ func TestOperators_resolveMonitoringInstanceName(t *testing.T) {
 		}).Return(&client.MonitoringInstance{}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Operators{
+		o := &Install{
 			l: l.Sugar(),
-			config: OperatorsConfig{
+			config: Config{
 				Monitoring: MonitoringConfig{
 					Enable:          true,
 					NewInstanceName: "new-instance",

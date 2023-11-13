@@ -87,21 +87,6 @@ test.describe('Everest CLI "--help" validation', async () => {
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'Usage:',
-      'everestctl install [command]',
-      'Available Commands:',
-      'operators',
-      'Flags:',
-      '-h, --help help for install',
-      'Use "everestctl install [command] --help" for more information about a command.',
-    ]);
-  });
-
-  test('install operators --help', async ({ cli }) => {
-    const out = await cli.everestExecSilent('install operators --help');
-
-    await out.assertSuccess();
-    await out.outContainsNormalizedMany([
-      'Usage:',
       'Flags:',
       '-h, --help',
       '-k, --kubeconfig',

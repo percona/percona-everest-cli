@@ -16,7 +16,7 @@ import { test, expect } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
 
-test.describe('Everest CLI install operators', async () => {
+test.describe('Everest CLI install', async () => {
   test.beforeEach(async ({ cli }) => {
     await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
     await cli.execute('minikube delete');
@@ -41,9 +41,9 @@ test.describe('Everest CLI install operators', async () => {
     };
     const clusterName = `test-${faker.number.int()}`;
 
-    await test.step('run everest install operators command', async () => {
+    await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
@@ -57,13 +57,13 @@ test.describe('Everest CLI install operators', async () => {
 
     await verifyClusterResources();
 
-    await test.step('re-run everest install operators command', async () => {
+    await test.step('re-run everest install command', async () => {
       await page.waitForTimeout(60_000);
       const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await operator.assertSuccess();
 
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
       );
       const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await restartedOperator.assertSuccess();

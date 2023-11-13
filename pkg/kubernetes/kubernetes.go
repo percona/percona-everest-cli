@@ -63,6 +63,7 @@ const (
 	ClusterTypeEKS ClusterType = "eks"
 	// ClusterTypeGeneric is a generic type.
 	ClusterTypeGeneric ClusterType = "generic"
+
 	// perconaEverestDeploymentName stores the name of everest backend deployment.
 	perconaEverestDeploymentName = "percona-everest"
 
@@ -893,29 +894,21 @@ func (k *Kubernetes) ApplyObject(obj runtime.Object) error {
 }
 
 // InstallEverest downloads the manifest file and applies it against provisioned k8s cluster.
-func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) (bool, error) {
-	s, err := k.client.GetService(ctx, namespace, perconaEverestDeploymentName)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return false, errors.Join(err, errors.New("could not get everest service"))
-	}
-	if s == nil {
-		return false, fmt.Errorf("service %s/%s is not found", namespace, perconaEverestDeploymentName)
-	}
+func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error {
 	data, err := k.getManifestData(ctx)
 	if err != nil {
-		return false, errors.Join(err, errors.New("failed downloading everest monitoring file"))
+		return errors.Join(err, errors.New("failed downloading everest monitoring file"))
 	}
 
 	err = k.client.ApplyManifestFile(data, namespace)
 
 	if err != nil {
-		return false, errors.Join(err, errors.New("failed applying manifest file"))
+		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
-	err = k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace})
-	if err != nil {
-		return false, errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace}); err != nil {
+		return errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
 	}
-	return true, nil
+	return nil
 }
 
 func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
