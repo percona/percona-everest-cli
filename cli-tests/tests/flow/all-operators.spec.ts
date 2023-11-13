@@ -41,7 +41,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --monitoring.enable=0 --name=${clusterName} --namespace=percona-everest-all`,
+        `install --monitoring.enable=0 --name=${clusterName} --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
