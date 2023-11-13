@@ -79,7 +79,7 @@ test.describe('Everest CLI install operators', async () => {
       );
     });
     await test.step('uninstall Everest', async () => {
-      let out = await cli.everestExecSkipWizard(
+      let out = await cli.everestExec(
         `uninstall --namespace=percona-everest --assume-yes`,
       );
 

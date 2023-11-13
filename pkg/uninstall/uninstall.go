@@ -27,15 +27,15 @@ import (
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
-// Cluster implements logic for the cluster command.
-type Cluster struct {
-	config     ClusterConfig
+// Uninstall implements logic for the cluster command.
+type Uninstall struct {
+	config     UninstallConfig
 	kubeClient *kubernetes.Kubernetes
 	l          *zap.SugaredLogger
 }
 
-// ClusterConfig stores configuration for the Cluster command.
-type ClusterConfig struct {
+// UninstallConfig stores configuration for the Uninstall command.
+type UninstallConfig struct {
 	// KubeconfigPath is a path to a kubeconfig
 	KubeconfigPath string `mapstructure:"kubeconfig"`
 	// Namespace defines the namespace operators shall be installed to.
@@ -44,20 +44,16 @@ type ClusterConfig struct {
 	AssumeYes bool `mapstructure:"assume-yes"`
 	// Force is true when we shall not prompt for removal.
 	Force bool
-	// IgnoreK8sUnavailable is true when unavailable Kubernetes can be ignored.
-	IgnoreK8sUnavailable bool `mapstructure:"ignore-kubernetes-unavailable"`
 }
 
-// NewCluster returns a new Cluster struct.
-func NewCluster(c ClusterConfig, l *zap.SugaredLogger) (*Cluster, error) {
+// NewUninstall returns a new Uninstall struct.
+func NewUninstall(c UninstallConfig, l *zap.SugaredLogger) (*Uninstall, error) {
 	kubeClient, err := kubernetes.New(c.KubeconfigPath, l)
 	if err != nil {
-		if !c.IgnoreK8sUnavailable {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	cli := &Cluster{
+	cli := &Uninstall{
 		config:     c,
 		kubeClient: kubeClient,
 		l:          l,
@@ -65,30 +61,35 @@ func NewCluster(c ClusterConfig, l *zap.SugaredLogger) (*Cluster, error) {
 	return cli, nil
 }
 
-func (c *Cluster) runEverestWizard() error {
-	pNamespace := &survey.Input{
-		Message: "Please select namespace",
-		Default: c.config.Namespace,
-	}
-	if err := survey.AskOne(
-		pNamespace,
-		&c.config.Namespace,
-	); err != nil {
-		return err
+func (u *Uninstall) runEverestWizard() error {
+	if !u.config.AssumeYes {
+		pNamespace := &survey.Input{
+			Message: "Please select namespace",
+			Default: u.config.Namespace,
+		}
+		if err := survey.AskOne(
+			pNamespace,
+			&u.config.Namespace,
+		); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // Run runs the cluster command.
-func (c *Cluster) Run(ctx context.Context) error {
-	if err := c.runEverestWizard(); err != nil {
+func (u *Uninstall) Run(ctx context.Context) error {
+	if err := u.runEverestWizard(); err != nil {
 		return err
 	}
+	if u.config.Namespace == "" {
+		return errors.New("namespace is not provided")
+	}
 
-	if !c.config.AssumeYes {
+	if !u.config.AssumeYes {
 		msg := `You are about to uninstall a Kubernetes cluster from Everest.
-This will uninstall all monitoring resources deployed by Everest from the Kubernetes cluster. All other resources such as Database Clusters will not be affected.`
+This will uninstall all monitoring resources deployed by Everest from the Kubernetes cluster. All other resources such as Database Uninstalls will not be affected.`
 		fmt.Printf("\n%s\n\n", msg) //nolint:forbidigo
 		confirm := &survey.Confirm{
 			Message: "Are you sure you want to uninstall Everest?",
@@ -99,21 +100,24 @@ This will uninstall all monitoring resources deployed by Everest from the Kubern
 		}
 
 		if !prompt {
-			c.l.Info("Exiting")
+			u.l.Info("Exiting")
 			return nil
 		}
 	}
 
-	if err := c.uninstallK8sResources(ctx); err != nil {
+	if err := u.uninstallK8sResources(ctx); err != nil {
+		return err
+	}
+	if err := u.kubeClient.DeleteEverest(ctx, u.config.Namespace); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (c *Cluster) uninstallK8sResources(ctx context.Context) error {
-	c.l.Info("Deleting all Kubernetes monitoring resources in Kubernetes cluster")
-	if err := c.kubeClient.DeleteAllMonitoringResources(ctx, c.config.Namespace); err != nil {
+func (u *Uninstall) uninstallK8sResources(ctx context.Context) error {
+	u.l.Info("Deleting all Kubernetes monitoring resources in Kubernetes cluster")
+	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, u.config.Namespace); err != nil {
 		return errors.Join(err, errors.New("could not uninstall monitoring resources from the Kubernetes cluster"))
 	}
 
