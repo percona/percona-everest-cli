@@ -88,8 +88,8 @@ func (u *Uninstall) Run(ctx context.Context) error {
 	}
 
 	if !u.config.AssumeYes {
-		msg := `You are about to uninstall a Kubernetes cluster from Everest.
-This will uninstall all monitoring resources deployed by Everest from the Kubernetes cluster. All other resources such as Database Uninstalls will not be affected.`
+		msg := `You are about to uninstall Everest from the Kubernetes cluster.
+This will uninstall Everest and all monitoring resources deployed by it. All other resources such as Databases and Database Backups will not be affected.`
 		fmt.Printf("\n%s\n\n", msg) //nolint:forbidigo
 		confirm := &survey.Confirm{
 			Message: "Are you sure you want to uninstall Everest?",
