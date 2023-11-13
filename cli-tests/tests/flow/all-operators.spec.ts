@@ -79,13 +79,13 @@ test.describe('Everest CLI install operators', async () => {
       );
     });
     await test.step('uninstall Everest', async () => {
-      const out = await cli.everestExecSkipWizard(
+      let out = await cli.everestExecSkipWizard(
         `uninstall --namespace=percona-everest --assume-yes`,
       );
 
       await out.assertSuccess();
-      // check that the telemetry IS NOT disabled by default
-      let out = await cli.exec('kubectl get deployments/percona-everest --namespace=percona-everest');
+      // check that the deployment does not exist
+      out = await cli.exec('kubectl get deployments/percona-everest --namespace=percona-everest');
 
       await out.outContains(
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
