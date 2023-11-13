@@ -85,7 +85,7 @@ test.describe('Everest CLI install', async () => {
 
       await out.assertSuccess();
       // check that the deployment does not exist
-      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all');
+      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all &> /dev/stdout');
 
       await out.outContains(
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
