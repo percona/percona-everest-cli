@@ -923,3 +923,18 @@ func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
 	defer resp.Body.Close() //nolint:errcheck
 	return io.ReadAll(resp.Body)
 }
+
+func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, namespaces []string) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "everest-namespaces",
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"namespaces": strings.Join(namespaces, ","),
+		},
+	}
+	_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
+
+	return err
+}

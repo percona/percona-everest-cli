@@ -71,6 +71,8 @@ type (
 		Name string
 		// Namespace defines the namespace operators shall be installed to.
 		Namespace string
+		// Namespaces defines namespaces that everest can operate in.
+		Namespaces []string
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -157,14 +159,38 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.populateConfig(ctx); err != nil {
 		return err
 	}
-	if err := o.provisionNamespace(); err != nil {
+	if err := o.provisionNamespace(o.config.Namespace); err != nil {
 		return err
 	}
 
 	if err := o.configureEverestConnector(); err != nil {
 		return err
 	}
-	return o.performProvisioning(ctx)
+	if err := o.performProvisioning(ctx, o.config.Namespace); err != nil {
+		return err
+	}
+	if len(o.config.Namespaces) > 0 {
+		for _, namespace := range o.config.Namespaces {
+			namespace := namespace
+			if err := o.provisionNamespace(namespace); err != nil {
+				return err
+			}
+
+			if err := o.configureEverestConnector(); err != nil {
+				return err
+			}
+			if err := o.performProvisioning(ctx, namespace); err != nil {
+				return err
+			}
+			// TODO: Create cluster role and cluster role binding
+		}
+		if err := o.kubeClient.PersistNamespaces(ctx, o.config.Namespace, o.config.Namespaces); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }
 
 func (o *Install) populateConfig(ctx context.Context) error {
@@ -187,28 +213,30 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 	return err
 }
 
-func (o *Install) performProvisioning(ctx context.Context) error {
-	if err := o.provisionAllOperators(ctx); err != nil {
+func (o *Install) performProvisioning(ctx context.Context, namespace string) error {
+	if err := o.provisionAllOperators(ctx, namespace); err != nil {
 		return err
 	}
-	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-	err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
-	if err != nil {
-		return err
+	if namespace == o.config.Namespace {
+		o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
+		err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+		if err != nil {
+			return err
+		}
+		o.l.Info("Everest has been installed. Configuring connection")
 	}
-	o.l.Info("Everest has been installed. Configuring connection")
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx); err != nil {
+		if err := o.provisionMonitoring(ctx, namespace); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context) error {
+func (o *Install) provisionMonitoring(ctx context.Context, namespace string) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
-	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
+	if err := o.kubeClient.ProvisionMonitoring(namespace); err != nil {
 		return errors.Join(err, errors.New("could not provision monitoring configuration"))
 	}
 
@@ -217,8 +245,10 @@ func (o *Install) provisionMonitoring(ctx context.Context) error {
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
-		return err
+	if o.config.Namespace == namespace {
+		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, namespace); err != nil {
+			return err
+		}
 	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
@@ -515,26 +545,27 @@ func (o *Install) runInstallWizard() error {
 }
 
 // provisionNamespace provisions a namespace for Everest.
-func (o *Install) provisionNamespace() error {
-	o.l.Infof("Creating namespace %s", o.config.Namespace)
-	err := o.kubeClient.CreateNamespace(o.config.Namespace)
+func (o *Install) provisionNamespace(namespace string) error {
+	o.l.Infof("Creating namespace %s", namespace)
+	err := o.kubeClient.CreateNamespace(namespace)
 	if err != nil {
 		return errors.Join(err, errors.New("could not provision namespace"))
 	}
 
-	o.l.Infof("Namespace %s has been created", o.config.Namespace)
+	o.l.Infof("Namespace %s has been created", namespace)
 	return nil
 }
 
 // provisionAllOperators provisions all configured operators to a k8s cluster.
-func (o *Install) provisionAllOperators(ctx context.Context) error {
+func (o *Install) provisionAllOperators(ctx context.Context, namespace string) error {
 	o.l.Info("Started provisioning the cluster")
-
-	if err := o.provisionOLM(ctx); err != nil {
-		return err
+	if namespace == o.config.Namespace {
+		if err := o.provisionOLM(ctx); err != nil {
+			return err
+		}
 	}
 
-	if err := o.provisionInstall(ctx); err != nil {
+	if err := o.provisionOperators(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -558,7 +589,7 @@ func (o *Install) provisionOLM(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) provisionInstall(ctx context.Context) error {
+func (o *Install) provisionOperators(ctx context.Context, namespace string) error {
 	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
 	if err != nil {
 		return err
@@ -571,26 +602,26 @@ func (o *Install) provisionInstall(ctx context.Context) error {
 	g.SetLimit(operatorInstallThreads)
 
 	if o.config.Monitoring.Enable {
-		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName, namespace))
 	}
 
 	if o.config.Operator.PXC {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName, namespace))
 	}
 	if o.config.Operator.PSMDB {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName, namespace))
 	}
 	if o.config.Operator.PG {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName, namespace))
 	}
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
+	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName, namespace)(); err != nil {
 		return err
 	}
-	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, namespace)
 	if err != nil {
 		return err
 	}
@@ -600,7 +631,7 @@ func (o *Install) provisionInstall(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) installOperator(ctx context.Context, channel, operatorName string) func() error {
+func (o *Install) installOperator(ctx context.Context, channel, operatorName, namespace string) func() error {
 	return func() error {
 		// We check if the context has not been cancelled yet to return early
 		if err := ctx.Err(); err != nil {
@@ -611,7 +642,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
-			Namespace:              o.config.Namespace,
+			Namespace:              namespace,
 			Name:                   operatorName,
 			OperatorGroup:          operatorGroup,
 			CatalogSource:          catalogSource,

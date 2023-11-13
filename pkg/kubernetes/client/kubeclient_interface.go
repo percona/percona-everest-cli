@@ -112,6 +112,7 @@ type KubeClientConnector interface {
 	DeleteFile(fileBytes []byte) error
 	// GetService returns k8s service by provided namespace and name.
 	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
+	CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.

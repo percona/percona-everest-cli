@@ -1341,3 +1341,7 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
 	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
+
+func (c *Client) CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
+	return c.clientset.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
+}
