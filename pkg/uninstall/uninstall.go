@@ -14,7 +14,7 @@
 // limitations under the License.
 
 // Package uninstall ...
-package uninstall //nolint:predeclared
+package uninstall
 
 import (
 	"context"
@@ -32,15 +32,6 @@ type Cluster struct {
 	config     ClusterConfig
 	kubeClient *kubernetes.Kubernetes
 	l          *zap.SugaredLogger
-}
-
-type k8sCluster struct {
-	// id stores ID of the Kubernetes cluster to be removed.
-	id string
-	// namespace stores everest namespace in the k8s cluster.
-	namespace string
-	// uid stores k8s UID of the namespace.
-	uid string
 }
 
 // ClusterConfig stores configuration for the Cluster command.
@@ -74,7 +65,7 @@ func NewCluster(c ClusterConfig, l *zap.SugaredLogger) (*Cluster, error) {
 	return cli, nil
 }
 
-func (c *Cluster) runEverestWizard(ctx context.Context) error {
+func (c *Cluster) runEverestWizard() error {
 	pNamespace := &survey.Input{
 		Message: "Please select namespace",
 		Default: c.config.Namespace,
@@ -91,7 +82,7 @@ func (c *Cluster) runEverestWizard(ctx context.Context) error {
 
 // Run runs the cluster command.
 func (c *Cluster) Run(ctx context.Context) error {
-	if err := c.runEverestWizard(ctx); err != nil {
+	if err := c.runEverestWizard(); err != nil {
 		return err
 	}
 

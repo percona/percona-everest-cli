@@ -14,7 +14,7 @@
 // limitations under the License.
 
 // Package commands ...
-package commands //nolint:predeclared
+package commands
 
 import (
 	"os"

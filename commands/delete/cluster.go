@@ -17,7 +17,6 @@
 package delete //nolint:predeclared
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -28,10 +27,11 @@ import (
 // NewClusterCmd returns a new cluster command.
 func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "cluster",
+		Use:   "cluster",
+		Short: "Deprecated. Please use everestctl uninstall instead",
 		Run: func(cmd *cobra.Command, args []string) {
 			initClusterViperFlags(cmd)
-			fmt.Println("delete cluster is deprecated. Please use everestctl uninstall")
+			l.Info("delete cluster is deprecated. Please use everestctl uninstall")
 			os.Exit(1)
 		},
 	}
