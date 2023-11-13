@@ -1342,6 +1342,7 @@ func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev
 	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// CreateConfigMap creates config map in the provided namespace.
 func (c *Client) CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error) {
 	return c.clientset.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{})
 }

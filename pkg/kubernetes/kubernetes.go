@@ -924,6 +924,7 @@ func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+// PersistNamespaces stores provided namespaces in the configMap.
 func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, namespaces []string) error {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

@@ -174,39 +174,41 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.performProvisioning(ctx, o.config.Namespace); err != nil {
 		return err
 	}
-	if len(o.config.Namespaces) > 0 {
-		for _, namespace := range o.config.Namespaces {
-			namespace := namespace
-			if err := o.provisionNamespace(namespace); err != nil {
-				return err
-			}
-
-			if err := o.configureEverestConnector(); err != nil {
-				return err
-			}
-			if err := o.performProvisioning(ctx, namespace); err != nil {
-				return err
-			}
-			o.l.Info("Creating role for Everest service account")
-			err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
-			if err != nil {
-				return errors.Join(err, errors.New("could not create role"))
-			}
-
-			o.l.Info("Binding role to Everest Service account")
-			err = o.kubeClient.CreateRoleBinding(
-				namespace,
-				everestServiceAccountRoleBinding,
-				everestServiceAccountRole,
-				everestServiceAccount,
-			)
-			if err != nil {
-				return errors.Join(err, errors.New("could not create role binding"))
-			}
-		}
-		if err := o.kubeClient.PersistNamespaces(ctx, o.config.Namespace, o.config.Namespaces); err != nil {
+	if len(o.config.Namespaces) == 0 {
+		// No multi namespace support for now and we can exit early.
+		return nil
+	}
+	for _, namespace := range o.config.Namespaces {
+		namespace := namespace
+		if err := o.provisionNamespace(namespace); err != nil {
 			return err
 		}
+
+		if err := o.configureEverestConnector(); err != nil {
+			return err
+		}
+		if err := o.performProvisioning(ctx, namespace); err != nil {
+			return err
+		}
+		o.l.Info("Creating role for Everest service account")
+		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role"))
+		}
+
+		o.l.Info("Binding role to Everest Service account")
+		err = o.kubeClient.CreateRoleBinding(
+			namespace,
+			everestServiceAccountRoleBinding,
+			everestServiceAccountRole,
+			everestServiceAccount,
+		)
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role binding"))
+		}
+	}
+	if err := o.kubeClient.PersistNamespaces(ctx, o.config.Namespace, o.config.Namespaces); err != nil {
+		return err
 	}
 
 	return nil
