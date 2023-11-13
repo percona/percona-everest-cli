@@ -16,7 +16,7 @@ import { test } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
 
-test.describe('Everest CLI install operators', async () => {
+test.describe('Everest CLI install', async () => {
   test.beforeEach(async ({ cli }) => {
     await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
     await cli.execute('minikube delete');
@@ -42,9 +42,9 @@ test.describe('Everest CLI install operators', async () => {
     };
     const clusterName = `test-${faker.number.int()}`;
 
-    await test.step('run everest install operators command', async () => {
+    await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
