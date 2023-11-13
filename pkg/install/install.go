@@ -29,6 +29,7 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -59,6 +60,10 @@ const (
 	pgOperatorName            = "percona-postgresql-operator"
 	vmOperatorName            = "victoriametrics-operator"
 	operatorInstallThreads    = 1
+
+	everestServiceAccount            = "everest-admin"
+	everestServiceAccountRole        = "everest-admin-role"
+	everestServiceAccountRoleBinding = "everest-admin-role-binding"
 )
 
 type (
@@ -182,7 +187,22 @@ func (o *Install) Run(ctx context.Context) error {
 			if err := o.performProvisioning(ctx, namespace); err != nil {
 				return err
 			}
-			// TODO: Create cluster role and cluster role binding
+			o.l.Info("Creating role for Everest service account")
+			err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
+			if err != nil {
+				return errors.Join(err, errors.New("could not create role"))
+			}
+
+			o.l.Info("Binding role to Everest Service account")
+			err = o.kubeClient.CreateRoleBinding(
+				namespace,
+				everestServiceAccountRoleBinding,
+				everestServiceAccountRole,
+				everestServiceAccount,
+			)
+			if err != nil {
+				return errors.Join(err, errors.New("could not create role binding"))
+			}
 		}
 		if err := o.kubeClient.PersistNamespaces(ctx, o.config.Namespace, o.config.Namespaces); err != nil {
 			return err
@@ -190,7 +210,6 @@ func (o *Install) Run(ctx context.Context) error {
 	}
 
 	return nil
-
 }
 
 func (o *Install) populateConfig(ctx context.Context) error {
@@ -663,4 +682,54 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 
 func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
 	return o.kubeClient.RestartEverest(ctx, "everest-operator", o.config.Namespace)
+}
+
+func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusters", "databaseclusterrestores"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseengines"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusterrestores"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusterbackups"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"backupstorages"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"monitoringconfigs"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"operator.victoriametrics.com"},
+			Resources: []string{"vmagents"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"namespaces"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"*"},
+		},
+	}
 }
