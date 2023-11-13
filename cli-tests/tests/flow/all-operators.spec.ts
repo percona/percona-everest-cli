@@ -65,7 +65,7 @@ test.describe('Everest CLI install', async () => {
         'name: DISABLE_TELEMETRY\n          value: "false"',
       );
 
-      out = await cli.everestExecSkipWizardWithEnv('upgrade', 'DISABLE_TELEMETRY=true');
+      out = await cli.everestExecSkipWizardWithEnv('upgrade --namespace=percona-everest-all', 'DISABLE_TELEMETRY=true');
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'Subscriptions have been patched\t{"component": "upgrade"}',
