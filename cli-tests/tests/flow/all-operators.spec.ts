@@ -27,7 +27,7 @@ test.describe('Everest CLI install operators', async () => {
   test('install all operators', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
-        const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+        const out = await cli.exec('kubectl get pods --namespace=percona-everest-all');
 
         await out.outContainsNormalizedMany([
           'percona-xtradb-cluster-operator',
@@ -41,7 +41,7 @@ test.describe('Everest CLI install operators', async () => {
 
     await test.step('run everest install operators command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --monitoring.enable=0 --name=${clusterName}`,
+        `install operators --monitoring.enable=0 --name=${clusterName} --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
@@ -59,7 +59,7 @@ test.describe('Everest CLI install operators', async () => {
 
     await test.step('disable telemetry', async () => {
       // check that the telemetry IS NOT disabled by default
-      let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
+      let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest-all -o yaml');
 
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "false"',
@@ -73,19 +73,19 @@ test.describe('Everest CLI install operators', async () => {
 
       await page.waitForTimeout(10_000);
       // check that the telemetry IS disabled
-      out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest -o yaml');
+      out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest-all -o yaml');
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "true"',
       );
     });
     await test.step('uninstall Everest', async () => {
       let out = await cli.everestExec(
-        `uninstall --namespace=percona-everest --assume-yes`,
+        `uninstall --namespace=percona-everest-all --assume-yes`,
       );
 
       await out.assertSuccess();
       // check that the deployment does not exist
-      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest');
+      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all');
 
       await out.outContains(
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
