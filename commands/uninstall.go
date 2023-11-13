@@ -13,35 +13,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package delete holds logic for delete command.
-package delete //nolint:predeclared
+// Package commands ...
+package commands //nolint:predeclared
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/pkg/output"
+	"github.com/percona/percona-everest-cli/pkg/uninstall"
 )
 
-// NewClusterCmd returns a new cluster command.
-func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
+// newUninstallCmd returns a new uninstall command.
+func newUninstallCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "cluster",
+		Use: "uninstall",
 		Run: func(cmd *cobra.Command, args []string) {
-			initClusterViperFlags(cmd)
-			fmt.Println("delete cluster is deprecated. Please use everestctl uninstall")
-			os.Exit(1)
+			initUninstallViperFlags(cmd)
+			c, err := parseClusterConfig()
+			if err != nil {
+				os.Exit(1)
+			}
+
+			op, err := uninstall.NewCluster(*c, l)
+			if err != nil {
+				l.Error(err)
+				os.Exit(1)
+			}
+
+			if err := op.Run(cmd.Context()); err != nil {
+				output.PrintError(err, l)
+				os.Exit(1)
+			}
 		},
 	}
 
-	initClusterFlags(cmd)
+	initUninstallFlags(cmd)
 
 	return cmd
 }
 
-func initClusterFlags(cmd *cobra.Command) {
+func initUninstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().String("name", "", "Kubernetes cluster name in Everest")
@@ -50,7 +65,7 @@ func initClusterFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("ignore-kubernetes-unavailable", false, "Remove cluster even if Kubernetes is not available")
 }
 
-func initClusterViperFlags(cmd *cobra.Command) {
+func initUninstallViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
@@ -60,4 +75,10 @@ func initClusterViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag(                                                //nolint:errcheck,gosec
 		"ignore-kubernetes-unavailable", cmd.Flags().Lookup("ignore-kubernetes-unavailable"),
 	)
+}
+
+func parseClusterConfig() (*uninstall.ClusterConfig, error) {
+	c := &uninstall.ClusterConfig{}
+	err := viper.Unmarshal(c)
+	return c, err
 }

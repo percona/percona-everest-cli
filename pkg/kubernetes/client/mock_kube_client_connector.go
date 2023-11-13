@@ -194,6 +194,20 @@ func (_m *MockKubeClientConnector) DeleteFile(fileBytes []byte) error {
 	return r0
 }
 
+// DeleteManifestFile provides a mock function with given fields: fileBytes, namespace
+func (_m *MockKubeClientConnector) DeleteManifestFile(fileBytes []byte, namespace string) error {
+	ret := _m.Called(fileBytes, namespace)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]byte, string) error); ok {
+		r0 = rf(fileBytes, namespace)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteObject provides a mock function with given fields: obj
 func (_m *MockKubeClientConnector) DeleteObject(obj runtime.Object) error {
 	ret := _m.Called(obj)
