@@ -92,7 +92,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	}
 	u.l.Info("Subscriptions have been patched")
 	u.l.Info("Upgrading Everest")
-	if _, err := u.kubeClient.InstallEverest(ctx, u.config.Namespace); err != nil {
+	if err := u.kubeClient.InstallEverest(ctx, u.config.Namespace); err != nil {
 		return err
 	}
 	u.l.Info("Everest has been upgraded")
