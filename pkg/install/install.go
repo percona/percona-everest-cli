@@ -29,6 +29,7 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -191,21 +192,30 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
+	_, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
+	var everestExists bool
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+	if err != nil && k8serrors.IsNotFound(err) {
+		everestExists = true
+	}
+
 	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-	err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+	err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
 	if err != nil {
 		return err
 	}
 	o.l.Info("Everest has been installed. Configuring connection")
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx); err != nil {
+		if err := o.provisionMonitoring(ctx, everestExists); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context) error {
+func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
 	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
@@ -217,8 +227,10 @@ func (o *Install) provisionMonitoring(ctx context.Context) error {
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
-		return err
+	if everestExists {
+		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
+			return err
+		}
 	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
