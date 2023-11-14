@@ -78,7 +78,6 @@ const (
 	databaseClusterAPIVersion    = "everest.percona.com/v1alpha1"
 	restartAnnotationKey         = "everest.percona.com/restart"
 	managedByKey                 = "everest.percona.com/managed-by"
-
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
@@ -922,4 +921,18 @@ func (k *Kubernetes) getManifestData(ctx context.Context) ([]byte, error) {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 	return io.ReadAll(resp.Body)
+}
+
+// DeleteEverest downloads the manifest file and deletes it from provisioned k8s cluster.
+func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error {
+	data, err := k.getManifestData(ctx)
+	if err != nil {
+		return errors.Join(err, errors.New("failed downloading everest monitoring file"))
+	}
+
+	err = k.client.DeleteManifestFile(data, namespace)
+	if err != nil {
+		return errors.Join(err, errors.New("failed deleting manifest file"))
+	}
+	return nil
 }

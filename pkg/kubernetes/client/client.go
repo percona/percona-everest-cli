@@ -759,6 +759,26 @@ func (c *Client) ApplyManifestFile(fileBytes []byte, namespace string) error {
 	return nil
 }
 
+// DeleteManifestFile accepts manifest file contents, parses into []runtime.Object
+// and deletes them from the cluster.
+func (c *Client) DeleteManifestFile(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i]
+		if err := c.applyTemplateCustomization(o, namespace); err != nil {
+			return err
+		}
+		err := c.DeleteObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namespace string) error {
 	if err := unstructured.SetNestedField(u.Object, namespace, "metadata", "namespace"); err != nil {
 		return err

@@ -42,6 +42,7 @@ func NewRootCmd(l *zap.SugaredLogger) *cobra.Command {
 	rootCmd.AddCommand(newDeleteCmd(l))
 	rootCmd.AddCommand(newVersionCmd(l))
 	rootCmd.AddCommand(newUpgradeCmd(l))
+	rootCmd.AddCommand(newUninstallCmd(l))
 
 	return rootCmd
 }
