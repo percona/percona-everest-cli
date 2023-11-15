@@ -192,12 +192,12 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
-	_, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
+	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
-	if err != nil && k8serrors.IsNotFound(err) {
+	if d.Name == kubernetes.PerconaEverestDeploymentName {
 		everestExists = true
 	}
 
