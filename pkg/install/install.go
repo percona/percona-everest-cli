@@ -197,7 +197,7 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
-	if d.Name == kubernetes.PerconaEverestDeploymentName {
+	if d != nil && d.Name == kubernetes.PerconaEverestDeploymentName {
 		everestExists = true
 	}
 
