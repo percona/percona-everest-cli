@@ -10,13 +10,8 @@ then
 	echo "kubectl command not found. Please install it."
 	exit
 fi
-if ! command -v jq &> /dev/null
-then
-	echo "jq is not found. Please install it."
-	exit
-fi
 
-latest_release=$(curl -s https://api.github.com/repos/percona/percona-everest-cli/releases/latest |jq -r '.name')
+latest_release=$(curl -s https://api.github.com/repos/percona/percona-everest-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | tr '[:upper:]' '[:lower:]')
 
