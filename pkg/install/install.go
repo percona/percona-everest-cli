@@ -373,54 +373,10 @@ func (o *Install) runMonitoringConfigWizard(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.InstanceName == "" {
-		if err := o.runMonitoringURLWizard(ctx); err != nil {
+		if err := o.runMonitoringNewURLWizard(); err != nil {
 			return err
 		}
 	}
-
-	return nil
-}
-
-func (o *Install) runMonitoringURLWizard(ctx context.Context) error {
-	instances, err := o.everestClient.ListMonitoringInstances(ctx)
-	if err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Debug(err)
-		} else {
-			o.l.Error(err)
-		}
-
-		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-		l.Error("Could not get a list of monitoring instances from Everest. " +
-			"Make sure Everest is running and is accessible from this machine.")
-		return common.ErrExitWithError
-	}
-
-	if len(instances) == 0 {
-		return o.runMonitoringNewURLWizard()
-	}
-
-	opts := make([]string, 0, len(instances)+1)
-	for _, i := range instances {
-		opts = append(opts, i.Name)
-	}
-	opts = append(opts, "Add new monitoring instance")
-
-	pInstance := &survey.Select{
-		Message: "Select monitoring instance:",
-		Options: opts,
-	}
-	ix := 0
-	if err := survey.AskOne(pInstance, &ix); err != nil {
-		return err
-	}
-
-	if ix > len(instances)-1 {
-		return o.runMonitoringNewURLWizard()
-	}
-
-	o.monitoringInstanceName = instances[ix].Name
 
 	return nil
 }
