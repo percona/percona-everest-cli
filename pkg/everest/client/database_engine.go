@@ -35,7 +35,7 @@ func (e *Everest) ListDatabaseEngines(ctx context.Context) (*client.DatabaseEngi
 	defer res.Body.Close() //nolint:errcheck
 
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
-		return ret, processErrorResponse(res, errors.New("cannot list database engines doe to Everest error"))
+		return ret, processErrorResponse(res, errors.New("cannot list database engines due to Everest error"))
 	}
 	err = json.NewDecoder(res.Body).Decode(ret)
 	return ret, err
