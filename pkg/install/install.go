@@ -253,7 +253,7 @@ func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) e
 	// deployed yet and we get a HTTP 500 in this case.
 	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, "1", client.KubernetesClusterMonitoring{
+		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
 			Enable:                 true,
 			MonitoringInstanceName: o.monitoringInstanceName,
 		})
