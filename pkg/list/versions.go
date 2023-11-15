@@ -37,8 +37,7 @@ type Versions struct {
 type (
 	// VersionsConfig stores configuration for the versions command.
 	VersionsConfig struct {
-		KubernetesID string `mapstructure:"kubernetes-id"`
-		Everest      EverestConfig
+		Everest EverestConfig
 
 		// Type represents a database engine type.
 		Type string

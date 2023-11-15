@@ -35,8 +35,7 @@ type DBEngines struct {
 type (
 	// DBEnginesConfig stores configuration for the database engines.
 	DBEnginesConfig struct {
-		KubernetesID string `mapstructure:"kubernetes-id"`
-		Everest      EverestConfig
+		Everest EverestConfig
 	}
 
 	// EverestConfig stores config for Everest.
