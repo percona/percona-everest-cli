@@ -201,10 +201,12 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 		everestExists = true
 	}
 
-	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-	err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
-	if err != nil {
-		return err
+	if !everestExists {
+		o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
+		err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+		if err != nil {
+			return err
+		}
 	}
 	o.l.Info("Everest has been installed. Configuring connection")
 	if o.config.Monitoring.Enable {

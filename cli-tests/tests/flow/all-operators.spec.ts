@@ -88,11 +88,11 @@ test.describe('Everest CLI install', async () => {
       const out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
       await out.assertSuccess();
 
-      await out.outErrContainsNormalizedMany([
+      await out.outContainsNormalizedMany([
         'namespace: percona-everest-all',
         'namespace: different-everest',
       ]);
-      await cli.everestExec('uninstall --namespace=different-evereest --assume-yes');
+      await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
     });
 
     await test.step('uninstall Everest', async () => {
