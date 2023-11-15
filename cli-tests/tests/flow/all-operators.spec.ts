@@ -78,6 +78,23 @@ test.describe('Everest CLI install', async () => {
         'name: DISABLE_TELEMETRY\n          value: "true"',
       );
     });
+    await test.step('run everest install command using a different namespace', async () => {
+      const install = await cli.everestExecSkipWizard(
+        `install --monitoring.enable=0 --name=${clusterName} --namespace=different-everest`,
+      );
+
+      await install.assertSuccess();
+
+      const out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
+      await out.assertSuccess();
+
+      await out.outErrContainsNormalizedMany([
+        'namespace: percona-everest-all',
+        'namespace: different-everest',
+      ]);
+      await cli.everestExec('uninstall --namespace=different-evereest --assume-yes');
+    });
+
     await test.step('uninstall Everest', async () => {
       let out = await cli.everestExec(
         `uninstall --namespace=percona-everest-all --assume-yes`,
