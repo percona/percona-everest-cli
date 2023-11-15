@@ -18,21 +18,25 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
 
 	"github.com/percona/percona-everest-backend/client"
 )
 
 // ListDatabaseEngines lists database engines.
-func (e *Everest) ListDatabaseEngines(ctx context.Context, kubernetesID string) (*client.DatabaseEngineList, error) {
-	res := &client.DatabaseEngineList{}
-	err := makeRequest(
-		ctx, e.cl.ListDatabaseEngines,
-		kubernetesID, res, errors.New("cannot list database engines due to Everest error"),
-	)
+func (e *Everest) ListDatabaseEngines(ctx context.Context) (*client.DatabaseEngineList, error) {
+	ret := &client.DatabaseEngineList{}
+	res, err := e.cl.ListDatabaseEngines(ctx)
 	if err != nil {
-		return nil, err
+		return ret, errors.Join(err, errors.New("cannot list database engines due to Everest error"))
 	}
+	defer res.Body.Close() //nolint:errcheck
 
-	return res, nil
+	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
+		return ret, processErrorResponse(res, errors.New("cannot list database engines doe to Everest error"))
+	}
+	err = json.NewDecoder(res.Body).Decode(ret)
+	return ret, err
 }

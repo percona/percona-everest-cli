@@ -75,7 +75,7 @@ func (m *MySQL) Run(ctx context.Context) error {
 	}
 
 	m.l.Infof("Deleting %q cluster", m.config.Name)
-	_, err := m.everestClient.DeleteDBCluster(ctx, m.config.KubernetesID, m.config.Name)
+	_, err := m.everestClient.DeleteDBCluster(ctx, m.config.Name)
 	if err != nil {
 		return err
 	}

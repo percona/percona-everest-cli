@@ -27,7 +27,6 @@ import (
 // CreateDBCluster creates a new database cluster.
 func (e *Everest) CreateDBCluster(
 	ctx context.Context,
-	kubernetesID string,
 	body client.CreateDatabaseClusterJSONRequestBody,
 ) (*client.DatabaseCluster, error) {
 	res := &client.DatabaseCluster{}
@@ -38,7 +37,7 @@ func (e *Everest) CreateDBCluster(
 			body client.CreateDatabaseClusterJSONRequestBody,
 			r ...client.RequestEditorFn,
 		) (*http.Response, error) {
-			return e.cl.CreateDatabaseCluster(ctx, kubernetesID, body, r...)
+			return e.cl.CreateDatabaseCluster(ctx, body, r...)
 		},
 		body, res, errors.New("cannot create database cluster due to Everest error"),
 	)
@@ -52,7 +51,6 @@ func (e *Everest) CreateDBCluster(
 // DeleteDBCluster deletes a database cluster.
 func (e *Everest) DeleteDBCluster(
 	ctx context.Context,
-	kubernetesID string,
 	name string,
 ) (*client.IoK8sApimachineryPkgApisMetaV1StatusV2, error) {
 	res := &client.IoK8sApimachineryPkgApisMetaV1StatusV2{}
@@ -63,7 +61,7 @@ func (e *Everest) DeleteDBCluster(
 			_ struct{},
 			r ...client.RequestEditorFn,
 		) (*http.Response, error) {
-			return e.cl.DeleteDatabaseCluster(ctx, kubernetesID, name, r...)
+			return e.cl.DeleteDatabaseCluster(ctx, name, r...)
 		},
 		struct{}{}, res, errors.New("cannot delete database cluster due to Everest error"),
 	)

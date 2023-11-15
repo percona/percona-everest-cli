@@ -25,7 +25,6 @@ import (
 type everestClientConnector interface {
 	CreateDBCluster(
 		ctx context.Context,
-		kubernetesID string,
 		body client.CreateDatabaseClusterJSONRequestBody,
 	) (*client.DatabaseCluster, error)
 }
