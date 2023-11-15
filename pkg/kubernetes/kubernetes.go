@@ -33,6 +33,7 @@ import (
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,8 +65,8 @@ const (
 	// ClusterTypeGeneric is a generic type.
 	ClusterTypeGeneric ClusterType = "generic"
 
-	// perconaEverestDeploymentName stores the name of everest backend deployment.
-	perconaEverestDeploymentName = "percona-everest"
+	// PerconaEverestDeploymentName stores the name of everest backend deployment.
+	PerconaEverestDeploymentName = "percona-everest"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
@@ -904,7 +905,7 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error
 	if err != nil {
 		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Name: perconaEverestDeploymentName, Namespace: namespace}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Name: PerconaEverestDeploymentName, Namespace: namespace}); err != nil {
 		return errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
 	}
 	return nil
@@ -935,4 +936,9 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 		return errors.Join(err, errors.New("failed deleting manifest file"))
 	}
 	return nil
+}
+
+// GetDeployment returns k8s deployment by provided name and namespace.
+func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
+	return k.client.GetDeployment(ctx, name, namespace)
 }

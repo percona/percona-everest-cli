@@ -29,6 +29,7 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/commands/common"
@@ -191,21 +192,30 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
+	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
+	var everestExists bool
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+	if d != nil && d.Name == kubernetes.PerconaEverestDeploymentName {
+		everestExists = true
+	}
+
 	o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-	err := o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+	err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
 	if err != nil {
 		return err
 	}
 	o.l.Info("Everest has been installed. Configuring connection")
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx); err != nil {
+		if err := o.provisionMonitoring(ctx, everestExists); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context) error {
+func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
 	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
@@ -217,8 +227,10 @@ func (o *Install) provisionMonitoring(ctx context.Context) error {
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
-		return err
+	if everestExists {
+		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
+			return err
+		}
 	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
@@ -361,54 +373,10 @@ func (o *Install) runMonitoringConfigWizard(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.InstanceName == "" {
-		if err := o.runMonitoringURLWizard(ctx); err != nil {
+		if err := o.runMonitoringNewURLWizard(); err != nil {
 			return err
 		}
 	}
-
-	return nil
-}
-
-func (o *Install) runMonitoringURLWizard(ctx context.Context) error {
-	instances, err := o.everestClient.ListMonitoringInstances(ctx)
-	if err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Debug(err)
-		} else {
-			o.l.Error(err)
-		}
-
-		l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-		l.Error("Could not get a list of monitoring instances from Everest. " +
-			"Make sure Everest is running and is accessible from this machine.")
-		return common.ErrExitWithError
-	}
-
-	if len(instances) == 0 {
-		return o.runMonitoringNewURLWizard()
-	}
-
-	opts := make([]string, 0, len(instances)+1)
-	for _, i := range instances {
-		opts = append(opts, i.Name)
-	}
-	opts = append(opts, "Add new monitoring instance")
-
-	pInstance := &survey.Select{
-		Message: "Select monitoring instance:",
-		Options: opts,
-	}
-	ix := 0
-	if err := survey.AskOne(pInstance, &ix); err != nil {
-		return err
-	}
-
-	if ix > len(instances)-1 {
-		return o.runMonitoringNewURLWizard()
-	}
-
-	o.monitoringInstanceName = instances[ix].Name
 
 	return nil
 }
