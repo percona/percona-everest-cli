@@ -45,7 +45,6 @@ import (
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -811,7 +810,7 @@ func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespac
 		Version: "v1",
 	})
 	err = cl.Get(context.Background(), types.NamespacedName{Name: "everest-admin-cluster-role-binding"}, binding)
-	if err != nil && !k8serrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
@@ -854,9 +853,7 @@ func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespac
 	if !ok {
 		return nil
 	}
-	for _, s := range bindingSubjects {
-		subjects = append(subjects, s)
-	}
+	subjects = append(subjects, bindingSubjects...)
 	return unstructured.SetNestedSlice(u.Object, subjects, "subjects")
 }
 

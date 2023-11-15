@@ -155,7 +155,7 @@ func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 
 // Run runs the operators installation process.
 func (o *Install) Run(ctx context.Context) error {
-	if err := o.populateConfig(ctx); err != nil {
+	if err := o.populateConfig(); err != nil {
 		return err
 	}
 	if err := o.provisionNamespace(); err != nil {
@@ -168,9 +168,9 @@ func (o *Install) Run(ctx context.Context) error {
 	return o.performProvisioning(ctx)
 }
 
-func (o *Install) populateConfig(ctx context.Context) error {
+func (o *Install) populateConfig() error {
 	if !o.config.SkipWizard {
-		if err := o.runWizard(ctx); err != nil {
+		if err := o.runWizard(); err != nil {
 			return err
 		}
 	}
@@ -328,12 +328,12 @@ func (o *Install) configureEverestConnector() error {
 }
 
 // runWizard runs installation wizard.
-func (o *Install) runWizard(ctx context.Context) error {
+func (o *Install) runWizard() error {
 	if err := o.runEverestWizard(); err != nil {
 		return err
 	}
 
-	if err := o.runMonitoringWizard(ctx); err != nil {
+	if err := o.runMonitoringWizard(); err != nil {
 		return err
 	}
 
@@ -348,7 +348,7 @@ func (o *Install) runEverestWizard() error {
 	return survey.AskOne(pNamespace, &o.config.Namespace)
 }
 
-func (o *Install) runMonitoringWizard(ctx context.Context) error {
+func (o *Install) runMonitoringWizard() error {
 	pMonitor := &survey.Confirm{
 		Message: "Do you want to enable monitoring?",
 		Default: o.config.Monitoring.Enable,
@@ -359,7 +359,7 @@ func (o *Install) runMonitoringWizard(ctx context.Context) error {
 	}
 
 	if o.config.Monitoring.Enable {
-		if err := o.runMonitoringConfigWizard(ctx); err != nil {
+		if err := o.runMonitoringConfigWizard(); err != nil {
 			return err
 		}
 	}
@@ -367,7 +367,7 @@ func (o *Install) runMonitoringWizard(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) runMonitoringConfigWizard(ctx context.Context) error {
+func (o *Install) runMonitoringConfigWizard() error {
 	if o.config.Monitoring.PMM == nil {
 		o.config.Monitoring.PMM = &PMMConfig{}
 	}
