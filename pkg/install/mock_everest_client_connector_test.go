@@ -14,32 +14,6 @@ type mockEverestClientConnector struct {
 	mock.Mock
 }
 
-// CreateBackupStorage provides a mock function with given fields: ctx, body
-func (_m *mockEverestClientConnector) CreateBackupStorage(ctx context.Context, body client.CreateBackupStorageParams) (*client.BackupStorage, error) {
-	ret := _m.Called(ctx, body)
-
-	var r0 *client.BackupStorage
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, client.CreateBackupStorageParams) (*client.BackupStorage, error)); ok {
-		return rf(ctx, body)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, client.CreateBackupStorageParams) *client.BackupStorage); ok {
-		r0 = rf(ctx, body)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*client.BackupStorage)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, client.CreateBackupStorageParams) error); ok {
-		r1 = rf(ctx, body)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // CreateMonitoringInstance provides a mock function with given fields: ctx, body
 func (_m *mockEverestClientConnector) CreateMonitoringInstance(ctx context.Context, body client.MonitoringInstanceCreateParams) (*client.MonitoringInstanceBaseWithName, error) {
 	ret := _m.Called(ctx, body)
@@ -92,32 +66,6 @@ func (_m *mockEverestClientConnector) GetMonitoringInstance(ctx context.Context,
 	return r0, r1
 }
 
-// ListKubernetesClusters provides a mock function with given fields: ctx
-func (_m *mockEverestClientConnector) ListKubernetesClusters(ctx context.Context) ([]client.KubernetesCluster, error) {
-	ret := _m.Called(ctx)
-
-	var r0 []client.KubernetesCluster
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]client.KubernetesCluster, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) []client.KubernetesCluster); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]client.KubernetesCluster)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListMonitoringInstances provides a mock function with given fields: ctx
 func (_m *mockEverestClientConnector) ListMonitoringInstances(ctx context.Context) ([]client.MonitoringInstanceBaseWithName, error) {
 	ret := _m.Called(ctx)
@@ -144,39 +92,13 @@ func (_m *mockEverestClientConnector) ListMonitoringInstances(ctx context.Contex
 	return r0, r1
 }
 
-// RegisterKubernetesCluster provides a mock function with given fields: ctx, body
-func (_m *mockEverestClientConnector) RegisterKubernetesCluster(ctx context.Context, body client.CreateKubernetesClusterParams) (*client.KubernetesCluster, error) {
+// SetKubernetesClusterMonitoring provides a mock function with given fields: ctx, body
+func (_m *mockEverestClientConnector) SetKubernetesClusterMonitoring(ctx context.Context, body client.KubernetesClusterMonitoring) error {
 	ret := _m.Called(ctx, body)
 
-	var r0 *client.KubernetesCluster
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, client.CreateKubernetesClusterParams) (*client.KubernetesCluster, error)); ok {
-		return rf(ctx, body)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, client.CreateKubernetesClusterParams) *client.KubernetesCluster); ok {
-		r0 = rf(ctx, body)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*client.KubernetesCluster)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, client.CreateKubernetesClusterParams) error); ok {
-		r1 = rf(ctx, body)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// SetKubernetesClusterMonitoring provides a mock function with given fields: ctx, kubernetesID, body
-func (_m *mockEverestClientConnector) SetKubernetesClusterMonitoring(ctx context.Context, kubernetesID string, body client.KubernetesClusterMonitoring) error {
-	ret := _m.Called(ctx, kubernetesID, body)
-
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, client.KubernetesClusterMonitoring) error); ok {
-		r0 = rf(ctx, kubernetesID, body)
+	if rf, ok := ret.Get(0).(func(context.Context, client.KubernetesClusterMonitoring) error); ok {
+		r0 = rf(ctx, body)
 	} else {
 		r0 = ret.Error(0)
 	}

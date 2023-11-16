@@ -68,15 +68,12 @@ func NewVersionsCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initVersionsFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
-	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID")
-	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 
 	cmd.Flags().String("type", "", "Filter by database engine type")
 }
 
 func initVersionsViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("kubernetes-id", cmd.Flags().Lookup("kubernetes-id"))       //nolint:errcheck,gosec
 
 	viper.BindPFlag("type", cmd.Flags().Lookup("type")) //nolint:errcheck,gosec
 }
