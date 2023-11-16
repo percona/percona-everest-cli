@@ -73,6 +73,9 @@ type KubeClientConnector interface {
 	// ApplyManifestFile accepts manifest file contents, parses into []runtime.Object
 	// and applies them against the cluster.
 	ApplyManifestFile(fileBytes []byte, namespace string) error
+	// DeleteManifestFile accepts manifest file contents, parses into []runtime.Object
+	// and deletes them from the cluster.
+	DeleteManifestFile(fileBytes []byte, namespace string) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
 	// GetSubscriptionCSV retrieves a subscription CSV.

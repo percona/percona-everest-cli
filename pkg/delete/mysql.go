@@ -33,8 +33,7 @@ type MySQL struct {
 
 // MySQLConfig stores configuration for the MySQL command.
 type MySQLConfig struct {
-	Name         string
-	KubernetesID string `mapstructure:"kubernetes-id"`
+	Name string
 
 	Everest struct {
 		// Endpoint stores URL to Everest.
@@ -75,7 +74,7 @@ func (m *MySQL) Run(ctx context.Context) error {
 	}
 
 	m.l.Infof("Deleting %q cluster", m.config.Name)
-	_, err := m.everestClient.DeleteDBCluster(ctx, m.config.KubernetesID, m.config.Name)
+	_, err := m.everestClient.DeleteDBCluster(ctx, m.config.Name)
 	if err != nil {
 		return err
 	}

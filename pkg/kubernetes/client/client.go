@@ -759,6 +759,26 @@ func (c *Client) ApplyManifestFile(fileBytes []byte, namespace string) error {
 	return nil
 }
 
+// DeleteManifestFile accepts manifest file contents, parses into []runtime.Object
+// and deletes them from the cluster.
+func (c *Client) DeleteManifestFile(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i]
+		if err := c.applyTemplateCustomization(o, namespace); err != nil {
+			return err
+		}
+		err := c.DeleteObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namespace string) error {
 	if err := unstructured.SetNestedField(u.Object, namespace, "metadata", "namespace"); err != nil {
 		return err
@@ -770,7 +790,7 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 	}
 
 	if ok && kind == "ClusterRoleBinding" {
-		if err := c.updateClusterRoleBindingNamespace(u, namespace); err != nil {
+		if err := c.updateClusterRoleBinding(u, namespace); err != nil {
 			return err
 		}
 	}
@@ -778,7 +798,22 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 	return nil
 }
 
-func (c *Client) updateClusterRoleBindingNamespace(u *unstructured.Unstructured, namespace string) error {
+func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespace string) error {
+	cl, err := c.kubeClient()
+	if err != nil {
+		return err
+	}
+	binding := &unstructured.Unstructured{}
+	binding.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "rbac.authorization.k8s.io",
+		Kind:    "ClusterRoleBinding",
+		Version: "v1",
+	})
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "everest-admin-cluster-role-binding"}, binding)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
 	sub, ok, err := unstructured.NestedFieldNoCopy(u.Object, "subjects")
 	if err != nil {
 		return err
@@ -803,8 +838,23 @@ func (c *Client) updateClusterRoleBindingNamespace(u *unstructured.Unstructured,
 			return err
 		}
 	}
+	if binding.GetName() == "" {
+		return nil
+	}
 
-	return nil
+	bindingSub, ok, err := unstructured.NestedFieldNoCopy(binding.Object, "subjects")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	bindingSubjects, ok := bindingSub.([]interface{})
+	if !ok {
+		return nil
+	}
+	subjects = append(subjects, bindingSubjects...)
+	return unstructured.SetNestedSlice(u.Object, subjects, "subjects")
 }
 
 func (c *Client) getObjects(f []byte) ([]*unstructured.Unstructured, error) {

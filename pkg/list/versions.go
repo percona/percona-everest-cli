@@ -37,8 +37,7 @@ type Versions struct {
 type (
 	// VersionsConfig stores configuration for the versions command.
 	VersionsConfig struct {
-		KubernetesID string `mapstructure:"kubernetes-id"`
-		Everest      EverestConfig
+		Everest EverestConfig
 
 		// Type represents a database engine type.
 		Type string
@@ -78,7 +77,7 @@ func NewVersions(c VersionsConfig, everestClient everestClientConnector, l *zap.
 
 // Run runs the versions list command.
 func (v *Versions) Run(ctx context.Context) (VersionsList, error) {
-	dbEngines, err := v.everestClient.ListDatabaseEngines(ctx, v.config.KubernetesID)
+	dbEngines, err := v.everestClient.ListDatabaseEngines(ctx)
 	if err != nil {
 		return nil, err
 	}
