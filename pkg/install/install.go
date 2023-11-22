@@ -645,6 +645,9 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
+		if len(o.config.Namespaces) != 0 && operatorName == everestOperatorName {
+			params.TargetNamespaces = o.config.Namespaces
+		}
 
 		if err := o.kubeClient.InstallOperator(ctx, params); err != nil {
 			o.l.Errorf("failed installing %s operator", operatorName)

@@ -611,11 +611,12 @@ type InstallOperatorRequest struct {
 	Channel                string
 	InstallPlanApproval    v1alpha1.Approval
 	StartingCSV            string
+	TargetNamespaces       []string
 }
 
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error {
-	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace); err != nil {
+	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace, req.TargetNamespaces); err != nil {
 		return err
 	}
 
@@ -678,14 +679,14 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 func createOperatorGroupIfNeeded(
 	ctx context.Context,
 	client client.KubeClientConnector,
-	name, namespace string,
+	name, namespace string, targetNamespaces []string,
 ) error {
 	_, err := client.GetOperatorGroup(ctx, namespace, name)
 	if err == nil {
 		return nil
 	}
 
-	_, err = client.CreateOperatorGroup(ctx, namespace, name)
+	_, err = client.CreateOperatorGroup(ctx, namespace, name, targetNamespaces)
 
 	return err
 }

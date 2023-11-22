@@ -1155,11 +1155,12 @@ func (c *Client) GetOperatorGroup(ctx context.Context, namespace, name string) (
 }
 
 // CreateOperatorGroup creates an operator group to be used as part of a subscription.
-func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error) {
+func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string, targetNamespaces []string) (*v1.OperatorGroup, error) {
 	operatorClient, err := versioned.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
+	targetNamespaces = append(targetNamespaces, namespace)
 
 	if namespace == "" {
 		namespace = c.namespace
@@ -1170,7 +1171,7 @@ func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string
 			Namespace: namespace,
 		},
 		Spec: v1.OperatorGroupSpec{
-			TargetNamespaces: []string{namespace},
+			TargetNamespaces: targetNamespaces,
 		},
 		Status: v1.OperatorGroupStatus{
 			LastUpdated: &metav1.Time{

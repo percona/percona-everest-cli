@@ -140,25 +140,25 @@ func (_m *MockKubeClientConnector) CreateNamespace(name string) error {
 	return r0
 }
 
-// CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name
-func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string) (*operatorsv1.OperatorGroup, error) {
-	ret := _m.Called(ctx, namespace, name)
+// CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name, targetNamespaces
+func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string, targetNamespaces []string) (*operatorsv1.OperatorGroup, error) {
+	ret := _m.Called(ctx, namespace, name, targetNamespaces)
 
 	var r0 *operatorsv1.OperatorGroup
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*operatorsv1.OperatorGroup, error)); ok {
-		return rf(ctx, namespace, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) (*operatorsv1.OperatorGroup, error)); ok {
+		return rf(ctx, namespace, name, targetNamespaces)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *operatorsv1.OperatorGroup); ok {
-		r0 = rf(ctx, namespace, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) *operatorsv1.OperatorGroup); ok {
+		r0 = rf(ctx, namespace, name, targetNamespaces)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*operatorsv1.OperatorGroup)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, namespace, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string) error); ok {
+		r1 = rf(ctx, namespace, name, targetNamespaces)
 	} else {
 		r1 = ret.Error(1)
 	}

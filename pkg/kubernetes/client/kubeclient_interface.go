@@ -87,7 +87,7 @@ type KubeClientConnector interface {
 	// GetOperatorGroup retrieves an operator group details by namespace and name.
 	GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
 	// CreateOperatorGroup creates an operator group to be used as part of a subscription.
-	CreateOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
+	CreateOperatorGroup(ctx context.Context, namespace, name string, targetNamespaces []string) (*v1.OperatorGroup, error)
 	// CreateSubscriptionForCatalog creates an OLM subscription.
 	CreateSubscriptionForCatalog(ctx context.Context, namespace, name, catalogNamespace, catalog, packageName, channel, startingCSV string, approval v1alpha1.Approval) (*v1alpha1.Subscription, error)
 	// GetSubscription retrieves an OLM subscription by namespace and name.
@@ -115,6 +115,7 @@ type KubeClientConnector interface {
 	DeleteFile(fileBytes []byte) error
 	// GetService returns k8s service by provided namespace and name.
 	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
+	// CreateConfigMap creates config map in the provided namespace.
 	CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
