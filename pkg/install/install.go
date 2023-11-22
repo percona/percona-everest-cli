@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -29,6 +30,7 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -65,6 +67,7 @@ const (
 	everestServiceAccount            = "everest-admin"
 	everestServiceAccountRole        = "everest-admin-role"
 	everestServiceAccountRoleBinding = "everest-admin-role-binding"
+	everestWatchNamespacesEnvVar     = "WATCH_NAMESPACES"
 )
 
 type (
@@ -647,6 +650,14 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 		}
 		if len(o.config.Namespaces) != 0 && operatorName == everestOperatorName {
 			params.TargetNamespaces = o.config.Namespaces
+			params.SubscriptionConfig = &v1alpha1.SubscriptionConfig{
+				Env: []corev1.EnvVar{
+					{
+						Name:  everestWatchNamespacesEnvVar,
+						Value: strings.Join(o.config.Namespaces, ","),
+					},
+				},
+			}
 		}
 
 		if err := o.kubeClient.InstallOperator(ctx, params); err != nil {

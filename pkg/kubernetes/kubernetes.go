@@ -612,6 +612,7 @@ type InstallOperatorRequest struct {
 	InstallPlanApproval    v1alpha1.Approval
 	StartingCSV            string
 	TargetNamespaces       []string
+	SubscriptionConfig     *v1alpha1.SubscriptionConfig
 }
 
 // InstallOperator installs an operator via OLM.
