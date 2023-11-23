@@ -942,6 +942,7 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 
 // PersistNamespaces stores provided namespaces in the configMap.
 func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, namespaces []string) error {
+	namespaces = append(namespaces, namespace)
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "everest-namespaces",
