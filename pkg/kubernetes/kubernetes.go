@@ -295,6 +295,11 @@ func (k *Kubernetes) ListSecrets(ctx context.Context) (*corev1.SecretList, error
 	return k.client.ListSecrets(ctx)
 }
 
+// SetSecret creates or updates an existing secret.
+func (k *Kubernetes) SetSecret(secret *corev1.Secret) error {
+	return k.client.ApplyObject(secret)
+}
+
 // CreatePMMSecret creates pmm secret in kubernetes.
 func (k *Kubernetes) CreatePMMSecret(namespace, secretName string, secrets map[string][]byte) error {
 	secret := &corev1.Secret{ //nolint: exhaustruct

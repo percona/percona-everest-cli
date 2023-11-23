@@ -45,10 +45,16 @@ func NewEverest(everestClient *client.Client) *Everest {
 }
 
 // NewEverestFromURL returns a new Everest from a provided URL.
-func NewEverestFromURL(url string) (*Everest, error) {
-	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url))
+func NewEverestFromURL(url, everestPwd string) (*Everest, error) {
+	everestCl, err := client.NewClient(
+		fmt.Sprintf("%s/v1", url),
+		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			req.Header.Add("Authentication", fmt.Sprintf("Bearer %s", everestPwd))
+			return nil
+		}),
+	)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not initialize everest client"))
+		return nil, errors.Join(err, errors.New("could not initialize Everest client"))
 	}
 	return NewEverest(everestCl), nil
 }
@@ -57,7 +63,7 @@ func NewEverestFromURL(url string) (*Everest, error) {
 // Learn more https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster-services/#manually-constructing-apiserver-proxy-urls
 //
 // This client must be used only for provisioning only.
-func NewProxiedEverest(config *rest.Config, namespace string) (*Everest, error) {
+func NewProxiedEverest(config *rest.Config, namespace, everestPwd string) (*Everest, error) {
 	host, err := url.Parse(config.Host)
 	if err != nil {
 		return nil, err
@@ -68,6 +74,10 @@ func NewProxiedEverest(config *rest.Config, namespace string) (*Everest, error) 
 			host,
 			url.PathEscape(namespace),
 		),
+		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			req.Header.Add("Authentication", fmt.Sprintf("Bearer %s", everestPwd))
+			return nil
+		}),
 	)
 	if err != nil {
 		return nil, err

@@ -35,6 +35,7 @@ import (
 	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
+	"github.com/percona/percona-everest-cli/pkg/password"
 )
 
 // Install implements the main logic for commands.
@@ -161,11 +162,20 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
-
-	if err := o.configureEverestConnector(); err != nil {
+	pwd, err := o.generatePassword(ctx)
+	if err != nil {
 		return err
 	}
-	return o.performProvisioning(ctx)
+	if err := o.configureEverestConnector(pwd.Password); err != nil {
+		return err
+	}
+	if err := o.performProvisioning(ctx); err != nil {
+		return err
+	}
+
+	o.l.Info(pwd)
+
+	return nil
 }
 
 func (o *Install) populateConfig() error {
@@ -320,8 +330,8 @@ func (o *Install) createPMMMonitoringInstance(ctx context.Context, name, url, us
 	return nil
 }
 
-func (o *Install) configureEverestConnector() error {
-	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace)
+func (o *Install) configureEverestConnector(everestPwd string) error {
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace, everestPwd)
 	if err != nil {
 		return err
 	}
@@ -598,6 +608,30 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 
 		return nil
 	}
+}
+
+func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
+	o.l.Info("Creating password for Everest")
+
+	r, err := password.NewReset(
+		password.ResetConfig{
+			KubeconfigPath: o.config.KubeconfigPath,
+			Namespace:      o.config.Namespace,
+		},
+		o.l,
+	)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not initialize reset password"))
+	}
+
+	res, err := r.Run(ctx)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not create password"))
+	}
+
+	o.l.Debug(res)
+
+	return res, nil
 }
 
 func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
