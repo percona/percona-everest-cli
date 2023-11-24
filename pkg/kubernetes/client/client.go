@@ -1183,6 +1183,25 @@ func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string
 	return operatorClient.OperatorsV1().OperatorGroups(namespace).Create(ctx, og, metav1.CreateOptions{})
 }
 
+// CreateSubscription creates an OLM subscription.
+func (c *Client) CreateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	operatorClient, err := versioned.NewForConfig(c.restConfig)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
+	}
+	sub, err := operatorClient.
+		OperatorsV1alpha1().
+		Subscriptions(namespace).
+		Create(ctx, subscription, metav1.CreateOptions{})
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return sub, nil
+		}
+		return sub, err
+	}
+	return sub, nil
+}
+
 // CreateSubscriptionForCatalog creates an OLM subscription.
 func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, name, catalogNamespace, catalog,
 	packageName, channel, startingCSV string, approval v1alpha1.Approval,
@@ -1213,14 +1232,14 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			Channel:                channel,
 			StartingCSV:            startingCSV,
 			InstallPlanApproval:    approval,
-			Config: &v1alpha1.SubscriptionConfig{
-				Env: []corev1.EnvVar{
-					{
-						Name:  disableTelemetryEnvVar,
-						Value: disableTelemetry,
-					},
-				},
-			},
+			//Config: &v1alpha1.SubscriptionConfig{
+			//	Env: []corev1.EnvVar{
+			//		{
+			//			Name:  disableTelemetryEnvVar,
+			//			Value: disableTelemetry,
+			//		},
+			//	},
+			//},
 		},
 	}
 	sub, err := operatorClient.

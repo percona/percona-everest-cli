@@ -166,6 +166,32 @@ func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, name
 	return r0, r1
 }
 
+// CreateSubscription provides a mock function with given fields: ctx, namespace, subscription
+func (_m *MockKubeClientConnector) CreateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	ret := _m.Called(ctx, namespace, subscription)
+
+	var r0 *v1alpha1.Subscription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) (*v1alpha1.Subscription, error)); ok {
+		return rf(ctx, namespace, subscription)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) *v1alpha1.Subscription); ok {
+		r0 = rf(ctx, namespace, subscription)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1alpha1.Subscription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, *v1alpha1.Subscription) error); ok {
+		r1 = rf(ctx, namespace, subscription)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateSubscriptionForCatalog provides a mock function with given fields: ctx, namespace, name, catalogNamespace, catalog, packageName, channel, startingCSV, approval
 func (_m *MockKubeClientConnector) CreateSubscriptionForCatalog(ctx context.Context, namespace string, name string, catalogNamespace string, catalog string, packageName string, channel string, startingCSV string, approval v1alpha1.Approval) (*v1alpha1.Subscription, error) {
 	ret := _m.Called(ctx, namespace, name, catalogNamespace, catalog, packageName, channel, startingCSV, approval)

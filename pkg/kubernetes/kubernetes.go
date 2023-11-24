@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
+	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
@@ -620,11 +621,27 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace, req.TargetNamespaces); err != nil {
 		return err
 	}
+	subscription := &olmv1alpha1.Subscription{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       olmv1alpha1.SubscriptionKind,
+			APIVersion: olmv1alpha1.SubscriptionCRDAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: req.Namespace,
+			Name:      req.Name,
+		},
+		Spec: &v1alpha1.SubscriptionSpec{
+			CatalogSource:          req.CatalogSource,
+			CatalogSourceNamespace: "olm",
+			Package:                req.Name,
+			Channel:                req.Channel,
+			StartingCSV:            req.StartingCSV,
+			InstallPlanApproval:    olmv1alpha1.ApprovalManual,
+			Config:                 req.SubscriptionConfig,
+		},
+	}
+	subs, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)
 
-	subs, err := k.client.CreateSubscriptionForCatalog(
-		ctx, req.Namespace, req.Name, "olm", req.CatalogSource,
-		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual,
-	)
 	if err != nil {
 		return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
 	}
