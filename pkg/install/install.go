@@ -168,48 +168,15 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.populateConfig(); err != nil {
 		return err
 	}
-	if err := o.provisionNamespace(o.config.InstallNamespace); err != nil {
+	if err := o.createNamespace(o.config.InstallNamespace); err != nil {
+		return err
+	}
+	if err := o.installDefaultComponents(ctx); err != nil {
 		return err
 	}
 
-	if err := o.configureEverestConnector(); err != nil {
+	if err := o.provisionAllNamespaces(ctx); err != nil {
 		return err
-	}
-	if err := o.performProvisioning(ctx, o.config.InstallNamespace); err != nil {
-		return err
-	}
-	if len(o.config.AdditionalNamespaces) == 0 {
-		// No multi namespace support for now and we can exit early.
-		return nil
-	}
-	for _, namespace := range o.config.AdditionalNamespaces {
-		namespace := namespace
-		if err := o.provisionNamespace(namespace); err != nil {
-			return err
-		}
-
-		if err := o.configureEverestConnector(); err != nil {
-			return err
-		}
-		if err := o.performProvisioning(ctx, namespace); err != nil {
-			return err
-		}
-		o.l.Info("Creating role for Everest service account")
-		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
-		if err != nil {
-			return errors.Join(err, errors.New("could not create role"))
-		}
-
-		o.l.Info("Binding role to Everest Service account")
-		err = o.kubeClient.CreateRoleBinding(
-			namespace,
-			everestServiceAccountRoleBinding,
-			everestServiceAccountRole,
-			everestServiceAccount,
-		)
-		if err != nil {
-			return errors.Join(err, errors.New("could not create role binding"))
-		}
 	}
 	if err := o.kubeClient.PersistNamespaces(ctx, o.config.InstallNamespace, o.config.AdditionalNamespaces); err != nil {
 		return err
@@ -237,19 +204,19 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 	_, err := o.everestClient.ListMonitoringInstances(ctx)
 	return err
 }
-
-func (o *Install) performProvisioning(ctx context.Context, namespace string) error {
-	if err := o.provisionAllOperators(ctx, namespace); err != nil {
+func (o *Install) installDefaultComponents(ctx context.Context) error {
+	if err := o.provisionOLM(ctx); err != nil {
 		return err
 	}
-	if namespace == o.config.InstallNamespace {
-		o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.InstallNamespace))
-		err := o.kubeClient.InstallEverest(ctx, o.config.InstallNamespace)
-		if err != nil {
-			return err
-		}
-		o.l.Info("Everest has been installed. Configuring connection")
+	if err := o.kubeClient.CreateOperatorGroup(ctx, operatorGroup, o.config.InstallNamespace, o.config.AdditionalNamespaces); err != nil {
+		return err
 	}
+	if err := o.provisionOperators(ctx, o.config.InstallNamespace); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *Install) installEverest(ctx context.Context) error {
 	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.InstallNamespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -265,17 +232,60 @@ func (o *Install) performProvisioning(ctx context.Context, namespace string) err
 		if err != nil {
 			return err
 		}
+		o.l.Info("Everest has been installed. Configuring connection")
 	}
-	o.l.Info("Everest has been installed. Configuring connection")
+	if err := o.configureEverestConnector(); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *Install) provisionAllNamespaces(ctx context.Context) error {
+	if len(o.config.AdditionalNamespaces) == 0 {
+		// No multi namespace support for now and we can exit early.
+		return nil
+	}
+	for _, namespace := range o.config.AdditionalNamespaces {
+		namespace := namespace
+		if err := o.createNamespace(namespace); err != nil {
+			return err
+		}
+
+		if err := o.provisionNamespace(ctx, namespace); err != nil {
+			return err
+		}
+		o.l.Info("Creating role for Everest service account")
+		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role"))
+		}
+
+		o.l.Info("Binding role to Everest Service account")
+		err = o.kubeClient.CreateRoleBinding(
+			namespace,
+			everestServiceAccountRoleBinding,
+			everestServiceAccountRole,
+			everestServiceAccount,
+		)
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role binding"))
+		}
+	}
+	return nil
+}
+
+func (o *Install) provisionNamespace(ctx context.Context, namespace string) error {
+	if err := o.provisionAllOperators(ctx, namespace); err != nil {
+		return err
+	}
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx, everestExists, namespace); err != nil {
+		if err := o.provisionMonitoring(ctx, namespace); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool, namespace string) error {
+func (o *Install) provisionMonitoring(ctx context.Context, namespace string) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
 	if err := o.kubeClient.ProvisionMonitoring(namespace); err != nil {
@@ -287,11 +297,11 @@ func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool, n
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if everestExists {
-		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.InstallNamespace); err != nil {
-			return err
-		}
-	}
+	//if everestExists {
+	//	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.InstallNamespace); err != nil {
+	//		return err
+	//	}
+	//}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
 		if errors.As(err, &u) {
@@ -542,8 +552,8 @@ func (o *Install) runInstallWizard() error {
 	return nil
 }
 
-// provisionNamespace provisions a namespace for Everest.
-func (o *Install) provisionNamespace(namespace string) error {
+// createNamespace provisions a namespace for Everest.
+func (o *Install) createNamespace(namespace string) error {
 	o.l.Infof("Creating namespace %s", namespace)
 	err := o.kubeClient.CreateNamespace(namespace)
 	if err != nil {

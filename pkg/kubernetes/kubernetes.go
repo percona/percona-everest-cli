@@ -618,9 +618,6 @@ type InstallOperatorRequest struct {
 
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error {
-	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace, req.TargetNamespaces); err != nil {
-		return err
-	}
 	subscription := &olmv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       olmv1alpha1.SubscriptionKind,
@@ -694,19 +691,41 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	return true, nil
 }
 
-func createOperatorGroupIfNeeded(
-	ctx context.Context,
-	client client.KubeClientConnector,
-	name, namespace string, targetNamespaces []string,
-) error {
-	_, err := client.GetOperatorGroup(ctx, namespace, name)
-	if err == nil {
+func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace string, targetNamespaces []string) error {
+	targetNamespaces = append(targetNamespaces, namespace)
+	og, err := k.client.GetOperatorGroup(ctx, namespace, name)
+	if err != nil && apierrors.IsNotFound(err) {
+		return err
+	}
+	if err != nil && apierrors.IsNotFound(err) {
+		_, err = k.client.CreateOperatorGroup(ctx, namespace, name, targetNamespaces)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
+	var update bool
+	for _, namespace := range targetNamespaces {
+		namespace := namespace
+		if !contains(og.Spec.TargetNamespaces, namespace) {
+			update = true
+		}
+	}
+	if update {
+		og.Spec.TargetNamespaces = targetNamespaces
+		return k.client.ApplyObject(og)
+	}
+	return nil
 
-	_, err = client.CreateOperatorGroup(ctx, namespace, name, targetNamespaces)
-
-	return err
+}
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		a := a
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 // ListSubscriptions all the subscriptions in the namespace.
