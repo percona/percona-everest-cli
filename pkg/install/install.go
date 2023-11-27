@@ -178,6 +178,14 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.provisionAllNamespaces(ctx); err != nil {
 		return err
 	}
+	if err := o.installEverest(ctx); err != nil {
+		return err
+	}
+	if o.config.Monitoring.Enable {
+		if err := o.provisionMonitoringInAllNamespaces(ctx); err != nil {
+			return err
+		}
+	}
 	if err := o.kubeClient.PersistNamespaces(ctx, o.config.InstallNamespace, o.config.AdditionalNamespaces); err != nil {
 		return err
 	}
@@ -280,66 +288,60 @@ func (o *Install) provisionNamespace(ctx context.Context, namespace string) erro
 	if err := o.provisionAllOperators(ctx, namespace); err != nil {
 		return err
 	}
-	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx, namespace); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context, namespace string) error {
+func (o *Install) provisionMonitoringInAllNamespaces(ctx context.Context) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
-	if err := o.kubeClient.ProvisionMonitoring(namespace); err != nil {
-		return errors.Join(err, errors.New("could not provision monitoring configuration"))
-	}
-
-	l.Info("K8s cluster monitoring has been provisioned successfully")
-	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-		return err
-	}
-	o.l.Info("Deploying VMAgent to k8s cluster")
-	//if everestExists {
-	//	if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.InstallNamespace); err != nil {
-	//		return err
-	//	}
-	//}
-	if err := o.checkEverestConnection(ctx); err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Debug(err)
-
-			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-			l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this machine.",
-			)
-			return common.ErrExitWithError
+	namespaces := []string{o.config.InstallNamespace}
+	namespaces = append(namespaces, o.config.AdditionalNamespaces...)
+	for _, namespace := range namespaces {
+		if err := o.kubeClient.ProvisionMonitoring(namespace); err != nil {
+			return errors.Join(err, errors.New("could not provision monitoring configuration"))
 		}
 
-		return errors.Join(err, errors.New("could not check connection to Everest"))
-	}
+		l.Info("K8s cluster monitoring has been provisioned successfully")
+		if err := o.resolveMonitoringInstanceName(ctx); err != nil {
+			return err
+		}
+		o.l.Info("Deploying VMAgent to k8s cluster")
+		if err := o.checkEverestConnection(ctx); err != nil {
+			var u *url.Error
+			if errors.As(err, &u) {
+				o.l.Debug(err)
 
-	// We retry for a bit since the MonitoringConfig may not be properly
-	// deployed yet and we get a HTTP 500 in this case.
-	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-		o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
-			Enable:                 true,
-			MonitoringInstanceName: o.monitoringInstanceName,
+				l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+				l.Error("Could not connect to Everest. " +
+					"Make sure Everest is running and is accessible from this machine.",
+				)
+				return common.ErrExitWithError
+			}
+
+			return errors.Join(err, errors.New("could not check connection to Everest"))
+		}
+
+		// We retry for a bit since the MonitoringConfig may not be properly
+		// deployed yet and we get a HTTP 500 in this case.
+		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
+			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
+				Enable:                 true,
+				MonitoringInstanceName: o.monitoringInstanceName,
+			})
+			if err != nil {
+				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
+				return false, nil
+			}
+
+			return true, nil
 		})
 		if err != nil {
-			o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
-			return false, nil
+			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
 		}
 
-		return true, nil
-	})
-	if err != nil {
-		return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
+		o.l.Info("VMAgent deployed successfully")
 	}
-
-	o.l.Info("VMAgent deployed successfully")
 	return nil
 }
 
