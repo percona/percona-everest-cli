@@ -687,7 +687,7 @@ func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 	return []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{"everest.percona.com"},
-			Resources: []string{"databaseclusters", "databaseclusterrestores"},
+			Resources: []string{"databaseclusters"},
 			Verbs:     []string{"*"},
 		},
 		{
