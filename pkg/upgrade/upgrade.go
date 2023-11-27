@@ -38,8 +38,6 @@ const (
 type (
 	// Config defines configuration required for upgrade command.
 	Config struct {
-		// Name of the Kubernetes Cluster
-		Name string
 		// Namespaces defines namespaces that everest can operate in.
 		Namespaces []string `mapstructure:"namespace"`
 		// KubeconfigPath is a path to a kubeconfig

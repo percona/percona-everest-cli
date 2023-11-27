@@ -77,8 +77,6 @@ type (
 
 	// Config stores configuration for the operators.
 	Config struct {
-		// Name of the Kubernetes Cluster
-		Name string
 		// Namespaces defines namespaces that everest can operate in.
 		Namespaces []string `mapstructure:"namespace"`
 		// SkipWizard skips wizard during installation.
