@@ -179,7 +179,7 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.populateConfig(); err != nil {
 		return err
 	}
-	if len(u.config.Namespaces) == 0 {
+	if len(o.config.Namespaces) == 0 {
 		return errors.New("namespace list is empty")
 	}
 	if err := o.createNamespace(everestNamespace); err != nil {
