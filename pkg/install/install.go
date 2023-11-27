@@ -204,6 +204,7 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 	_, err := o.everestClient.ListMonitoringInstances(ctx)
 	return err
 }
+
 func (o *Install) installDefaultComponents(ctx context.Context) error {
 	if err := o.provisionOLM(ctx); err != nil {
 		return err
@@ -216,6 +217,7 @@ func (o *Install) installDefaultComponents(ctx context.Context) error {
 	}
 	return nil
 }
+
 func (o *Install) installEverest(ctx context.Context) error {
 	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.InstallNamespace)
 	var everestExists bool
@@ -239,6 +241,7 @@ func (o *Install) installEverest(ctx context.Context) error {
 	}
 	return nil
 }
+
 func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 	if len(o.config.AdditionalNamespaces) == 0 {
 		// No multi namespace support for now and we can exit early.

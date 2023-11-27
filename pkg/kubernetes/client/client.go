@@ -84,8 +84,6 @@ const (
 
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
-
-	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
 // Each level has 2 spaces for PrefixWriter.
@@ -1211,11 +1209,6 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
-	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
-	if !ok || disableTelemetry != "true" {
-		disableTelemetry = "false"
-	}
-
 	subscription := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha1.SubscriptionKind,
@@ -1232,14 +1225,6 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			Channel:                channel,
 			StartingCSV:            startingCSV,
 			InstallPlanApproval:    approval,
-			//Config: &v1alpha1.SubscriptionConfig{
-			//	Env: []corev1.EnvVar{
-			//		{
-			//			Name:  disableTelemetryEnvVar,
-			//			Value: disableTelemetry,
-			//		},
-			//	},
-			//},
 		},
 	}
 	sub, err := operatorClient.

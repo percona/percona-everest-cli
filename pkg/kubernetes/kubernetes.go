@@ -26,6 +26,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -86,6 +87,7 @@ const (
 	// ContainerStateTerminated indicates that container began execution and
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
+	disableTelemetryEnvVar                  = "DISABLE_TELEMETRY"
 
 	olmNamespace = "olm"
 
@@ -618,6 +620,18 @@ type InstallOperatorRequest struct {
 
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error {
+	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+	if !ok || disableTelemetry != "true" {
+		disableTelemetry = "false"
+	}
+	config := &olmv1alpha1.SubscriptionConfig{Env: []corev1.EnvVar{}}
+	if req.SubscriptionConfig != nil {
+		config = req.SubscriptionConfig
+	}
+	config.Env = append(config.Env, corev1.EnvVar{
+		Name:  disableTelemetryEnvVar,
+		Value: disableTelemetry,
+	})
 	subscription := &olmv1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       olmv1alpha1.SubscriptionKind,
@@ -634,7 +648,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 			Channel:                req.Channel,
 			StartingCSV:            req.StartingCSV,
 			InstallPlanApproval:    olmv1alpha1.ApprovalManual,
-			Config:                 req.SubscriptionConfig,
+			Config:                 config,
 		},
 	}
 	subs, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)

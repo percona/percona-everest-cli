@@ -119,6 +119,8 @@ type KubeClientConnector interface {
 	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
 	// CreateConfigMap creates config map in the provided namespace.
 	CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	// GetConfigMap fetches the config map in the provided namespace.
+	GetConfigMap(ctx context.Context, namespace, name string) (*corev1.ConfigMap, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.
