@@ -80,7 +80,7 @@ func NewUpgrade(c Config, l *zap.SugaredLogger) (*Upgrade, error) {
 
 // Run runs the operators installation process.
 func (u *Upgrade) Run(ctx context.Context) error {
-	if err := u.runEverestWizard(); err != nil {
+	if err := u.runEverestWizard(ctx); err != nil {
 		return err
 	}
 	if len(u.config.Namespaces) == 0 {
@@ -106,21 +106,24 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	u.l.Info("Everest has been upgraded")
 	return nil
 }
-func (u *Upgrade) runEverestWizard() error {
-	namespaces, err := u.kubeClient.GetPersistedNamespaces(context.Background(), everestNamespace)
-	if err != nil {
-		return err
-	}
-	pNamespace := &survey.MultiSelect{
-		Message: "Please select namespaces",
-		Options: namespaces,
-	}
-	if err := survey.AskOne(
-		pNamespace,
-		&u.config.Namespaces,
-		survey.WithValidator(survey.MinItems(1)),
-	); err != nil {
-		return err
+
+func (u *Upgrade) runEverestWizard(ctx context.Context) error {
+	if !u.config.SkipWizard {
+		namespaces, err := u.kubeClient.GetPersistedNamespaces(ctx, everestNamespace)
+		if err != nil {
+			return err
+		}
+		pNamespace := &survey.MultiSelect{
+			Message: "Please select namespaces",
+			Options: namespaces,
+		}
+		if err := survey.AskOne(
+			pNamespace,
+			&u.config.Namespaces,
+			survey.WithValidator(survey.MinItems(1)),
+		); err != nil {
+			return err
+		}
 	}
 
 	return nil

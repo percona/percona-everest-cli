@@ -82,6 +82,7 @@ const (
 	restartAnnotationKey         = "everest.percona.com/restart"
 	managedByKey                 = "everest.percona.com/managed-by"
 	disableTelemetryEnvVar       = "DISABLE_TELEMETRY"
+	configMapName                = "everest-configuration"
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
@@ -995,14 +996,14 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 // PersistConfiguration stores provided namespaces in the configMap.
 func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string, namespaces []string, operatorsList []string) (bool, error) {
 	namespaces = append(namespaces, namespace)
-	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-configuration")
+	cMap, err := k.client.GetConfigMap(ctx, namespace, configMapName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, err
 	}
 	if err != nil && apierrors.IsNotFound(err) {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "everest-configuration",
+				Name:      configMapName,
 				Namespace: namespace,
 			},
 			Data: map[string]string{
@@ -1013,7 +1014,7 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 		_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
 		return false, err
 	}
-	if cMap != nil && cMap.Name != "everest-configuration" {
+	if cMap != nil && cMap.Name != configMapName {
 		return false, nil
 	}
 	v, ok := cMap.Data["namespaces"]
@@ -1048,9 +1049,10 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	return false, nil
 }
 
+// GetPersistedNamespaces returns list of persisted namespaces.
 func (k *Kubernetes) GetPersistedNamespaces(ctx context.Context, namespace string) ([]string, error) {
 	var namespaces []string
-	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-configuration")
+	cMap, err := k.client.GetConfigMap(ctx, namespace, configMapName)
 	if err != nil {
 		return namespaces, err
 	}

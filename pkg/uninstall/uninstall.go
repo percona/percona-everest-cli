@@ -65,22 +65,24 @@ func NewUninstall(c Config, l *zap.SugaredLogger) (*Uninstall, error) {
 	return cli, nil
 }
 
-func (u *Uninstall) runEverestWizard() error {
-	namespaces, err := u.kubeClient.GetPersistedNamespaces(context.Background(), everestNamespace)
-	if err != nil {
-		return err
-	}
+func (u *Uninstall) runEverestWizard(ctx context.Context) error {
 	if !u.config.AssumeYes {
-		pNamespace := &survey.MultiSelect{
-			Message: "Please select namespaces",
-			Options: namespaces,
-		}
-		if err := survey.AskOne(
-			pNamespace,
-			&u.config.Namespaces,
-			survey.WithValidator(survey.MinItems(1)),
-		); err != nil {
+		namespaces, err := u.kubeClient.GetPersistedNamespaces(ctx, everestNamespace)
+		if err != nil {
 			return err
+		}
+		if !u.config.AssumeYes {
+			pNamespace := &survey.MultiSelect{
+				Message: "Please select namespaces",
+				Options: namespaces,
+			}
+			if err := survey.AskOne(
+				pNamespace,
+				&u.config.Namespaces,
+				survey.WithValidator(survey.MinItems(1)),
+			); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -89,7 +91,7 @@ func (u *Uninstall) runEverestWizard() error {
 
 // Run runs the cluster command.
 func (u *Uninstall) Run(ctx context.Context) error {
-	if err := u.runEverestWizard(); err != nil {
+	if err := u.runEverestWizard(ctx); err != nil {
 		return err
 	}
 	if len(u.config.Namespaces) == 0 {
