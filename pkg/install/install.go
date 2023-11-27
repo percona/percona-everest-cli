@@ -220,10 +220,6 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if o.config.Name == "" {
-		o.config.Name = o.kubeClient.ClusterName()
-	}
-
 	return nil
 }
 
