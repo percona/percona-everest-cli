@@ -38,7 +38,6 @@ test.describe('Everest CLI install', async () => {
           'percona-xtradb-cluster-operator',
           'percona-server-mongodb-operator',
           'percona-postgresql-operator',
-          'everest-operator-controller-manager',
         ]);
       });
     };
@@ -106,7 +105,7 @@ test.describe('Everest CLI install', async () => {
 
       await out.assertSuccess();
       // check that the deployment does not exist
-      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all');
+      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest');
 
       await out.outErrContainsNormalizedMany([
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
