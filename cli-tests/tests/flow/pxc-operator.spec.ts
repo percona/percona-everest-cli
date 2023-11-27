@@ -40,11 +40,10 @@ test.describe('Everest CLI install', async () => {
         ]);
       });
     };
-    const clusterName = `test-${faker.number.int()}`;
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0`,
       );
 
       await out.assertSuccess();

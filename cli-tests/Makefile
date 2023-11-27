@@ -5,6 +5,7 @@ init:               ## Install dependencies
 install-operators:  ## Install operators to k8s
 	../bin/everest install \
 		--skip-wizard \
+		--namespace=testing \
 		--monitoring.enable=0
 
 test-cli:           ## Run all tests

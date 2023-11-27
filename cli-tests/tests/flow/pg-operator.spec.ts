@@ -39,11 +39,10 @@ test.describe('Everest CLI install', async () => {
         ]);
       });
     };
-    const clusterName = `test-${faker.number.int()}`;
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0`,
       );
 
       await out.assertSuccess();
@@ -63,7 +62,7 @@ test.describe('Everest CLI install', async () => {
       await operator.assertSuccess();
 
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0`,
       );
       const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await restartedOperator.assertSuccess();
