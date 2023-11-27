@@ -979,18 +979,44 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 // PersistNamespaces stores provided namespaces in the configMap.
 func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, namespaces []string) error {
 	namespaces = append(namespaces, namespace)
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "everest-namespaces",
-			Namespace: namespace,
-		},
-		Data: map[string]string{
-			"namespaces": strings.Join(namespaces, ","),
-		},
+	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-namespaces")
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
 	}
-	_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
+	if err != nil && apierrors.IsNotFound(err) {
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "everest-namespaces",
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				"namespaces": strings.Join(namespaces, ","),
+			},
+		}
+		_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
+		return err
+	}
+	if cMap != nil && cMap.Name != "everest-namespaces" {
+		return nil
+	}
+	v, ok := cMap.Data["namespaces"]
+	if !ok {
+		return nil
+	}
+	var update bool
+	existingNamespaces := strings.Split(v, ",")
+	for _, namespace := range namespaces {
+		namespace := namespace
+		if !contains(existingNamespaces, namespace) {
+			update = true
+		}
+	}
+	if update {
+		cMap.Data["namespaces"] = strings.Join(namespaces, ",")
+		return k.client.ApplyObject(cMap)
+	}
+	return nil
 
-	return err
 }
 
 // GetDeployment returns k8s deployment by provided name and namespace.
