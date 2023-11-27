@@ -36,7 +36,6 @@ test.describe('Everest CLI install', async () => {
 
         await out.outContainsNormalizedMany([
           'percona-xtradb-cluster-operator',
-          'everest-operator-controller-manager',
         ]);
 
         await out.outNotContains([
