@@ -30,7 +30,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
@@ -81,13 +80,13 @@ const (
 	databaseClusterAPIVersion    = "everest.percona.com/v1alpha1"
 	restartAnnotationKey         = "everest.percona.com/restart"
 	managedByKey                 = "everest.percona.com/managed-by"
+	disableTelemetryEnvVar       = "DISABLE_TELEMETRY"
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
 	// ContainerStateTerminated indicates that container began execution and
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
-	disableTelemetryEnvVar                  = "DISABLE_TELEMETRY"
 
 	olmNamespace = "olm"
 
@@ -464,9 +463,9 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error
 func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Unstructured) error {
 	subscriptions := filterResources(resources, func(r unstructured.Unstructured) bool {
 		return r.GroupVersionKind() == schema.GroupVersionKind{
-			Group:   v1alpha1.GroupName,
-			Version: v1alpha1.GroupVersion,
-			Kind:    v1alpha1.SubscriptionKind,
+			Group:   olmv1alpha1.GroupName,
+			Version: olmv1alpha1.GroupVersion,
+			Kind:    olmv1alpha1.SubscriptionKind,
 		}
 	})
 
@@ -612,10 +611,10 @@ type InstallOperatorRequest struct {
 	CatalogSource          string
 	CatalogSourceNamespace string
 	Channel                string
-	InstallPlanApproval    v1alpha1.Approval
+	InstallPlanApproval    olmv1alpha1.Approval
 	StartingCSV            string
 	TargetNamespaces       []string
-	SubscriptionConfig     *v1alpha1.SubscriptionConfig
+	SubscriptionConfig     *olmv1alpha1.SubscriptionConfig
 }
 
 // InstallOperator installs an operator via OLM.
@@ -641,7 +640,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 			Namespace: req.Namespace,
 			Name:      req.Name,
 		},
-		Spec: &v1alpha1.SubscriptionSpec{
+		Spec: &olmv1alpha1.SubscriptionSpec{
 			CatalogSource:          req.CatalogSource,
 			CatalogSourceNamespace: "olm",
 			Package:                req.Name,
@@ -652,7 +651,6 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		},
 	}
 	subs, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)
-
 	if err != nil {
 		return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
 	}
@@ -730,8 +728,8 @@ func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace st
 		return k.client.ApplyObject(og)
 	}
 	return nil
-
 }
+
 func contains(s []string, e string) bool {
 	for _, a := range s {
 		a := a
@@ -743,7 +741,7 @@ func contains(s []string, e string) bool {
 }
 
 // ListSubscriptions all the subscriptions in the namespace.
-func (k *Kubernetes) ListSubscriptions(ctx context.Context, namespace string) (*v1alpha1.SubscriptionList, error) {
+func (k *Kubernetes) ListSubscriptions(ctx context.Context, namespace string) (*olmv1alpha1.SubscriptionList, error) {
 	return k.client.ListSubscriptions(ctx, namespace)
 }
 
@@ -765,8 +763,8 @@ func (k *Kubernetes) UpgradeOperator(ctx context.Context, namespace, name string
 	return err
 }
 
-func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string) (*v1alpha1.InstallPlan, error) {
-	var subs *v1alpha1.Subscription
+func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string) (*olmv1alpha1.InstallPlan, error) {
+	var subs *olmv1alpha1.Subscription
 
 	// If the subscription was recently created, the install plan might not be ready yet.
 	err := wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
@@ -805,7 +803,7 @@ func (k *Kubernetes) GetServerVersion() (*version.Info, error) {
 func (k *Kubernetes) GetClusterServiceVersion(
 	ctx context.Context,
 	key types.NamespacedName,
-) (*v1alpha1.ClusterServiceVersion, error) {
+) (*olmv1alpha1.ClusterServiceVersion, error) {
 	return k.client.GetClusterServiceVersion(ctx, key)
 }
 
@@ -813,7 +811,7 @@ func (k *Kubernetes) GetClusterServiceVersion(
 func (k *Kubernetes) ListClusterServiceVersion(
 	ctx context.Context,
 	namespace string,
-) (*v1alpha1.ClusterServiceVersionList, error) {
+) (*olmv1alpha1.ClusterServiceVersionList, error) {
 	return k.client.ListClusterServiceVersion(ctx, namespace)
 }
 
@@ -1030,7 +1028,6 @@ func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, na
 		return k.client.ApplyObject(cMap)
 	}
 	return nil
-
 }
 
 // GetDeployment returns k8s deployment by provided name and namespace.
