@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	olmv1 "github.com/operator-framework/api/pkg/operators/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
@@ -706,7 +707,7 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace string, targetNamespaces []string) error {
 	targetNamespaces = append(targetNamespaces, namespace)
 	og, err := k.client.GetOperatorGroup(ctx, namespace, name)
-	if err != nil && apierrors.IsNotFound(err) {
+	if err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	if err != nil && apierrors.IsNotFound(err) {
@@ -716,6 +717,8 @@ func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace st
 		}
 		return nil
 	}
+	og.Kind = olmv1.OperatorGroupKind
+	og.APIVersion = "operators.coreos.com/v1"
 	var update bool
 	for _, namespace := range targetNamespaces {
 		namespace := namespace
@@ -1015,6 +1018,8 @@ func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, na
 	if !ok {
 		return nil
 	}
+	cMap.Kind = "ConfigMap"
+	cMap.APIVersion = "/v1"
 	var update bool
 	existingNamespaces := strings.Split(v, ",")
 	for _, namespace := range namespaces {

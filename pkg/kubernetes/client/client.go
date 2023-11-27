@@ -1158,7 +1158,6 @@ func (c *Client) CreateOperatorGroup(ctx context.Context, namespace, name string
 	if err != nil {
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
-	targetNamespaces = append(targetNamespaces, namespace)
 
 	if namespace == "" {
 		namespace = c.namespace

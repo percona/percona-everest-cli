@@ -70,8 +70,7 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
-	cmd.Flags().String("install-namespace", "percona-everest", "Namespace where to install everest control plane components")
-	cmd.Flags().StringArray("additional-namespaces", []string{}, "Namespaces list Percona Everest can manage")
+	cmd.Flags().StringArray("namespace", []string{}, "Namespaces list Percona Everest can manage")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().BoolP("monitoring.enable", "m", false, "Enable monitoring")
@@ -108,11 +107,10 @@ func initInstallViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
 	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
 
-	viper.BindEnv("kubeconfig")                                                           //nolint:errcheck,gosec
-	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))                       //nolint:errcheck,gosec
-	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                                   //nolint:errcheck,gosec
-	viper.BindPFlag("install-namespace", cmd.Flags().Lookup("install-namespace"))         //nolint:errcheck,gosec
-	viper.BindPFlag("additional-namespaces", cmd.Flags().Lookup("additional-namespaces")) //nolint:errcheck,gosec
+	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
+	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
+	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
+	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
