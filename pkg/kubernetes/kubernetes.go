@@ -704,6 +704,7 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	return true, nil
 }
 
+// CreateOperatorGroup creates operator group in the given namespace.
 func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace string, targetNamespaces []string) error {
 	targetNamespaces = append(targetNamespaces, namespace)
 	og, err := k.client.GetOperatorGroup(ctx, namespace, name)
@@ -991,32 +992,37 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 	return nil
 }
 
-// PersistNamespaces stores provided namespaces in the configMap.
-func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, namespaces []string) error {
+// PersistConfiguration stores provided namespaces in the configMap.
+func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string, namespaces []string, operatorsList []string) (bool, error) {
 	namespaces = append(namespaces, namespace)
-	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-namespaces")
+	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-configuration")
 	if err != nil && !apierrors.IsNotFound(err) {
-		return err
+		return false, err
 	}
 	if err != nil && apierrors.IsNotFound(err) {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "everest-namespaces",
+				Name:      "everest-configuration",
 				Namespace: namespace,
 			},
 			Data: map[string]string{
 				"namespaces": strings.Join(namespaces, ","),
+				"operators":  strings.Join(operatorsList, ","),
 			},
 		}
 		_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
-		return err
+		return false, err
 	}
-	if cMap != nil && cMap.Name != "everest-namespaces" {
-		return nil
+	if cMap != nil && cMap.Name != "everest-configuration" {
+		return false, nil
 	}
 	v, ok := cMap.Data["namespaces"]
 	if !ok {
-		return nil
+		return false, nil
+	}
+	o, ok := cMap.Data["namespaces"]
+	if !ok {
+		return false, nil
 	}
 	cMap.Kind = "ConfigMap"
 	cMap.APIVersion = "/v1"
@@ -1028,11 +1034,18 @@ func (k *Kubernetes) PersistNamespaces(ctx context.Context, namespace string, na
 			update = true
 		}
 	}
+	existingOperators := strings.Split(o, ",")
+	for _, operator := range operatorsList {
+		operator := operator
+		if !contains(existingOperators, operator) {
+			update = true
+		}
+	}
 	if update {
 		cMap.Data["namespaces"] = strings.Join(namespaces, ",")
-		return k.client.ApplyObject(cMap)
+		return true, k.client.ApplyObject(cMap)
 	}
-	return nil
+	return false, nil
 }
 
 // GetDeployment returns k8s deployment by provided name and namespace.

@@ -142,6 +142,20 @@ type (
 	}
 )
 
+func (o OperatorConfig) operatorsList() []string {
+	var operators []string
+	if o.PXC {
+		operators = append(operators, pxcOperatorName)
+	}
+	if o.PSMDB {
+		operators = append(operators, psmdbOperatorName)
+	}
+	if o.PG {
+		operators = append(operators, pgOperatorName)
+	}
+	return operators
+}
+
 // NewInstall returns a new Install struct.
 func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 	cli := &Install{
@@ -185,8 +199,17 @@ func (o *Install) Run(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := o.kubeClient.PersistNamespaces(ctx, everestNamespace, o.config.Namespaces); err != nil {
+	updated, err := o.kubeClient.PersistConfiguration(ctx, everestNamespace, o.config.Namespaces, o.config.Operator.operatorsList())
+	if err != nil {
 		return err
+	}
+	if updated {
+		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, everestNamespace); err != nil {
+			return err
+		}
+		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, everestNamespace); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -600,10 +623,6 @@ func (o *Install) provisionOLM(ctx context.Context) error {
 }
 
 func (o *Install) provisionOperators(ctx context.Context, namespace string) error {
-	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, everestNamespace)
-	if err != nil {
-		return err
-	}
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -628,13 +647,6 @@ func (o *Install) provisionOperators(ctx context.Context, namespace string) erro
 		return err
 	}
 
-	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, namespace)
-	if err != nil {
-		return err
-	}
-	if len(deploymentsBefore) != 0 && len(deploymentsBefore) != len(deploymentsAfter) {
-		return o.restartEverestOperatorPod(ctx)
-	}
 	return nil
 }
 
@@ -677,10 +689,6 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 
 		return nil
 	}
-}
-
-func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverest(ctx, "everest-operator", everestNamespace)
 }
 
 func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
