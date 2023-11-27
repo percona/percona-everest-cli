@@ -1048,6 +1048,20 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	return false, nil
 }
 
+func (k *Kubernetes) GetPersistedNamespaces(ctx context.Context, namespace string) ([]string, error) {
+	var namespaces []string
+	cMap, err := k.client.GetConfigMap(ctx, namespace, "everest-configuration")
+	if err != nil {
+		return namespaces, err
+	}
+	v, ok := cMap.Data["namespaces"]
+	if !ok {
+		return namespaces, errors.New("`namespaces` key does not exist in the configmap")
+	}
+	namespaces = strings.Split(v, ",")
+	return namespaces, nil
+}
+
 // GetDeployment returns k8s deployment by provided name and namespace.
 func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
 	return k.client.GetDeployment(ctx, name, namespace)

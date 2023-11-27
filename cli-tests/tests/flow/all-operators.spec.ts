@@ -18,7 +18,6 @@ import { faker } from '@faker-js/faker';
 
 test.describe('Everest CLI install', async () => {
   test.beforeEach(async ({ cli }) => {
-    await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
     await cli.execute('minikube delete');
     await cli.execute('minikube start');
     // await cli.execute('minikube start --apiserver-name=host.docker.internal');
@@ -27,6 +26,12 @@ test.describe('Everest CLI install', async () => {
   test('install all operators', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
+        const everest = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+        await everest.outContainsNormalizedMany([
+          'percona-everest',
+          'everest-operator-controller-manager',
+        ]);
         const out = await cli.exec('kubectl get pods --namespace=percona-everest-all');
 
         await out.outContainsNormalizedMany([
@@ -37,11 +42,10 @@ test.describe('Everest CLI install', async () => {
         ]);
       });
     };
-    const clusterName = `test-${faker.number.int()}`;
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0 --name=${clusterName} --namespace=percona-everest-all`,
+        `install --monitoring.enable=0 --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
