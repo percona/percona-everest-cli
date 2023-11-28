@@ -271,7 +271,8 @@ jobs:
           'test-all-operators',
           'test-mongo-operator',
           'test-pg-operator',
-          'test-pxc-operator'
+          'test-pxc-operator',
+          'multi-namespace-mongo-operator'
         ]
     name: CLI tests
     uses: ./.github/workflows/cli-tests.yml
