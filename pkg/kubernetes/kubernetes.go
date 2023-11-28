@@ -30,8 +30,6 @@ import (
 	"strings"
 	"time"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
 	olmv1 "github.com/operator-framework/api/pkg/operators/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
@@ -39,6 +37,7 @@ import (
 	yamlv3 "gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -987,7 +986,6 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 
 // PersistConfiguration stores provided namespaces in the configMap.
 func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string, namespaces []string, operatorsList []string) (bool, error) {
-	namespaces = append(namespaces, namespace)
 	cMap, err := k.client.GetConfigMap(ctx, namespace, configMapName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return false, err
@@ -1061,6 +1059,7 @@ func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) 
 	return k.client.GetDeployment(ctx, name, namespace)
 }
 
+// UpdateClusterRoleBinding updates namespaces list for the cluster role by provided name.
 func (k *Kubernetes) UpdateClusterRoleBinding(ctx context.Context, name string, namespaces []string) error {
 	binding, err := k.client.GetClusterRoleBinding(ctx, name)
 	if err != nil {
@@ -1078,7 +1077,6 @@ func (k *Kubernetes) UpdateClusterRoleBinding(ctx context.Context, name string, 
 			binding.Subjects = append(binding.Subjects, subject)
 			needsUpdate = true
 		}
-
 	}
 	if needsUpdate {
 		binding.Kind = "ClusterRoleBinding"
@@ -1087,8 +1085,8 @@ func (k *Kubernetes) UpdateClusterRoleBinding(ctx context.Context, name string, 
 	}
 
 	return nil
-
 }
+
 func arrayContains(s []string, e string) bool {
 	for _, a := range s {
 		a := a
@@ -1098,6 +1096,7 @@ func arrayContains(s []string, e string) bool {
 	}
 	return false
 }
+
 func subjectsContains(s []rbacv1.Subject, n string) bool {
 	for _, a := range s {
 		a := a

@@ -1376,6 +1376,7 @@ func (c *Client) GetConfigMap(ctx context.Context, namespace, name string) (*cor
 	return c.clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// GetClusterRoleBinding returns cluster role binding by given name.
 func (c *Client) GetClusterRoleBinding(ctx context.Context, name string) (*rbacv1.ClusterRoleBinding, error) {
 	return c.clientset.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 }

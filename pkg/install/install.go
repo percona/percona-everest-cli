@@ -196,6 +196,9 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.installEverest(ctx); err != nil {
 		return err
 	}
+	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
+		return err
+	}
 	if o.config.Monitoring.Enable {
 		if err := o.provisionMonitoringInAllNamespaces(ctx); err != nil {
 			return err
@@ -301,7 +304,7 @@ func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 		}
 	}
 
-	return o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces)
+	return nil
 }
 
 func (o *Install) provisionNamespace(ctx context.Context, namespace string) error {
