@@ -88,7 +88,7 @@ test.describe('Everest CLI install', async () => {
 
       await install.assertSuccess();
 
-      const out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
+      const out = await cli.exec('kubectl get clusterrolebinding -n percona-everest  everest-admin-cluster-role-binding -o yaml');
       await out.assertSuccess();
 
       await out.outContainsNormalizedMany([
