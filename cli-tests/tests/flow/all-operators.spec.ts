@@ -83,7 +83,7 @@ test.describe('Everest CLI install', async () => {
     });
     await test.step('run everest install command using a different namespace', async () => {
       const install = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0  --namespace=different-everest`,
+        `install --monitoring.enable=0  --namespace=different-everest --namespace=percona-everest-all`,
       );
 
       await install.assertSuccess();
