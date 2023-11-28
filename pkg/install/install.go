@@ -748,6 +748,7 @@ func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 		},
 	}
 }
+
 func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
 	o.l.Info("Creating password for Everest")
 
@@ -770,8 +771,4 @@ func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse
 	o.l.Debug(res)
 
 	return res, nil
-}
-
-func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverest(ctx, "everest-operator", everestNamespace)
 }
