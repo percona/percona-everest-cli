@@ -38,6 +38,7 @@ import (
 	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
+	"github.com/percona/percona-everest-cli/pkg/password"
 )
 
 // Install implements the main logic for commands.
@@ -186,14 +187,17 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.createNamespace(everestNamespace); err != nil {
 		return err
 	}
+	pwd, err := o.generatePassword(ctx)
+	if err != nil {
+		return err
+	}
 	if err := o.installDefaultComponents(ctx); err != nil {
 		return err
 	}
-
 	if err := o.provisionAllNamespaces(ctx); err != nil {
 		return err
 	}
-	if err := o.installEverest(ctx); err != nil {
+	if err := o.installEverest(ctx, pwd); err != nil {
 		return err
 	}
 	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
@@ -216,6 +220,8 @@ func (o *Install) Run(ctx context.Context) error {
 			return err
 		}
 	}
+
+	o.l.Info(pwd)
 
 	return nil
 }
@@ -246,7 +252,7 @@ func (o *Install) installDefaultComponents(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) installEverest(ctx context.Context) error {
+func (o *Install) installEverest(ctx context.Context, pwd *password.ResetResponse) error {
 	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName, everestNamespace)(); err != nil {
 		return err
 	}
@@ -267,7 +273,7 @@ func (o *Install) installEverest(ctx context.Context) error {
 		}
 		o.l.Info("Everest has been installed. Configuring connection")
 	}
-	if err := o.configureEverestConnector(); err != nil {
+	if err := o.configureEverestConnector(pwd.Password); err != nil {
 		return err
 	}
 	return nil
@@ -416,8 +422,8 @@ func (o *Install) createPMMMonitoringInstance(ctx context.Context, name, url, us
 	return nil
 }
 
-func (o *Install) configureEverestConnector() error {
-	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), everestNamespace)
+func (o *Install) configureEverestConnector(everestPwd string) error {
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), everestNamespace, everestPwd)
 	if err != nil {
 		return err
 	}
@@ -741,4 +747,31 @@ func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
 			Verbs:     []string{"*"},
 		},
 	}
+}
+func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
+	o.l.Info("Creating password for Everest")
+
+	r, err := password.NewReset(
+		password.ResetConfig{
+			KubeconfigPath: o.config.KubeconfigPath,
+			Namespace:      everestNamespace,
+		},
+		o.l,
+	)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not initialize reset password"))
+	}
+
+	res, err := r.Run(ctx)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not create password"))
+	}
+
+	o.l.Debug(res)
+
+	return res, nil
+}
+
+func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
+	return o.kubeClient.RestartEverest(ctx, "everest-operator", everestNamespace)
 }
