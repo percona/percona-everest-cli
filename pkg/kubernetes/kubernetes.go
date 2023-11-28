@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	rbacv1 "k8s.io/api/rbac/v1"
+
 	olmv1 "github.com/operator-framework/api/pkg/operators/v1"
 	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
@@ -724,7 +726,7 @@ func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace st
 	var update bool
 	for _, namespace := range targetNamespaces {
 		namespace := namespace
-		if !contains(og.Spec.TargetNamespaces, namespace) {
+		if !arrayContains(og.Spec.TargetNamespaces, namespace) {
 			update = true
 		}
 	}
@@ -733,16 +735,6 @@ func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace st
 		return k.client.ApplyObject(og)
 	}
 	return nil
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		a := a
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 
 // ListSubscriptions all the subscriptions in the namespace.
@@ -1031,14 +1023,14 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	existingNamespaces := strings.Split(v, ",")
 	for _, namespace := range namespaces {
 		namespace := namespace
-		if !contains(existingNamespaces, namespace) {
+		if !arrayContains(existingNamespaces, namespace) {
 			update = true
 		}
 	}
 	existingOperators := strings.Split(o, ",")
 	for _, operator := range operatorsList {
 		operator := operator
-		if !contains(existingOperators, operator) {
+		if !arrayContains(existingOperators, operator) {
 			update = true
 		}
 	}
@@ -1067,4 +1059,51 @@ func (k *Kubernetes) GetPersistedNamespaces(ctx context.Context, namespace strin
 // GetDeployment returns k8s deployment by provided name and namespace.
 func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
 	return k.client.GetDeployment(ctx, name, namespace)
+}
+
+func (k *Kubernetes) UpdateClusterRoleBinding(ctx context.Context, name string, namespaces []string) error {
+	binding, err := k.client.GetClusterRoleBinding(ctx, name)
+	if err != nil {
+		return err
+	}
+	if len(binding.Subjects) == 0 {
+		return fmt.Errorf("no subjects available for the cluster role binding %s", name)
+	}
+	var needsUpdate bool
+	for _, namespace := range namespaces {
+		namespace := namespace
+		if !subjectsContains(binding.Subjects, namespace) {
+			subject := binding.Subjects[0]
+			subject.Namespace = namespace
+			binding.Subjects = append(binding.Subjects, subject)
+			needsUpdate = true
+		}
+
+	}
+	if needsUpdate {
+		binding.Kind = "ClusterRoleBinding"
+		binding.APIVersion = "rbac.authorization.k8s.io/v1"
+		return k.client.ApplyObject(binding)
+	}
+
+	return nil
+
+}
+func arrayContains(s []string, e string) bool {
+	for _, a := range s {
+		a := a
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+func subjectsContains(s []rbacv1.Subject, n string) bool {
+	for _, a := range s {
+		a := a
+		if a.Namespace == n {
+			return true
+		}
+	}
+	return false
 }

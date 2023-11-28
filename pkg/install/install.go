@@ -64,11 +64,12 @@ const (
 	vmOperatorName            = "victoriametrics-operator"
 	operatorInstallThreads    = 1
 
-	everestServiceAccount            = "everest-admin"
-	everestServiceAccountRole        = "everest-admin-role"
-	everestServiceAccountRoleBinding = "everest-admin-role-binding"
-	everestWatchNamespacesEnvVar     = "WATCH_NAMESPACES"
-	everestNamespace                 = "percona-everest"
+	everestServiceAccount                   = "everest-admin"
+	everestServiceAccountRole               = "everest-admin-role"
+	everestServiceAccountRoleBinding        = "everest-admin-role-binding"
+	everestServiceAccountClusterRoleBinding = "everest-admin-cluster-role-binding"
+	everestWatchNamespacesEnvVar            = "WATCH_NAMESPACES"
+	everestNamespace                        = "percona-everest"
 )
 
 type (
@@ -282,13 +283,13 @@ func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 		if err := o.provisionNamespace(ctx, namespace); err != nil {
 			return err
 		}
-		o.l.Info("Creating role for Everest service account")
+		o.l.Info("Creating role for the Everest service account")
 		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
 		if err != nil {
 			return errors.Join(err, errors.New("could not create role"))
 		}
 
-		o.l.Info("Binding role to Everest Service account")
+		o.l.Info("Binding role to the Everest Service account")
 		err = o.kubeClient.CreateRoleBinding(
 			namespace,
 			everestServiceAccountRoleBinding,
@@ -299,7 +300,8 @@ func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 			return errors.Join(err, errors.New("could not create role binding"))
 		}
 	}
-	return nil
+
+	return o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces)
 }
 
 func (o *Install) provisionNamespace(ctx context.Context, namespace string) error {

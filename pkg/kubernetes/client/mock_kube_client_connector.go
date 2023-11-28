@@ -12,6 +12,7 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -349,6 +350,32 @@ func (_m *MockKubeClientConnector) GenerateKubeConfigWithToken(user string, secr
 
 	if rf, ok := ret.Get(1).(func(string, *v1.Secret) error); ok {
 		r1 = rf(user, secret)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetClusterRoleBinding provides a mock function with given fields: ctx, name
+func (_m *MockKubeClientConnector) GetClusterRoleBinding(ctx context.Context, name string) (*rbacv1.ClusterRoleBinding, error) {
+	ret := _m.Called(ctx, name)
+
+	var r0 *rbacv1.ClusterRoleBinding
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*rbacv1.ClusterRoleBinding, error)); ok {
+		return rf(ctx, name)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *rbacv1.ClusterRoleBinding); ok {
+		r0 = rf(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}

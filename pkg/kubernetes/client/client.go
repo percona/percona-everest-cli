@@ -41,6 +41,7 @@ import (
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -797,21 +798,6 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 }
 
 func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespace string) error {
-	cl, err := c.kubeClient()
-	if err != nil {
-		return err
-	}
-	binding := &unstructured.Unstructured{}
-	binding.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "rbac.authorization.k8s.io",
-		Kind:    "ClusterRoleBinding",
-		Version: "v1",
-	})
-	err = cl.Get(context.Background(), types.NamespacedName{Name: "everest-admin-cluster-role-binding"}, binding)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
 	sub, ok, err := unstructured.NestedFieldNoCopy(u.Object, "subjects")
 	if err != nil {
 		return err
@@ -836,22 +822,6 @@ func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespac
 			return err
 		}
 	}
-	if binding.GetName() == "" {
-		return nil
-	}
-
-	bindingSub, ok, err := unstructured.NestedFieldNoCopy(binding.Object, "subjects")
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return nil
-	}
-	bindingSubjects, ok := bindingSub.([]interface{})
-	if !ok {
-		return nil
-	}
-	subjects = append(subjects, bindingSubjects...)
 	return unstructured.SetNestedSlice(u.Object, subjects, "subjects")
 }
 
@@ -1404,4 +1374,8 @@ func (c *Client) CreateConfigMap(ctx context.Context, namespace string, configMa
 // GetConfigMap fetches the config map in the provided namespace.
 func (c *Client) GetConfigMap(ctx context.Context, namespace, name string) (*corev1.ConfigMap, error) {
 	return c.clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+func (c *Client) GetClusterRoleBinding(ctx context.Context, name string) (*rbacv1.ClusterRoleBinding, error) {
+	return c.clientset.RbacV1().ClusterRoleBindings().Get(ctx, name, metav1.GetOptions{})
 }
