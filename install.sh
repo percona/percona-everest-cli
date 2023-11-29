@@ -11,7 +11,6 @@ then
 	exit
 fi
 
-latest_release=$(curl -s https://api.github.com/repos/percona/percona-everest-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 arch=$(uname -m | tr '[:upper:]' '[:lower:]')
 
@@ -22,8 +21,8 @@ fi
 
 
 echo "Downloading the latest release of Percona Everest CLI"
-echo "https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch"
-curl -sL  https://github.com/percona/percona-everest-cli/releases/download/${latest_release}/everestctl-$os-$arch -o everestctl
+echo "https://github.com/percona/percona-everest-cli/releases/download/v0.5.0/everestctl-$os-$arch"
+curl -sL  https://github.com/percona/percona-everest-cli/releases/download/v0.5.0/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
 
 # If KUBECONFIG is set let the user know we are using it
