@@ -1024,9 +1024,9 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	cMap.APIVersion = "/v1"
 	var update bool
 	existingNamespaces := strings.Split(v, ",")
-	for _, namespace := range namespaces {
-		namespace := namespace
-		if !arrayContains(existingNamespaces, namespace) {
+	for _, ns := range namespaces {
+		ns := ns
+		if !arrayContains(existingNamespaces, ns) {
 			update = true
 		}
 	}
