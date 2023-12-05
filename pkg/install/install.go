@@ -212,7 +212,7 @@ func (o *Install) Run(ctx context.Context) error {
 	sleep := time.Second
 	for i := 0; i < 3; i++ {
 		updated, err = o.kubeClient.PersistConfiguration(ctx, everestNamespace, o.config.Namespaces, o.config.Operator.operatorsList())
-		if err != nil {
+		if err != nil && k8serrors.IsConflict(err) {
 			sleep *= 2
 			o.l.Debug(fmt.Sprintf("retrying persisting configuration. Received error +%v", err))
 			continue
