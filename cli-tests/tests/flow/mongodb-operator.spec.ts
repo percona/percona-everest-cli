@@ -48,7 +48,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --monitoring.enable=0 --namespace=testing`,
+        'install --operator.mongodb=true --operator.postgresql=false --operator.xtradb-cluster=false --monitoring.enable=0 --namespace=testing',
       );
 
       await out.assertSuccess();

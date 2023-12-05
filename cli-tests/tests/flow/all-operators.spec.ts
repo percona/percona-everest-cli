@@ -44,7 +44,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0 --namespace=percona-everest-all`,
+        'install --monitoring.enable=0 --namespace=percona-everest-all',
       );
 
       await out.assertSuccess();
@@ -84,12 +84,13 @@ test.describe('Everest CLI install', async () => {
     });
     await test.step('run everest install command using a different namespace', async () => {
       const install = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0  --namespace=different-everest --namespace=percona-everest-all`,
+        'install --monitoring.enable=0  --namespace=different-everest --namespace=percona-everest-all',
       );
 
       await install.assertSuccess();
 
       const out = await cli.exec('kubectl get clusterrolebinding -n percona-everest  everest-admin-cluster-role-binding -o yaml');
+
       await out.assertSuccess();
 
       await out.outContainsNormalizedMany([
@@ -101,7 +102,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('uninstall Everest', async () => {
       let out = await cli.everestExec(
-        `uninstall --namespace=percona-everest-all --assume-yes`,
+        'uninstall --namespace=percona-everest-all --assume-yes',
       );
 
       await out.assertSuccess();
@@ -111,7 +112,6 @@ test.describe('Everest CLI install', async () => {
       await out.outErrContainsNormalizedMany([
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
       ]);
-
     });
   });
 });
