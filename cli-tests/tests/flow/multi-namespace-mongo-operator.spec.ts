@@ -81,7 +81,7 @@ test.describe('Everest CLI install', async () => {
       ]);
       out = await cli.exec('kubectl -n percona-everest get configmap everest-configuration -o yaml');
       await out.outContainsNormalizedMany([
-        'namespaces: percona-everest,prod,dev',
+        'namespaces: prod,dev',
         'operators: percona-server-mongodb-operator,percona-postgresql-operator',
       ]);
     });
