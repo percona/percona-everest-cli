@@ -22,7 +22,7 @@ test.describe('Everest CLI install', async () => {
     await cli.execute('minikube start');
   });
 
-  test('install only mongodb-operator', async ({ page, cli, request }) => {
+  test('multiple runs against multiple namespaces', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
         let out = await cli.exec('kubectl get pods --namespace=percona-everest');
@@ -70,4 +70,22 @@ test.describe('Everest CLI install', async () => {
 
     await verifyClusterResources();
   });
+  await test.step('re-run everest install command', async () => {
+    let out = await cli.everestExecSkipWizard(
+      `install --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --namespace=prod --namespace=dev`,
+    );
+
+    await out.assertSuccess();
+    await out.outErrContainsNormalizedMany([
+      'percona-server-mongodb-operator operator has been installed',
+      'everest-operator operator has been installed',
+    ]);
+    out = await cli.exec('kubectl -n percona-everest get configmap everest-configuration -o yaml');
+    await out.outContainsNormalizedMany([
+      'namespaces: percona-everest,prod,dev',
+      'operators: percona-server-mongodb-operator,percona-postgresql-operator',
+    ]);
+  });
+
+  await page.waitForTimeout(10_000);
 });

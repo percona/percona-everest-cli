@@ -1016,7 +1016,7 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	if !ok {
 		return false, nil
 	}
-	o, ok := cMap.Data["namespaces"]
+	o, ok := cMap.Data["operators"]
 	if !ok {
 		return false, nil
 	}
@@ -1039,6 +1039,7 @@ func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string,
 	}
 	if update {
 		cMap.Data["namespaces"] = strings.Join(namespaces, ",")
+		cMap.Data["operators"] = strings.Join(operatorsList, ",")
 		return true, k.client.ApplyObject(cMap)
 	}
 	return false, nil

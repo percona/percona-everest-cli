@@ -208,24 +208,23 @@ func (o *Install) Run(ctx context.Context) error {
 			return err
 		}
 	}
-	var updated bool
 	sleep := time.Second
 	for i := 0; i < 3; i++ {
-		updated, err = o.kubeClient.PersistConfiguration(ctx, everestNamespace, o.config.Namespaces, o.config.Operator.operatorsList())
+		updated, err := o.kubeClient.PersistConfiguration(ctx, everestNamespace, o.config.Namespaces, o.config.Operator.operatorsList())
 		if err != nil && k8serrors.IsConflict(err) {
 			sleep *= 2
 			o.l.Debug(fmt.Sprintf("retrying persisting configuration. Received error +%v", err))
 			continue
 		}
+		if updated {
+			if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, everestNamespace); err != nil {
+				return err
+			}
+			if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, everestNamespace); err != nil {
+				return err
+			}
+		}
 		break
-	}
-	if updated {
-		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, everestNamespace); err != nil {
-			return err
-		}
-		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, everestNamespace); err != nil {
-			return err
-		}
 	}
 	if err != nil {
 		return errors.Join(err, errors.New("could not persist configuration"))
