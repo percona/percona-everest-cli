@@ -191,7 +191,11 @@ func (o *Install) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := o.installDefaultComponents(ctx); err != nil {
+	if err := o.provisionOLM(ctx); err != nil {
+		return err
+	}
+	o.l.Info("Creating operator group for the everest")
+	if err := o.kubeClient.CreateOperatorGroup(ctx, operatorGroup, everestNamespace, o.config.Namespaces); err != nil {
 		return err
 	}
 	if err := o.provisionAllNamespaces(ctx); err != nil {
@@ -200,11 +204,12 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.installEverest(ctx, pwd); err != nil {
 		return err
 	}
+	o.l.Info("Updating cluster role bingings for the everest-admin")
 	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
 		return err
 	}
 	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoringInAllNamespaces(ctx); err != nil {
+		if err := o.provisionMonitoring(ctx); err != nil {
 			return err
 		}
 	}
@@ -251,16 +256,6 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 	return err
 }
 
-func (o *Install) installDefaultComponents(ctx context.Context) error {
-	if err := o.provisionOLM(ctx); err != nil {
-		return err
-	}
-	if err := o.kubeClient.CreateOperatorGroup(ctx, operatorGroup, everestNamespace, o.config.Namespaces); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (o *Install) installEverest(ctx context.Context, pwd *password.ResetResponse) error {
 	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName, everestNamespace)(); err != nil {
 		return err
@@ -298,7 +293,8 @@ func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 			return err
 		}
 
-		if err := o.provisionNamespace(ctx, namespace); err != nil {
+		o.l.Infof("Installing operators into %s namespace", namespace)
+		if err := o.provisionOperators(ctx, namespace); err != nil {
 			return err
 		}
 		o.l.Info("Creating role for the Everest service account")
@@ -322,64 +318,53 @@ func (o *Install) provisionAllNamespaces(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) provisionNamespace(ctx context.Context, namespace string) error {
-	if err := o.provisionAllOperators(ctx, namespace); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o *Install) provisionMonitoringInAllNamespaces(ctx context.Context) error {
+func (o *Install) provisionMonitoring(ctx context.Context) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
-	namespaces := []string{everestNamespace}
-	namespaces = append(namespaces, o.config.Namespaces...)
-	for _, namespace := range namespaces {
-		if err := o.kubeClient.ProvisionMonitoring(namespace); err != nil {
-			return errors.Join(err, errors.New("could not provision monitoring configuration"))
+	if err := o.kubeClient.ProvisionMonitoring(everestNamespace); err != nil {
+		return errors.Join(err, errors.New("could not provision monitoring configuration"))
+	}
+
+	l.Info("K8s cluster monitoring has been provisioned successfully")
+	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
+		return err
+	}
+	o.l.Info("Deploying VMAgent to k8s cluster")
+	if err := o.checkEverestConnection(ctx); err != nil {
+		var u *url.Error
+		if errors.As(err, &u) {
+			o.l.Debug(err)
+
+			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+			l.Error("Could not connect to Everest. " +
+				"Make sure Everest is running and is accessible from this machine.",
+			)
+			return common.ErrExitWithError
 		}
 
-		l.Info("K8s cluster monitoring has been provisioned successfully")
-		if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-			return err
-		}
-		o.l.Info("Deploying VMAgent to k8s cluster")
-		if err := o.checkEverestConnection(ctx); err != nil {
-			var u *url.Error
-			if errors.As(err, &u) {
-				o.l.Debug(err)
+		return errors.Join(err, errors.New("could not check connection to Everest"))
+	}
 
-				l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-				l.Error("Could not connect to Everest. " +
-					"Make sure Everest is running and is accessible from this machine.",
-				)
-				return common.ErrExitWithError
-			}
-
-			return errors.Join(err, errors.New("could not check connection to Everest"))
-		}
-
-		// We retry for a bit since the MonitoringConfig may not be properly
-		// deployed yet and we get a HTTP 500 in this case.
-		err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-			o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-			err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
-				Enable:                 true,
-				MonitoringInstanceName: o.monitoringInstanceName,
-			})
-			if err != nil {
-				o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
-				return false, nil
-			}
-
-			return true, nil
+	// We retry for a bit since the MonitoringConfig may not be properly
+	// deployed yet and we get a HTTP 500 in this case.
+	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		o.l.Debug("Trying to enable Kubernetes cluster monitoring")
+		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
+			Enable:                 true,
+			MonitoringInstanceName: o.monitoringInstanceName,
 		})
 		if err != nil {
-			return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
+			o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
+			return false, nil
 		}
 
-		o.l.Info("VMAgent deployed successfully")
+		return true, nil
+	})
+	if err != nil {
+		return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
 	}
+
+	o.l.Info("VMAgent deployed successfully")
 	return nil
 }
 
@@ -609,16 +594,6 @@ func (o *Install) createNamespace(namespace string) error {
 	}
 
 	o.l.Infof("Namespace %s has been created", namespace)
-	return nil
-}
-
-// provisionAllOperators provisions all configured operators to a k8s cluster.
-func (o *Install) provisionAllOperators(ctx context.Context, namespace string) error {
-	o.l.Info("Started provisioning the cluster")
-	if err := o.provisionOperators(ctx, namespace); err != nil {
-		return err
-	}
-
 	return nil
 }
 
