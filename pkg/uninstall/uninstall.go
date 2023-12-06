@@ -65,7 +65,6 @@ func NewUninstall(c Config, l *zap.SugaredLogger) (*Uninstall, error) {
 
 // Run runs the cluster command.
 func (u *Uninstall) Run(ctx context.Context) error {
-
 	if !u.config.AssumeYes {
 		msg := `You are about to uninstall Everest from the Kubernetes cluster.
 This will uninstall Everest and all monitoring resources deployed by it. All other resources such as Databases and Database Backups will not be affected.`
