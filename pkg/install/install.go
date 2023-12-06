@@ -231,9 +231,6 @@ func (o *Install) Run(ctx context.Context) error {
 		}
 		break
 	}
-	if err != nil {
-		return errors.Join(err, errors.New("could not persist configuration"))
-	}
 
 	o.l.Info(pwd)
 
