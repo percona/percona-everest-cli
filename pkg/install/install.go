@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -29,6 +30,8 @@ import (
 	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -61,6 +64,13 @@ const (
 	pgOperatorName            = "percona-postgresql-operator"
 	vmOperatorName            = "victoriametrics-operator"
 	operatorInstallThreads    = 1
+
+	everestServiceAccount                   = "everest-admin"
+	everestServiceAccountRole               = "everest-admin-role"
+	everestServiceAccountRoleBinding        = "everest-admin-role-binding"
+	everestServiceAccountClusterRoleBinding = "everest-admin-cluster-role-binding"
+	everestWatchNamespacesEnvVar            = "WATCH_NAMESPACES"
+	everestNamespace                        = "percona-everest"
 )
 
 type (
@@ -69,10 +79,8 @@ type (
 
 	// Config stores configuration for the operators.
 	Config struct {
-		// Name of the Kubernetes Cluster
-		Name string
-		// Namespace defines the namespace operators shall be installed to.
-		Namespace string
+		// Namespaces defines namespaces that everest can operate in.
+		Namespaces []string `mapstructure:"namespace"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -134,6 +142,20 @@ type (
 	}
 )
 
+func (o OperatorConfig) operatorsList() []string {
+	var operators []string
+	if o.PXC {
+		operators = append(operators, pxcOperatorName)
+	}
+	if o.PSMDB {
+		operators = append(operators, psmdbOperatorName)
+	}
+	if o.PG {
+		operators = append(operators, pgOperatorName)
+	}
+	return operators
+}
+
 // NewInstall returns a new Install struct.
 func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 	cli := &Install{
@@ -159,18 +181,58 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.populateConfig(); err != nil {
 		return err
 	}
-	if err := o.provisionNamespace(); err != nil {
+	if len(o.config.Namespaces) == 0 {
+		return errors.New("namespace list is empty")
+	}
+	if err := o.createNamespace(everestNamespace); err != nil {
 		return err
 	}
 	pwd, err := o.generatePassword(ctx)
 	if err != nil {
 		return err
 	}
-	if err := o.configureEverestConnector(pwd.Password); err != nil {
+	if err := o.provisionOLM(ctx); err != nil {
 		return err
 	}
-	if err := o.performProvisioning(ctx); err != nil {
+	o.l.Info("Creating operator group for the everest")
+	if err := o.kubeClient.CreateOperatorGroup(ctx, operatorGroup, everestNamespace, o.config.Namespaces); err != nil {
 		return err
+	}
+	if err := o.provisionAllNamespaces(ctx); err != nil {
+		return err
+	}
+	if err := o.installEverest(ctx, pwd); err != nil {
+		return err
+	}
+	o.l.Info("Updating cluster role bingings for the everest-admin")
+	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
+		return err
+	}
+	if o.config.Monitoring.Enable {
+		if err := o.provisionMonitoring(ctx); err != nil {
+			return err
+		}
+	}
+	sleep := time.Second
+	for i := 0; i < 3; i++ {
+		updated, err := o.kubeClient.PersistConfiguration(ctx, everestNamespace, o.config.Namespaces, o.config.Operator.operatorsList())
+		if err != nil && k8serrors.IsConflict(err) {
+			sleep *= 2
+			o.l.Debug(fmt.Sprintf("retrying persisting configuration. Received error +%v", err))
+			continue
+		}
+		if err != nil {
+			return errors.Join(err, errors.New("could not persist configuration"))
+		}
+		if updated {
+			if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, everestNamespace); err != nil {
+				return err
+			}
+			if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, everestNamespace); err != nil {
+				return err
+			}
+		}
+		break
 	}
 
 	o.l.Info(pwd)
@@ -185,10 +247,6 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if o.config.Name == "" {
-		o.config.Name = o.kubeClient.ClusterName()
-	}
-
 	return nil
 }
 
@@ -198,11 +256,11 @@ func (o *Install) checkEverestConnection(ctx context.Context) error {
 	return err
 }
 
-func (o *Install) performProvisioning(ctx context.Context) error {
-	if err := o.provisionAllOperators(ctx); err != nil {
+func (o *Install) installEverest(ctx context.Context, pwd *password.ResetResponse) error {
+	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName, everestNamespace)(); err != nil {
 		return err
 	}
-	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
+	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, everestNamespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
@@ -212,25 +270,58 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	}
 
 	if !everestExists {
-		o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-		err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+		o.l.Info(fmt.Sprintf("Deploying Everest to %s", everestNamespace))
+		err = o.kubeClient.InstallEverest(ctx, everestNamespace)
 		if err != nil {
 			return err
 		}
+		o.l.Info("Everest has been installed. Configuring connection")
 	}
-	o.l.Info("Everest has been installed. Configuring connection")
-	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx, everestExists); err != nil {
-			return err
-		}
+	if err := o.configureEverestConnector(pwd.Password); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) error {
+func (o *Install) provisionAllNamespaces(ctx context.Context) error {
+	for _, namespace := range o.config.Namespaces {
+		namespace := namespace
+		if err := o.createNamespace(namespace); err != nil {
+			return err
+		}
+		if err := o.kubeClient.CreateOperatorGroup(ctx, operatorGroup, namespace, []string{}); err != nil {
+			return err
+		}
+
+		o.l.Infof("Installing operators into %s namespace", namespace)
+		if err := o.provisionOperators(ctx, namespace); err != nil {
+			return err
+		}
+		o.l.Info("Creating role for the Everest service account")
+		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role"))
+		}
+
+		o.l.Info("Binding role to the Everest Service account")
+		err = o.kubeClient.CreateRoleBinding(
+			namespace,
+			everestServiceAccountRoleBinding,
+			everestServiceAccountRole,
+			everestServiceAccount,
+		)
+		if err != nil {
+			return errors.Join(err, errors.New("could not create role binding"))
+		}
+	}
+
+	return nil
+}
+
+func (o *Install) provisionMonitoring(ctx context.Context) error {
 	l := o.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
-	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
+	if err := o.kubeClient.ProvisionMonitoring(everestNamespace); err != nil {
 		return errors.Join(err, errors.New("could not provision monitoring configuration"))
 	}
 
@@ -239,11 +330,6 @@ func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) e
 		return err
 	}
 	o.l.Info("Deploying VMAgent to k8s cluster")
-	if everestExists {
-		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
-			return err
-		}
-	}
 	if err := o.checkEverestConnection(ctx); err != nil {
 		var u *url.Error
 		if errors.As(err, &u) {
@@ -331,7 +417,7 @@ func (o *Install) createPMMMonitoringInstance(ctx context.Context, name, url, us
 }
 
 func (o *Install) configureEverestConnector(everestPwd string) error {
-	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace, everestPwd)
+	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), everestNamespace, everestPwd)
 	if err != nil {
 		return err
 	}
@@ -353,11 +439,19 @@ func (o *Install) runWizard() error {
 }
 
 func (o *Install) runEverestWizard() error {
+	var namespaces string
 	pNamespace := &survey.Input{
-		Message: "Namespace to deploy Everest to",
-		Default: o.config.Namespace,
+		Message: "Namespaces to deploy Everest to. Comma separated",
+		Default: namespaces,
 	}
-	return survey.AskOne(pNamespace, &o.config.Namespace)
+	if err := survey.AskOne(pNamespace, &namespaces); err != nil {
+		return err
+	}
+	nsList := strings.Split(namespaces, ",")
+	for i := range nsList {
+		o.config.Namespaces = append(o.config.Namespaces, strings.TrimSpace(nsList[i]))
+	}
+	return nil
 }
 
 func (o *Install) runMonitoringWizard() error {
@@ -494,30 +588,15 @@ func (o *Install) runInstallWizard() error {
 	return nil
 }
 
-// provisionNamespace provisions a namespace for Everest.
-func (o *Install) provisionNamespace() error {
-	o.l.Infof("Creating namespace %s", o.config.Namespace)
-	err := o.kubeClient.CreateNamespace(o.config.Namespace)
+// createNamespace provisions a namespace for Everest.
+func (o *Install) createNamespace(namespace string) error {
+	o.l.Infof("Creating namespace %s", namespace)
+	err := o.kubeClient.CreateNamespace(namespace)
 	if err != nil {
 		return errors.Join(err, errors.New("could not provision namespace"))
 	}
 
-	o.l.Infof("Namespace %s has been created", o.config.Namespace)
-	return nil
-}
-
-// provisionAllOperators provisions all configured operators to a k8s cluster.
-func (o *Install) provisionAllOperators(ctx context.Context) error {
-	o.l.Info("Started provisioning the cluster")
-
-	if err := o.provisionOLM(ctx); err != nil {
-		return err
-	}
-
-	if err := o.provisionInstall(ctx); err != nil {
-		return err
-	}
-
+	o.l.Infof("Namespace %s has been created", namespace)
 	return nil
 }
 
@@ -538,11 +617,7 @@ func (o *Install) provisionOLM(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) provisionInstall(ctx context.Context) error {
-	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
-	if err != nil {
-		return err
-	}
+func (o *Install) provisionOperators(ctx context.Context, namespace string) error {
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -551,36 +626,26 @@ func (o *Install) provisionInstall(ctx context.Context) error {
 	g.SetLimit(operatorInstallThreads)
 
 	if o.config.Monitoring.Enable {
-		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName, namespace))
 	}
 
 	if o.config.Operator.PXC {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName, namespace))
 	}
 	if o.config.Operator.PSMDB {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName, namespace))
 	}
 	if o.config.Operator.PG {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName))
+		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName, namespace))
 	}
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
-		return err
-	}
-	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
-	if err != nil {
-		return err
-	}
-	if len(deploymentsBefore) != 0 && len(deploymentsBefore) != len(deploymentsAfter) {
-		return o.restartEverestOperatorPod(ctx)
-	}
 	return nil
 }
 
-func (o *Install) installOperator(ctx context.Context, channel, operatorName string) func() error {
+func (o *Install) installOperator(ctx context.Context, channel, operatorName, namespace string) func() error {
 	return func() error {
 		// We check if the context has not been cancelled yet to return early
 		if err := ctx.Err(); err != nil {
@@ -591,13 +656,24 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
-			Namespace:              o.config.Namespace,
+			Namespace:              namespace,
 			Name:                   operatorName,
 			OperatorGroup:          operatorGroup,
 			CatalogSource:          catalogSource,
 			CatalogSourceNamespace: catalogSourceNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
+		}
+		if len(o.config.Namespaces) != 0 && operatorName == everestOperatorName {
+			params.TargetNamespaces = o.config.Namespaces
+			params.SubscriptionConfig = &v1alpha1.SubscriptionConfig{
+				Env: []corev1.EnvVar{
+					{
+						Name:  everestWatchNamespacesEnvVar,
+						Value: strings.Join(o.config.Namespaces, ","),
+					},
+				},
+			}
 		}
 
 		if err := o.kubeClient.InstallOperator(ctx, params); err != nil {
@@ -610,13 +686,63 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 	}
 }
 
+func (o *Install) serviceAccountRolePolicyRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusters"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseengines"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusterrestores"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"databaseclusterbackups"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"backupstorages"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"everest.percona.com"},
+			Resources: []string{"monitoringconfigs"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{"operator.victoriametrics.com"},
+			Resources: []string{"vmagents"},
+			Verbs:     []string{"*"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"namespaces"},
+			Verbs:     []string{"get"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"*"},
+		},
+	}
+}
+
 func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
 	o.l.Info("Creating password for Everest")
 
 	r, err := password.NewReset(
 		password.ResetConfig{
 			KubeconfigPath: o.config.KubeconfigPath,
-			Namespace:      o.config.Namespace,
+			Namespace:      everestNamespace,
 		},
 		o.l,
 	)
@@ -632,8 +758,4 @@ func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse
 	o.l.Debug(res)
 
 	return res, nil
-}
-
-func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverest(ctx, "everest-operator", o.config.Namespace)
 }

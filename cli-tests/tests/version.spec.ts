@@ -18,13 +18,13 @@ test.describe('Everest CLI "version" validation', async () => {
   test('version validation', async ({ cli }) => {
     const out = await cli.everestExecSilent('version');
     const version = await cli.exec('git describe --always --dirty|cut -b2-');
+
     await version.assertSuccess();
 
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'ProjectName: everestctl',
-      'Version: ' + version.getStdOutLines()[0],
+      `Version: ${version.getStdOutLines()[0]}`,
     ]);
   });
-
 });

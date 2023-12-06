@@ -11,6 +11,7 @@ import (
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,7 +88,9 @@ type KubeClientConnector interface {
 	// GetOperatorGroup retrieves an operator group details by namespace and name.
 	GetOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
 	// CreateOperatorGroup creates an operator group to be used as part of a subscription.
-	CreateOperatorGroup(ctx context.Context, namespace, name string) (*v1.OperatorGroup, error)
+	CreateOperatorGroup(ctx context.Context, namespace, name string, targetNamespaces []string) (*v1.OperatorGroup, error)
+	// CreateSubscription creates an OLM subscription.
+	CreateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error)
 	// CreateSubscriptionForCatalog creates an OLM subscription.
 	CreateSubscriptionForCatalog(ctx context.Context, namespace, name, catalogNamespace, catalog, packageName, channel, startingCSV string, approval v1alpha1.Approval) (*v1alpha1.Subscription, error)
 	// GetSubscription retrieves an OLM subscription by namespace and name.
@@ -115,6 +118,11 @@ type KubeClientConnector interface {
 	DeleteFile(fileBytes []byte) error
 	// GetService returns k8s service by provided namespace and name.
 	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
+	// CreateConfigMap creates config map in the provided namespace.
+	CreateConfigMap(ctx context.Context, namespace string, configMap *corev1.ConfigMap) (*corev1.ConfigMap, error)
+	// GetConfigMap fetches the config map in the provided namespace.
+	GetConfigMap(ctx context.Context, namespace, name string) (*corev1.ConfigMap, error)
+	GetClusterRoleBinding(ctx context.Context, name string) (*rbacv1.ClusterRoleBinding, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.

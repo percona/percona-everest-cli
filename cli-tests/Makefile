@@ -5,6 +5,7 @@ init:               ## Install dependencies
 install-operators:  ## Install operators to k8s
 	../bin/everest install \
 		--skip-wizard \
+		--namespace=testing \
 		--monitoring.enable=0
 
 test-cli:           ## Run all tests
@@ -15,6 +16,9 @@ test-all-operators:       ## Run mongo operator flow tests. Requires minikube in
 
 test-mongo-operator:       ## Run mongo operator flow tests. Requires minikube installed and /etc/hosts updated
 	npx playwright test tests/flow/mongodb-operator.spec.ts
+
+multi-namespace-mongo-operator:       ## Run mongo operator multi namespace flow tests. Requires minikube installed and /etc/hosts updated
+	npx playwright test tests/flow/multi-namespace-mongo-operator.spec.ts
 
 test-pg-operator:       ## Run pg operator flow tests. Requires minikube installed and /etc/hosts updated
 	npx playwright test tests/flow/pg-operator.spec.ts

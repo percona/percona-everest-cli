@@ -44,7 +44,6 @@ func NewClusterCmd(l *zap.SugaredLogger) *cobra.Command {
 func initClusterFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
-	cmd.Flags().String("name", "", "Kubernetes cluster name in Everest")
 	cmd.Flags().BoolP("assume-yes", "y", false, "Assume yes to all questions")
 	cmd.Flags().BoolP("force", "f", false, "Force removal in case there are database clusters running")
 	cmd.Flags().Bool("ignore-kubernetes-unavailable", false, "Remove cluster even if Kubernetes is not available")
@@ -54,7 +53,6 @@ func initClusterViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
-	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("assume-yes", cmd.Flags().Lookup("assume-yes")) //nolint:errcheck,gosec
 	viper.BindPFlag("force", cmd.Flags().Lookup("force"))           //nolint:errcheck,gosec
 	viper.BindPFlag(                                                //nolint:errcheck,gosec

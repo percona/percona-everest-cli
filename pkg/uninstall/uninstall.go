@@ -27,6 +27,10 @@ import (
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
+const (
+	everestNamespace = "percona-everest"
+)
+
 // Uninstall implements logic for the cluster command.
 type Uninstall struct {
 	config     Config
@@ -38,8 +42,6 @@ type Uninstall struct {
 type Config struct {
 	// KubeconfigPath is a path to a kubeconfig
 	KubeconfigPath string `mapstructure:"kubeconfig"`
-	// Namespace defines the namespace operators shall be installed to.
-	Namespace string
 	// AssumeYes is true when all questions can be skipped.
 	AssumeYes bool `mapstructure:"assume-yes"`
 	// Force is true when we shall not prompt for removal.
@@ -61,32 +63,8 @@ func NewUninstall(c Config, l *zap.SugaredLogger) (*Uninstall, error) {
 	return cli, nil
 }
 
-func (u *Uninstall) runEverestWizard() error {
-	if !u.config.AssumeYes {
-		pNamespace := &survey.Input{
-			Message: "Please select namespace",
-			Default: u.config.Namespace,
-		}
-		if err := survey.AskOne(
-			pNamespace,
-			&u.config.Namespace,
-		); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Run runs the cluster command.
 func (u *Uninstall) Run(ctx context.Context) error {
-	if err := u.runEverestWizard(); err != nil {
-		return err
-	}
-	if u.config.Namespace == "" {
-		return errors.New("namespace is not provided")
-	}
-
 	if !u.config.AssumeYes {
 		msg := `You are about to uninstall Everest from the Kubernetes cluster.
 This will uninstall Everest and all monitoring resources deployed by it. All other resources such as Databases and Database Backups will not be affected.`
@@ -108,7 +86,7 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 	if err := u.uninstallK8sResources(ctx); err != nil {
 		return err
 	}
-	if err := u.kubeClient.DeleteEverest(ctx, u.config.Namespace); err != nil {
+	if err := u.kubeClient.DeleteEverest(ctx, everestNamespace); err != nil {
 		return err
 	}
 
@@ -117,7 +95,7 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 
 func (u *Uninstall) uninstallK8sResources(ctx context.Context) error {
 	u.l.Info("Deleting all Kubernetes monitoring resources in Kubernetes cluster")
-	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, u.config.Namespace); err != nil {
+	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, everestNamespace); err != nil {
 		return errors.Join(err, errors.New("could not uninstall monitoring resources from the Kubernetes cluster"))
 	}
 

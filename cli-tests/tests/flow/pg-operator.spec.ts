@@ -27,11 +27,15 @@ test.describe('Everest CLI install', async () => {
   test('install only postgresql-operator', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
-        const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+        let out = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+        await out.outContainsNormalizedMany([
+          'everest-operator-controller-manager',
+        ]);
+        out = await cli.exec('kubectl get pods --namespace=testing');
 
         await out.outContainsNormalizedMany([
           'percona-postgresql-operator',
-          'everest-operator-controller-manager',
         ]);
 
         await out.outNotContains([
@@ -39,11 +43,10 @@ test.describe('Everest CLI install', async () => {
         ]);
       });
     };
-    const clusterName = `test-${faker.number.int()}`;
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --name=${clusterName}`,
+        'install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --namespace=testing',
       );
 
       await out.assertSuccess();
@@ -59,13 +62,15 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('re-run everest install command', async () => {
       await page.waitForTimeout(60_000);
-      const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
+      const operator = await cli.exec('kubectl -n percona-everest get po | grep everest|awk {\'print $1\'}');
+
       await operator.assertSuccess();
 
       const out = await cli.everestExecSkipWizard(
-        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
+        'install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --monitoring.enable=0 --namespace=testing',
       );
-      const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
+      const restartedOperator = await cli.exec('kubectl -n percona-everest get po | grep everest|awk {\'print $1\'}');
+
       await restartedOperator.assertSuccess();
 
       expect(operator.getStdOutLines()[0]).not.toEqual(restartedOperator.getStdOutLines()[0]);
