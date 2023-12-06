@@ -444,7 +444,10 @@ func (o *Install) runEverestWizard() error {
 	if err := survey.AskOne(pNamespace, &namespaces); err != nil {
 		return err
 	}
-	o.config.Namespaces = strings.Split(namespaces, ",")
+	nsList := strings.Split(namespaces, ",")
+	for i := range nsList {
+		o.config.Namespaces = append(o.config.Namespaces, strings.TrimSpace(nsList[i]))
+	}
 	return nil
 }
 
