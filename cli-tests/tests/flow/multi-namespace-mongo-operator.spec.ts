@@ -85,5 +85,21 @@ test.describe('Everest CLI install', async () => {
         'operators: percona-server-mongodb-operator,percona-postgresql-operator',
       ]);
     });
+    await test.step('re-run everest install command in the different namespace', async () => {
+      let out = await cli.everestExecSkipWizard(
+        'install --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=false --monitoring.enable=0 --namespace=prod --namespace=dev --namespace=staging',
+      );
+
+      await out.assertSuccess();
+      await out.outErrContainsNormalizedMany([
+        'percona-server-mongodb-operator operator has been installed',
+        'everest-operator operator has been installed',
+      ]);
+      out = await cli.exec('kubectl -n percona-everest get configmap everest-configuration -o yaml');
+      await out.outContainsNormalizedMany([
+        'namespaces: prod,dev,staging',
+        'operators: percona-server-mongodb-operator,percona-postgresql-operator',
+      ]);
+    });
   });
 });
