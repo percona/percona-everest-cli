@@ -221,6 +221,9 @@ func (o *Install) Run(ctx context.Context) error {
 			o.l.Debug(fmt.Sprintf("retrying persisting configuration. Received error +%v", err))
 			continue
 		}
+		if err != nil {
+			return errors.Join(err, errors.New("could not persist configuration"))
+		}
 		if updated {
 			if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, everestNamespace); err != nil {
 				return err
@@ -230,9 +233,6 @@ func (o *Install) Run(ctx context.Context) error {
 			}
 		}
 		break
-	}
-	if err != nil {
-		return errors.Join(err, errors.New("could not persist configuration"))
 	}
 
 	o.l.Info(pwd)
