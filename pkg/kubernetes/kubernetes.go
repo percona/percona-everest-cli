@@ -26,18 +26,15 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
-	olmv1 "github.com/operator-framework/api/pkg/operators/v1"
-	olmv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	yamlv3 "gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,8 +79,6 @@ const (
 	databaseClusterAPIVersion    = "everest.percona.com/v1alpha1"
 	restartAnnotationKey         = "everest.percona.com/restart"
 	managedByKey                 = "everest.percona.com/managed-by"
-	disableTelemetryEnvVar       = "DISABLE_TELEMETRY"
-	configMapName                = "everest-configuration"
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
@@ -471,9 +466,9 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error
 func (k *Kubernetes) applyCSVs(ctx context.Context, resources []unstructured.Unstructured) error {
 	subscriptions := filterResources(resources, func(r unstructured.Unstructured) bool {
 		return r.GroupVersionKind() == schema.GroupVersionKind{
-			Group:   olmv1alpha1.GroupName,
-			Version: olmv1alpha1.GroupVersion,
-			Kind:    olmv1alpha1.SubscriptionKind,
+			Group:   v1alpha1.GroupName,
+			Version: v1alpha1.GroupVersion,
+			Kind:    v1alpha1.SubscriptionKind,
 		}
 	})
 
@@ -619,46 +614,20 @@ type InstallOperatorRequest struct {
 	CatalogSource          string
 	CatalogSourceNamespace string
 	Channel                string
-	InstallPlanApproval    olmv1alpha1.Approval
+	InstallPlanApproval    v1alpha1.Approval
 	StartingCSV            string
-	TargetNamespaces       []string
-	SubscriptionConfig     *olmv1alpha1.SubscriptionConfig
 }
 
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error {
-	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
-	if !ok || disableTelemetry != "true" {
-		disableTelemetry = "false"
+	if err := createOperatorGroupIfNeeded(ctx, k.client, req.OperatorGroup, req.Namespace); err != nil {
+		return err
 	}
-	config := &olmv1alpha1.SubscriptionConfig{Env: []corev1.EnvVar{}}
-	if req.SubscriptionConfig != nil {
-		config = req.SubscriptionConfig
-	}
-	config.Env = append(config.Env, corev1.EnvVar{
-		Name:  disableTelemetryEnvVar,
-		Value: disableTelemetry,
-	})
-	subscription := &olmv1alpha1.Subscription{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       olmv1alpha1.SubscriptionKind,
-			APIVersion: olmv1alpha1.SubscriptionCRDAPIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: req.Namespace,
-			Name:      req.Name,
-		},
-		Spec: &olmv1alpha1.SubscriptionSpec{
-			CatalogSource:          req.CatalogSource,
-			CatalogSourceNamespace: "olm",
-			Package:                req.Name,
-			Channel:                req.Channel,
-			StartingCSV:            req.StartingCSV,
-			InstallPlanApproval:    olmv1alpha1.ApprovalManual,
-			Config:                 config,
-		},
-	}
-	subs, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)
+
+	subs, err := k.client.CreateSubscriptionForCatalog(
+		ctx, req.Namespace, req.Name, "olm", req.CatalogSource,
+		req.Name, req.Channel, req.StartingCSV, v1alpha1.ApprovalManual,
+	)
 	if err != nil {
 		return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
 	}
@@ -715,38 +684,23 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	return true, nil
 }
 
-// CreateOperatorGroup creates operator group in the given namespace.
-func (k *Kubernetes) CreateOperatorGroup(ctx context.Context, name, namespace string, targetNamespaces []string) error {
-	targetNamespaces = append(targetNamespaces, namespace)
-	og, err := k.client.GetOperatorGroup(ctx, namespace, name)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err != nil && apierrors.IsNotFound(err) {
-		_, err = k.client.CreateOperatorGroup(ctx, namespace, name, targetNamespaces)
-		if err != nil {
-			return err
-		}
+func createOperatorGroupIfNeeded(
+	ctx context.Context,
+	client client.KubeClientConnector,
+	name, namespace string,
+) error {
+	_, err := client.GetOperatorGroup(ctx, namespace, name)
+	if err == nil {
 		return nil
 	}
-	og.Kind = olmv1.OperatorGroupKind
-	og.APIVersion = "operators.coreos.com/v1"
-	var update bool
-	for _, namespace := range targetNamespaces {
-		namespace := namespace
-		if !arrayContains(og.Spec.TargetNamespaces, namespace) {
-			update = true
-		}
-	}
-	if update {
-		og.Spec.TargetNamespaces = targetNamespaces
-		return k.client.ApplyObject(og)
-	}
-	return nil
+
+	_, err = client.CreateOperatorGroup(ctx, namespace, name)
+
+	return err
 }
 
 // ListSubscriptions all the subscriptions in the namespace.
-func (k *Kubernetes) ListSubscriptions(ctx context.Context, namespace string) (*olmv1alpha1.SubscriptionList, error) {
+func (k *Kubernetes) ListSubscriptions(ctx context.Context, namespace string) (*v1alpha1.SubscriptionList, error) {
 	return k.client.ListSubscriptions(ctx, namespace)
 }
 
@@ -768,8 +722,8 @@ func (k *Kubernetes) UpgradeOperator(ctx context.Context, namespace, name string
 	return err
 }
 
-func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string) (*olmv1alpha1.InstallPlan, error) {
-	var subs *olmv1alpha1.Subscription
+func (k *Kubernetes) getInstallPlan(ctx context.Context, namespace, name string) (*v1alpha1.InstallPlan, error) {
+	var subs *v1alpha1.Subscription
 
 	// If the subscription was recently created, the install plan might not be ready yet.
 	err := wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
@@ -808,7 +762,7 @@ func (k *Kubernetes) GetServerVersion() (*version.Info, error) {
 func (k *Kubernetes) GetClusterServiceVersion(
 	ctx context.Context,
 	key types.NamespacedName,
-) (*olmv1alpha1.ClusterServiceVersion, error) {
+) (*v1alpha1.ClusterServiceVersion, error) {
 	return k.client.GetClusterServiceVersion(ctx, key)
 }
 
@@ -816,7 +770,7 @@ func (k *Kubernetes) GetClusterServiceVersion(
 func (k *Kubernetes) ListClusterServiceVersion(
 	ctx context.Context,
 	namespace string,
-) (*olmv1alpha1.ClusterServiceVersionList, error) {
+) (*v1alpha1.ClusterServiceVersionList, error) {
 	return k.client.ListClusterServiceVersion(ctx, namespace)
 }
 
@@ -993,126 +947,7 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 	return nil
 }
 
-// PersistConfiguration stores provided namespaces in the configMap.
-func (k *Kubernetes) PersistConfiguration(ctx context.Context, namespace string, namespaces []string, operatorsList []string) (bool, error) {
-	cMap, err := k.client.GetConfigMap(ctx, namespace, configMapName)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return false, err
-	}
-	if err != nil && apierrors.IsNotFound(err) {
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      configMapName,
-				Namespace: namespace,
-			},
-			Data: map[string]string{
-				"namespaces": strings.Join(namespaces, ","),
-				"operators":  strings.Join(operatorsList, ","),
-			},
-		}
-		_, err := k.client.CreateConfigMap(ctx, namespace, configMap)
-		return false, err
-	}
-	if cMap != nil && cMap.Name != configMapName {
-		return false, nil
-	}
-	v, ok := cMap.Data["namespaces"]
-	if !ok {
-		return false, nil
-	}
-	o, ok := cMap.Data["operators"]
-	if !ok {
-		return false, nil
-	}
-	cMap.Kind = "ConfigMap"
-	cMap.APIVersion = "/v1"
-	var update bool
-	existingNamespaces := strings.Split(v, ",")
-	for _, ns := range namespaces {
-		ns := ns
-		if !arrayContains(existingNamespaces, ns) {
-			update = true
-		}
-	}
-	existingOperators := strings.Split(o, ",")
-	for _, operator := range operatorsList {
-		operator := operator
-		if !arrayContains(existingOperators, operator) {
-			update = true
-		}
-	}
-	if update {
-		cMap.Data["namespaces"] = strings.Join(namespaces, ",")
-		cMap.Data["operators"] = strings.Join(operatorsList, ",")
-		return true, k.client.ApplyObject(cMap)
-	}
-	return false, nil
-}
-
-// GetPersistedNamespaces returns list of persisted namespaces.
-func (k *Kubernetes) GetPersistedNamespaces(ctx context.Context, namespace string) ([]string, error) {
-	var namespaces []string
-	cMap, err := k.client.GetConfigMap(ctx, namespace, configMapName)
-	if err != nil {
-		return namespaces, err
-	}
-	v, ok := cMap.Data["namespaces"]
-	if !ok {
-		return namespaces, errors.New("`namespaces` key does not exist in the configmap")
-	}
-	namespaces = strings.Split(v, ",")
-	return namespaces, nil
-}
-
 // GetDeployment returns k8s deployment by provided name and namespace.
 func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
 	return k.client.GetDeployment(ctx, name, namespace)
-}
-
-// UpdateClusterRoleBinding updates namespaces list for the cluster role by provided name.
-func (k *Kubernetes) UpdateClusterRoleBinding(ctx context.Context, name string, namespaces []string) error {
-	binding, err := k.client.GetClusterRoleBinding(ctx, name)
-	if err != nil {
-		return err
-	}
-	if len(binding.Subjects) == 0 {
-		return fmt.Errorf("no subjects available for the cluster role binding %s", name)
-	}
-	var needsUpdate bool
-	for _, namespace := range namespaces {
-		namespace := namespace
-		if !subjectsContains(binding.Subjects, namespace) {
-			subject := binding.Subjects[0]
-			subject.Namespace = namespace
-			binding.Subjects = append(binding.Subjects, subject)
-			needsUpdate = true
-		}
-	}
-	if needsUpdate {
-		binding.Kind = "ClusterRoleBinding"
-		binding.APIVersion = "rbac.authorization.k8s.io/v1"
-		return k.client.ApplyObject(binding)
-	}
-
-	return nil
-}
-
-func arrayContains(s []string, e string) bool {
-	for _, a := range s {
-		a := a
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-func subjectsContains(s []rbacv1.Subject, n string) bool {
-	for _, a := range s {
-		a := a
-		if a.Namespace == n {
-			return true
-		}
-	}
-	return false
 }

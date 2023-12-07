@@ -59,7 +59,8 @@ func newUpgradeCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initUpgradeFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringArray("namespace", []string{}, "Namespaces list Percona Everest can manage")
+	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
+	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("upgrade-olm", false, "Upgrade OLM distribution")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 }
@@ -67,6 +68,7 @@ func initUpgradeFlags(cmd *cobra.Command) {
 func initUpgradeViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                       //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))   //nolint:errcheck,gosec
+	viper.BindPFlag("name", cmd.Flags().Lookup("name"))               //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))     //nolint:errcheck,gosec
 	viper.BindPFlag("upgrade-olm", cmd.Flags().Lookup("upgrade-olm")) //nolint:errcheck,gosec
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec

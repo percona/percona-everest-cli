@@ -27,15 +27,11 @@ test.describe('Everest CLI install', async () => {
   test('install only xtradb-cluster-operator', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
-        let out = await cli.exec('kubectl get pods --namespace=percona-everest');
-
-        await out.outContainsNormalizedMany([
-          'everest-operator-controller-manager',
-        ]);
-        out = await cli.exec('kubectl get pods --namespace=testing');
+        const out = await cli.exec('kubectl get pods --namespace=percona-everest');
 
         await out.outContainsNormalizedMany([
           'percona-xtradb-cluster-operator',
+          'everest-operator-controller-manager',
         ]);
 
         await out.outNotContains([
@@ -44,10 +40,11 @@ test.describe('Everest CLI install', async () => {
         ]);
       });
     };
+    const clusterName = `test-${faker.number.int()}`;
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        'install --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0 --namespace=testing',
+        `install --operator.mongodb=false --operator.postgresql=false --operator.xtradb-cluster=true --monitoring.enable=0 --name=${clusterName}`,
       );
 
       await out.assertSuccess();
