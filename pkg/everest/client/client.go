@@ -75,7 +75,13 @@ func NewProxiedEverest(config *rest.Config, namespace, everestPwd string) (*Ever
 			url.PathEscape(namespace),
 		),
 		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			req.Header.Add("Authentication", fmt.Sprintf("Bearer %s", everestPwd))
+			// We can't use the Authorization header because it's automatically
+			// removed by the k8s proxy.
+			// See https://github.com/kubernetes/kubernetes/issues/38775 for details.
+			req.AddCookie(&http.Cookie{
+				Name:  "everest_token",
+				Value: everestPwd,
+			})
 			return nil
 		}),
 	)

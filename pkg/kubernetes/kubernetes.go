@@ -686,6 +686,8 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 		deploymentName = "vm-operator-vm-operator"
 	}
 
+	k.l.Debugf("Waiting for deployment rollout %s/%s", req.Namespace, deploymentName)
+
 	return k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: req.Namespace, Name: deploymentName})
 }
 
@@ -694,6 +696,8 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	if err != nil {
 		return false, err
 	}
+
+	k.l.Debugf("Approving install plan %s/%s", namespace, installPlanName)
 
 	ip.Spec.Approved = true
 	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
