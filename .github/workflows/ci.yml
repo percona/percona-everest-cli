@@ -40,7 +40,7 @@ jobs:
 
       - name: Set up Go release
         if: matrix.go-version != 'tip'
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
@@ -137,7 +137,7 @@ jobs:
 
       - name: Set up Go release
         if: env.GO_VERSION != 'tip'
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
 
