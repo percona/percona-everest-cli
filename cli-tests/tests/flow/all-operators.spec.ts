@@ -65,6 +65,9 @@ test.describe('Everest CLI install', async () => {
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "false"',
       );
+      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}' --namespace=percona-everest-all`)
+
+      await out.assertSuccess();
 
       out = await cli.everestExecSkipWizardWithEnv('upgrade --namespace=percona-everest-all', 'DISABLE_TELEMETRY=true');
       await out.assertSuccess();
@@ -77,6 +80,11 @@ test.describe('Everest CLI install', async () => {
       out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest-all -o yaml');
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "true"',
+      );
+      // check that the spec.type is not overrided
+      out = await cli.exec('kubectl get service/everest --namespace=percona-everest-all -o yaml');
+      await out.outContains(
+        'type: LoadBalancer',
       );
     });
     await test.step('run everest install command using a different namespace', async () => {
