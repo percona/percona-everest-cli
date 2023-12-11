@@ -65,7 +65,7 @@ test.describe('Everest CLI install', async () => {
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "false"',
       );
-      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}' --namespace=percona-everest-all`)
+      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}}' --namespace=percona-everest-all`)
 
       await out.assertSuccess();
 
