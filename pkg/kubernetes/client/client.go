@@ -795,7 +795,9 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 		}
 	}
 	if ok && kind == "Service" {
-		if err := c.updateService(u, namespace); err != nil {
+		// During installation or upgrading of the everest backend
+		// CLI should keep spec.type untouched to prevent overriding of it.
+		if err := c.setEverestServiceType(u, namespace); err != nil {
 			return err
 		}
 	}
@@ -803,7 +805,7 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 	return nil
 }
 
-func (c *Client) updateService(u *unstructured.Unstructured, namespace string) error {
+func (c *Client) setEverestServiceType(u *unstructured.Unstructured, namespace string) error {
 	s, err := c.GetService(context.Background(), namespace, "everest")
 	if err != nil && !apierrors.IsNotFound(err) {
 		return err
