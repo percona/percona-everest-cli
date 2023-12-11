@@ -794,6 +794,21 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 			return err
 		}
 	}
+	if ok && kind == "Service" {
+		s, err := c.GetService(context.Background(), namespace, "everest")
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err != nil && apierrors.IsNotFound(err) {
+			return nil
+		}
+		if s != nil && s.Name != "" {
+			if err := unstructured.SetNestedField(u.Object, string(s.Spec.Type), "spec", "type"); err != nil {
+				return err
+			}
+		}
+
+	}
 
 	return nil
 }
