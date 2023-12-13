@@ -23,6 +23,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"go.uber.org/zap"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
@@ -104,6 +105,9 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 			return nil
 		}
 	}
+	if err := u.areResourcesExist(ctx); err != nil {
+		return err
+	}
 
 	if err := u.uninstallK8sResources(ctx); err != nil {
 		return err
@@ -112,6 +116,24 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 		return err
 	}
 
+	return nil
+}
+
+func (u *Uninstall) areResourcesExist(ctx context.Context) error {
+	_, err := u.kubeClient.GetNamespace(ctx, u.config.Namespace)
+	if err != nil && k8serrors.IsNotFound(err) {
+		return fmt.Errorf("namespace %s is not found", u.config.Namespace)
+	}
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
+	_, err = u.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, u.config.Namespace)
+	if err != nil && k8serrors.IsNotFound(err) {
+		return fmt.Errorf("no Everest deployment in %s namespace", u.config.Namespace)
+	}
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return err
+	}
 	return nil
 }
 
