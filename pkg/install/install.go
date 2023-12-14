@@ -39,9 +39,6 @@ type Install struct {
 
 	config     Config
 	kubeClient *kubernetes.Kubernetes
-
-	// monitoringInstanceName stores the resolved monitoring instance name.
-	monitoringInstanceName string
 }
 
 const (
@@ -60,9 +57,6 @@ const (
 var errAlreadyGenerated = errors.New("token is already generated")
 
 type (
-	// MonitoringType identifies type of monitoring to be used.
-	MonitoringType string
-
 	// Config stores configuration for the operators.
 	Config struct {
 		// Name of the Kubernetes Cluster
@@ -130,14 +124,18 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
-	pwd, pErr := o.generatePassword(ctx)
-	if pErr != nil && pErr != errAlreadyGenerated {
-		return pErr
-	}
 	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
-	if pErr != errAlreadyGenerated {
+	_, err := o.kubeClient.GetSecret(ctx, password.SecretName, o.config.Namespace)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return errors.Join(err, errors.New("could not get the everest token secret"))
+	}
+	if err != nil && k8serrors.IsNotFound(err) {
+		pwd, err := o.generatePassword(ctx)
+		if err != nil {
+			return err
+		}
 		o.l.Info(pwd)
 	}
 
@@ -363,13 +361,6 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 }
 
 func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
-	s, err := o.kubeClient.GetSecret(ctx, password.SecretName, o.config.Namespace)
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return nil, errors.Join(err, errors.New("could not get the everest token secret"))
-	}
-	if s != nil && s.Name == password.SecretName {
-		return nil, errAlreadyGenerated
-	}
 
 	o.l.Info("Creating password for Everest")
 
