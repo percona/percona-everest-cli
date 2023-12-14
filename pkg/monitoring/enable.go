@@ -155,6 +155,7 @@ func (m *Monitoring) provisionNamespace(ctx context.Context) error {
 	}
 	return err
 }
+
 func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	m.l.Infof("Installing %s operator", vmOperatorName)
 
@@ -175,6 +176,7 @@ func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	m.l.Infof("%s operator has been installed", vmOperatorName)
 	return nil
 }
+
 func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	l := m.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
@@ -283,6 +285,7 @@ func (m *Monitoring) configureEverestConnector() error {
 	m.everestClient = e
 	return nil
 }
+
 func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 	pURL := &survey.Input{
 		Message: "Everest URL endpoint",
@@ -312,6 +315,7 @@ func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 	}
 	return nil
 }
+
 func (m *Monitoring) runMonitoringWizard() error {
 	if m.config.PMM == nil {
 		m.config.PMM = &PMMConfig{}
