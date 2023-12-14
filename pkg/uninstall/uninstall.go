@@ -105,7 +105,7 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 			return nil
 		}
 	}
-	if err := u.areResourcesExist(ctx); err != nil {
+	if err := u.checkResourcesExist(ctx); err != nil {
 		return err
 	}
 
@@ -119,7 +119,7 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 	return nil
 }
 
-func (u *Uninstall) areResourcesExist(ctx context.Context) error {
+func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
 	_, err := u.kubeClient.GetNamespace(ctx, u.config.Namespace)
 	if err != nil && k8serrors.IsNotFound(err) {
 		return fmt.Errorf("namespace %s is not found", u.config.Namespace)
@@ -131,10 +131,7 @@ func (u *Uninstall) areResourcesExist(ctx context.Context) error {
 	if err != nil && k8serrors.IsNotFound(err) {
 		return fmt.Errorf("no Everest deployment in %s namespace", u.config.Namespace)
 	}
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (u *Uninstall) uninstallK8sResources(ctx context.Context) error {
