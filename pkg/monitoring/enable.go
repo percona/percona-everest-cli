@@ -152,7 +152,7 @@ func (m *Monitoring) provisionNamespace(ctx context.Context) error {
 	return err
 }
 
-func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
+func (m *Monitoring) provisionMonitoring(ctx context.Context) error { //nolint:funlen
 	m.l.Infof("Installing %s operator", vmOperatorName)
 
 	params := kubernetes.InstallOperatorRequest{
