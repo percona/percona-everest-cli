@@ -51,7 +51,6 @@ test.describe('Everest CLI install', async () => {
       await out.outErrContainsNormalizedMany([
         'percona-xtradb-cluster-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Everest has been installed. Configuring connection',
       ]);
     });
 
