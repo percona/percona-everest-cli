@@ -50,7 +50,6 @@ func NewMonitoringCmd(l *zap.SugaredLogger) *cobra.Command {
 				output.PrintError(err, l)
 				os.Exit(1)
 			}
-
 		},
 	}
 

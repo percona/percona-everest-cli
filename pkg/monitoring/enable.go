@@ -27,12 +27,13 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/percona/percona-everest-backend/client"
-	"github.com/percona/percona-everest-cli/commands/common"
-	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
-	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/percona/percona-everest-cli/commands/common"
+	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
+	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
 const (
@@ -73,7 +74,7 @@ type (
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
-		//EverestToken defines a token to connect to Everest
+		// EverestToken defines a token to connect to Everest
 		EverestToken string
 
 		// InstanceName stores monitoring instance name from Everest.
@@ -86,10 +87,6 @@ type (
 		Type MonitoringType
 		// PMM stores configuration for PMM monitoring type.
 		PMM *PMMConfig
-	}
-
-	// MonitoringConfig stores configuration for monitoring.
-	MonitoringConfig struct {
 	}
 
 	// PMMConfig stores configuration for PMM monitoring type.
@@ -158,11 +155,9 @@ func (m *Monitoring) provisionNamespace(ctx context.Context) error {
 		return fmt.Errorf("namespace %s is not found", m.config.Namespace)
 	}
 	return err
-
 }
 
 func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
-
 	m.l.Infof("Installing %s operator", vmOperatorName)
 
 	params := kubernetes.InstallOperatorRequest{
@@ -233,7 +228,6 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 }
 
 func (m *Monitoring) resolveMonitoringInstanceName(ctx context.Context) error {
-
 	if m.config.InstanceName != "" {
 		i, err := m.everestClient.GetMonitoringInstance(ctx, m.config.InstanceName)
 		if err != nil {
@@ -285,6 +279,7 @@ func (m *Monitoring) configureEverestConnector(everestPwd string) error {
 	m.everestClient = e
 	return nil
 }
+
 func (m *Monitoring) runMonitoringWizard() error {
 	if m.config.PMM == nil {
 		m.config.PMM = &PMMConfig{}
@@ -347,6 +342,7 @@ func (m *Monitoring) runMonitoringNewURLWizard() error {
 
 	return nil
 }
+
 func (m *Monitoring) checkEverestConnection(ctx context.Context) error {
 	m.l.Info("Checking connection to Everest")
 	_, err := m.everestClient.ListMonitoringInstances(ctx)

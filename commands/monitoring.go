@@ -17,9 +17,10 @@
 package commands
 
 import (
-	"github.com/percona/percona-everest-cli/commands/monitoring"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/commands/monitoring"
 )
 
 func newMonitoringCmd(l *zap.SugaredLogger) *cobra.Command {

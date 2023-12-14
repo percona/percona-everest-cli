@@ -361,7 +361,6 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 }
 
 func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
-
 	o.l.Info("Creating password for Everest")
 
 	r, err := password.NewReset(
