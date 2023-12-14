@@ -56,6 +56,7 @@ type (
 	}
 )
 
+// SecretName stores the name of the secret to store Everest token.
 const SecretName = "everest-password"
 
 func (r ResetResponse) String() string {
