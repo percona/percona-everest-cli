@@ -56,8 +56,8 @@ type Monitoring struct {
 }
 
 type (
-	// MonitoringType identifies type of monitoring to be used.
-	MonitoringType string
+	// monitoringType identifies type of monitoring to be used.
+	monitoringType string
 
 	// Config stores configuration for the operators.
 	Config struct {
@@ -78,7 +78,7 @@ type (
 		// if it's created.
 		NewInstanceName string `mapstructure:"new-instance-name"`
 		// Type stores the type of monitoring to be used.
-		Type MonitoringType
+		Type monitoringType
 		// PMM stores configuration for PMM monitoring type.
 		PMM *PMMConfig
 	}
