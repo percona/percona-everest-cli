@@ -54,8 +54,6 @@ const (
 	operatorInstallThreads    = 1
 )
 
-var errAlreadyGenerated = errors.New("token is already generated")
-
 type (
 	// Config stores configuration for the operators.
 	Config struct {
