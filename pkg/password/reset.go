@@ -56,7 +56,7 @@ type (
 	}
 )
 
-const passwordSecretName = "everest-password"
+const SecretName = "everest-password"
 
 func (r ResetResponse) String() string {
 	return fmt.Sprintf("Your new password is:\n%s", r.Password)
@@ -100,7 +100,7 @@ func (r *Reset) Run(ctx context.Context) (*ResetResponse, error) {
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      passwordSecretName,
+			Name:      SecretName,
 			Namespace: r.config.Namespace,
 		},
 		Type: corev1.SecretTypeOpaque,

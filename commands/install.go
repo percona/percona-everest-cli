@@ -73,18 +73,6 @@ func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
-	cmd.Flags().BoolP("monitoring.enable", "m", false, "Enable monitoring")
-	cmd.Flags().String("monitoring.instance-name", "",
-		"Monitoring instance name from Everest. If defined, other monitoring configuration is ignored",
-	)
-	cmd.Flags().String("monitoring.new-instance-name", "",
-		"Name for a new monitoring instance if it's going to be created",
-	)
-	cmd.Flags().String("monitoring.type", "pmm", "Monitoring type")
-	cmd.Flags().String("monitoring.pmm.endpoint", "http://127.0.0.1", "PMM endpoint URL")
-	cmd.Flags().String("monitoring.pmm.username", "admin", "PMM username")
-	cmd.Flags().String("monitoring.pmm.password", "", "PMM password")
-
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
 	cmd.Flags().Bool("operator.xtradb-cluster", true, "Install XtraDB Cluster operator")
@@ -98,14 +86,6 @@ func initInstallFlags(cmd *cobra.Command) {
 
 func initInstallViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard")) //nolint:errcheck,gosec
-
-	viper.BindPFlag("monitoring.enable", cmd.Flags().Lookup("monitoring.enable"))                       //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.new-instance-name", cmd.Flags().Lookup("monitoring.new-instance-name")) //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.type", cmd.Flags().Lookup("monitoring.type"))                           //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint"))           //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
-	viper.BindPFlag("monitoring.pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
 
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
