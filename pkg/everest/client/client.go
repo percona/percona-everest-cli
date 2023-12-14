@@ -47,7 +47,7 @@ func NewEverestFromURL(url, everestPwd string) (*Everest, error) {
 	everestCl, err := client.NewClient(
 		fmt.Sprintf("%s/v1", url),
 		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			req.Header.Add("Authentication", fmt.Sprintf("Bearer %s", everestPwd))
+			req.Header.Set("Cookie", fmt.Sprintf("everest_token=%s", everestPwd))
 			return nil
 		}),
 	)
