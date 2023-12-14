@@ -41,12 +41,7 @@ const (
 	everestBackendServiceName = "percona-everest-backend"
 	operatorGroup             = "percona-operators-group"
 	catalogSource             = "percona-everest-catalog"
-	everestOperatorName       = "everest-operator"
-	pxcOperatorName           = "percona-xtradb-cluster-operator"
-	psmdbOperatorName         = "percona-server-mongodb-operator"
-	pgOperatorName            = "percona-postgresql-operator"
 	vmOperatorName            = "victoriametrics-operator"
-	operatorInstallThreads    = 1
 )
 
 // Monitoring implements the logic for provisioning monitoring.
