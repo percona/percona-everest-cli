@@ -69,7 +69,9 @@ type (
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
 		// EverestToken defines a token to connect to Everest
-		EverestToken string
+		EverestToken string `mapstructure:"everest-token"`
+		// EverestURL defines an URL to connect to Everest
+		EverestURL string `mapstructure:"everest-url"`
 
 		// InstanceName stores monitoring instance name from Everest.
 		// If provided, the other monitoring configuration is ignored.
@@ -116,13 +118,13 @@ func NewMonitoring(c Config, l *zap.SugaredLogger) (*Monitoring, error) {
 
 // Run runs the operators installation process.
 func (m *Monitoring) Run(ctx context.Context) error {
-	if err := m.populateConfig(); err != nil {
+	if err := m.populateConfig(ctx); err != nil {
 		return err
 	}
 	if err := m.provisionNamespace(ctx); err != nil {
 		return err
 	}
-	if err := m.configureEverestConnector(m.config.EverestToken); err != nil {
+	if err := m.configureEverestConnector(); err != nil {
 		return err
 	}
 	if err := m.provisionMonitoring(ctx); err != nil {
@@ -132,8 +134,11 @@ func (m *Monitoring) Run(ctx context.Context) error {
 	return nil
 }
 
-func (m *Monitoring) populateConfig() error {
+func (m *Monitoring) populateConfig(ctx context.Context) error {
 	if !m.config.SkipWizard {
+		if err := m.runEverestWizard(ctx); err != nil {
+			return err
+		}
 		if err := m.runMonitoringWizard(); err != nil {
 			return err
 		}
@@ -150,8 +155,7 @@ func (m *Monitoring) provisionNamespace(ctx context.Context) error {
 	}
 	return err
 }
-
-func (m *Monitoring) provisionMonitoring(ctx context.Context) error { //nolint:funlen
+func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	m.l.Infof("Installing %s operator", vmOperatorName)
 
 	params := kubernetes.InstallOperatorRequest{
@@ -169,8 +173,14 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error { //nolint:f
 		return err
 	}
 	m.l.Infof("%s operator has been installed", vmOperatorName)
+	return nil
+}
+func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	l := m.l.With("action", "monitoring")
 	l.Info("Preparing k8s cluster for monitoring")
+	if err := m.installVMOperator(ctx); err != nil {
+		return err
+	}
 	if err := m.kubeClient.ProvisionMonitoring(m.config.Namespace); err != nil {
 		return errors.Join(err, errors.New("could not provision monitoring configuration"))
 	}
@@ -265,15 +275,43 @@ func (m *Monitoring) createPMMMonitoringInstance(ctx context.Context, name, url,
 	return nil
 }
 
-func (m *Monitoring) configureEverestConnector(everestPwd string) error {
-	e, err := everestClient.NewProxiedEverest(m.kubeClient.Config(), m.config.Namespace, everestPwd)
+func (m *Monitoring) configureEverestConnector() error {
+	e, err := everestClient.NewEverestFromURL(m.config.EverestURL, m.config.EverestToken)
 	if err != nil {
 		return err
 	}
 	m.everestClient = e
 	return nil
 }
+func (m *Monitoring) runEverestWizard(ctx context.Context) error {
+	pURL := &survey.Input{
+		Message: "Everest URL endpoint",
+		Default: m.config.EverestURL,
+	}
+	if err := survey.AskOne(
+		pURL,
+		&m.config.EverestURL,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
+	pToken := &survey.Password{Message: "Everest Token"}
+	if err := survey.AskOne(
+		pToken,
+		&m.config.EverestToken,
+		survey.WithValidator(survey.Required),
+	); err != nil {
+		return err
+	}
 
+	if err := m.configureEverestConnector(); err != nil {
+		return err
+	}
+	if err := m.checkEverestConnection(ctx); err != nil {
+		return err
+	}
+	return nil
+}
 func (m *Monitoring) runMonitoringWizard() error {
 	if m.config.PMM == nil {
 		m.config.PMM = &PMMConfig{}
@@ -338,7 +376,6 @@ func (m *Monitoring) runMonitoringNewURLWizard() error {
 }
 
 func (m *Monitoring) checkEverestConnection(ctx context.Context) error {
-	m.l.Info("Checking connection to Everest")
 	_, err := m.everestClient.ListMonitoringInstances(ctx)
 	return err
 }

@@ -23,10 +23,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/percona/percona-everest-backend/client"
-	"k8s.io/client-go/rest"
 )
 
 // Everest is a connector to the Everest API.
@@ -57,45 +55,6 @@ func NewEverestFromURL(url, everestPwd string) (*Everest, error) {
 		return nil, errors.Join(err, errors.New("could not initialize Everest client"))
 	}
 	return NewEverest(everestCl), nil
-}
-
-// NewProxiedEverest creates everest client by proxying requests into the k8s service using k8s api.
-// Learn more https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster-services/#manually-constructing-apiserver-proxy-urls
-//
-// This client must be used only for provisioning only.
-func NewProxiedEverest(config *rest.Config, namespace, everestPwd string) (*Everest, error) {
-	host, err := url.Parse(config.Host)
-	if err != nil {
-		return nil, err
-	}
-	cl, err := client.NewClient(
-		fmt.Sprintf(
-			"%s/api/v1/namespaces/%s/services/everest/proxy/v1",
-			host,
-			url.PathEscape(namespace),
-		),
-		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			// We can't use the Authorization header because it's automatically
-			// removed by the k8s proxy.
-			// See https://github.com/kubernetes/kubernetes/issues/38775 for details.
-			req.AddCookie(&http.Cookie{
-				Name:  "everest_token",
-				Value: everestPwd,
-			})
-			return nil
-		}),
-	)
-	if err != nil {
-		return nil, err
-	}
-	transport, err := rest.TransportFor(config)
-	if err != nil {
-		return nil, err
-	}
-	httpClient := &http.Client{Transport: transport}
-	e := NewEverest(cl)
-	e.cl.Client = httpClient
-	return e, nil
 }
 
 // makeRequest calls arbitrary *client.Client method for API call and applies common logic for response handling.

@@ -61,6 +61,8 @@ func NewMonitoringCmd(l *zap.SugaredLogger) *cobra.Command {
 func initMonitoringFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace where Percona Everest is deployed")
+	cmd.Flags().String("everest-url", "", "A URL to connect to Everest")
+	cmd.Flags().String("everest-token", "", "A Token to authenticate in Everest")
 	cmd.Flags().String("instance-name", "",
 		"Monitoring instance name from Everest. If defined, other monitoring configuration is ignored",
 	)
@@ -77,6 +79,8 @@ func initMonitoringViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                                              //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))                          //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))                            //nolint:errcheck,gosec
+	viper.BindPFlag("everest-url", cmd.Flags().Lookup("everest-url"))                        //nolint:errcheck,gosec
+	viper.BindPFlag("everest-token", cmd.Flags().Lookup("everest-token"))                    //nolint:errcheck,gosec
 	viper.BindPFlag("instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec
 	viper.BindPFlag("new-instance-name", cmd.Flags().Lookup("monitoring.new-instance-name")) //nolint:errcheck,gosec
 	viper.BindPFlag("type", cmd.Flags().Lookup("monitoring.type"))                           //nolint:errcheck,gosec
