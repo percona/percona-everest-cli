@@ -227,6 +227,7 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	m.l.Info("VMAgent deployed successfully")
 	return nil
 }
+
 func (m *Monitoring) waitForEverestConnection(ctx context.Context) error {
 	sleep := time.Second
 	for i := 0; i < 3; i++ {
@@ -252,6 +253,7 @@ func (m *Monitoring) waitForEverestConnection(ctx context.Context) error {
 	}
 	return nil
 }
+
 func (m *Monitoring) resolveMonitoringInstanceName(ctx context.Context) error {
 	if m.config.InstanceName != "" {
 		i, err := m.everestClient.GetMonitoringInstance(ctx, m.config.InstanceName)
