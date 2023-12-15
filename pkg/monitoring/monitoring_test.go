@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	iName    = "monitoring-instance"
-	iDefault = "default"
+	iName = "monitoring-instance"
 )
 
 func TestInstall_resolveMonitoringInstanceName(t *testing.T) {

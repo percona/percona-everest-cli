@@ -42,16 +42,14 @@ type Install struct {
 }
 
 const (
-	catalogSourceNamespace    = "olm"
-	everestBackendServiceName = "percona-everest-backend"
-	operatorGroup             = "percona-operators-group"
-	catalogSource             = "percona-everest-catalog"
-	everestOperatorName       = "everest-operator"
-	pxcOperatorName           = "percona-xtradb-cluster-operator"
-	psmdbOperatorName         = "percona-server-mongodb-operator"
-	pgOperatorName            = "percona-postgresql-operator"
-	vmOperatorName            = "victoriametrics-operator"
-	operatorInstallThreads    = 1
+	catalogSourceNamespace = "olm"
+	operatorGroup          = "percona-operators-group"
+	catalogSource          = "percona-everest-catalog"
+	everestOperatorName    = "everest-operator"
+	pxcOperatorName        = "percona-xtradb-cluster-operator"
+	psmdbOperatorName      = "percona-server-mongodb-operator"
+	pgOperatorName         = "percona-postgresql-operator"
+	operatorInstallThreads = 1
 )
 
 type (
