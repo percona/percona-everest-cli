@@ -954,6 +954,5 @@ func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) 
 
 // WaitForRollout waits for rollout of a provided deployment in the provided namespace.
 func (k *Kubernetes) WaitForRollout(ctx context.Context, name, namespace string) error {
-
 	return k.client.DoRolloutWait(ctx, types.NamespacedName{Name: name, Namespace: namespace})
 }

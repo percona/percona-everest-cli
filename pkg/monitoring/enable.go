@@ -141,7 +141,7 @@ func (m *Monitoring) populateConfig(ctx context.Context) error {
 		if err := m.runEverestWizard(ctx); err != nil {
 			return err
 		}
-		if err := m.runMonitoringWizard(ctx); err != nil {
+		if err := m.runMonitoringWizard(); err != nil {
 			return err
 		}
 	}
@@ -200,27 +200,9 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	if err := m.kubeClient.WaitForRollout(ctx, everestBackendDeploymentName, m.config.Namespace); err != nil {
 		return errors.Join(err, errors.New("failed waiting for Everest to be ready"))
 	}
-	sleep := time.Second
-	for i := 0; i < 3; i++ {
-		time.Sleep(sleep)
-		sleep *= 2
-		if err := m.checkEverestConnection(ctx); err != nil {
-			if i != 2 {
-				continue
-			}
-			var u *url.Error
-			if errors.As(err, &u) {
-				m.l.Debug(err)
 
-				l := m.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-				l.Error("Could not connect to Everest. " +
-					"Make sure Everest is running and is accessible from this machine.",
-				)
-				return common.ErrExitWithError
-			}
-
-			return errors.Join(err, errors.New("could not check connection to Everest"))
-		}
+	if err := m.waitForEverestConnection(ctx); err != nil {
+		return err
 	}
 
 	// We retry for a bit since the MonitoringConfig may not be properly
@@ -245,7 +227,31 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	m.l.Info("VMAgent deployed successfully")
 	return nil
 }
+func (m *Monitoring) waitForEverestConnection(ctx context.Context) error {
+	sleep := time.Second
+	for i := 0; i < 3; i++ {
+		time.Sleep(sleep)
+		sleep *= 2
+		if err := m.checkEverestConnection(ctx); err != nil {
+			if i != 2 {
+				continue
+			}
+			var u *url.Error
+			if errors.As(err, &u) {
+				m.l.Debug(err)
 
+				l := m.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+				l.Error("Could not connect to Everest. " +
+					"Make sure Everest is running and is accessible from this machine.",
+				)
+				return common.ErrExitWithError
+			}
+
+			return errors.Join(err, errors.New("could not check connection to Everest"))
+		}
+	}
+	return nil
+}
 func (m *Monitoring) resolveMonitoringInstanceName(ctx context.Context) error {
 	if m.config.InstanceName != "" {
 		i, err := m.everestClient.GetMonitoringInstance(ctx, m.config.InstanceName)
@@ -331,7 +337,7 @@ func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 	return nil
 }
 
-func (m *Monitoring) runMonitoringWizard(ctx context.Context) error {
+func (m *Monitoring) runMonitoringWizard() error {
 	if m.config.PMM == nil {
 		m.config.PMM = &PMMConfig{}
 	}
