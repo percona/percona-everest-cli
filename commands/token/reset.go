@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package password holds commands for password command.
-package password
+// Package token holds commands for token command.
+package token
 
 import (
 	"os"
@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/percona/percona-everest-cli/pkg/output"
-	"github.com/percona/percona-everest-cli/pkg/password"
+	"github.com/percona/percona-everest-cli/pkg/token"
 )
 
 // NewResetCmd returns a new versions command.
@@ -39,7 +39,7 @@ func NewResetCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
-			command, err := password.NewReset(*c, l)
+			command, err := token.NewReset(*c, l)
 			if err != nil {
 				output.PrintError(err, l)
 				os.Exit(1)
@@ -71,8 +71,8 @@ func initResetViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 }
 
-func parseResetConfig() (*password.ResetConfig, error) {
-	c := &password.ResetConfig{}
+func parseResetConfig() (*token.ResetConfig, error) {
+	c := &token.ResetConfig{}
 	err := viper.Unmarshal(c)
 	return c, err
 }

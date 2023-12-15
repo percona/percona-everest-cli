@@ -30,7 +30,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
-	"github.com/percona/percona-everest-cli/pkg/password"
+	"github.com/percona/percona-everest-cli/pkg/token"
 )
 
 // Install implements the main logic for commands.
@@ -125,16 +125,16 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
-	_, err := o.kubeClient.GetSecret(ctx, password.SecretName, o.config.Namespace)
+	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, o.config.Namespace)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Join(err, errors.New("could not get the everest token secret"))
 	}
 	if err != nil && k8serrors.IsNotFound(err) {
-		pwd, err := o.generatePassword(ctx)
+		pwd, err := o.generateToken(ctx)
 		if err != nil {
 			return err
 		}
-		o.l.Info(pwd)
+		o.l.Info("\n" + pwd.String() + "\n\n")
 	}
 
 	return nil
@@ -358,26 +358,24 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 	}
 }
 
-func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
-	o.l.Info("Creating password for Everest")
+func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, error) {
+	o.l.Info("Creating token for Everest")
 
-	r, err := password.NewReset(
-		password.ResetConfig{
+	r, err := token.NewReset(
+		token.ResetConfig{
 			KubeconfigPath: o.config.KubeconfigPath,
 			Namespace:      o.config.Namespace,
 		},
 		o.l,
 	)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not initialize reset password"))
+		return nil, errors.Join(err, errors.New("could not initialize reset token"))
 	}
 
 	res, err := r.Run(ctx)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not create password"))
+		return nil, errors.Join(err, errors.New("could not create token"))
 	}
-
-	o.l.Debug(res)
 
 	return res, nil
 }

@@ -50,7 +50,6 @@ test.describe('Everest CLI install', async () => {
         'percona-server-mongodb-operator operator has been installed',
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Your new password is',
       ]);
     });
 
