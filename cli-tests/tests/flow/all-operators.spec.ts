@@ -93,7 +93,7 @@ test.describe('Everest CLI install', async () => {
 
       await install.assertSuccess();
 
-      const out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
+      let out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
       await out.assertSuccess();
 
       await out.outContainsNormalizedMany([
@@ -101,6 +101,12 @@ test.describe('Everest CLI install', async () => {
         'namespace: different-everest',
       ]);
       await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      // Check that uninstall will fail because there's no everest deployment
+      out = await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      await out.outErrContainsNormalizedMany([
+        'no Everest deployment in different-everest namespace',
+      ]);
+
     });
 
     await test.step('uninstall Everest', async () => {
@@ -117,5 +123,17 @@ test.describe('Everest CLI install', async () => {
       ]);
 
     });
+
+    await test.step('uninstall Everest non existent namespace', async () => {
+      let out = await cli.everestExec(
+        `uninstall --namespace=not-exist --assume-yes`,
+      );
+
+      await out.outErrContainsNormalizedMany([
+        'namespace not-exist is not found',
+      ]);
+
+    });
+
   });
 });
