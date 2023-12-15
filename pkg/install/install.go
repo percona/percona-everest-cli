@@ -134,7 +134,7 @@ func (o *Install) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(pwd) //nolint:forbidigo
+		o.l.Info("\n" + pwd.String() + "\n\n")
 	}
 
 	return nil

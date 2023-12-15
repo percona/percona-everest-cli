@@ -60,7 +60,7 @@ type (
 const SecretName = "everest-token"
 
 func (r ResetResponse) String() string {
-	return fmt.Sprintf("Here's your authorization token for accessing the Everest UI and API:\n\n\033[1m%s\033[0m\n\nStore this token securely as you will not be able to retrieve it later. If you ever need to reset it, use the following command:\n\neverestctl token reset", r.Token)
+	return fmt.Sprintf("Here's your authorization token for accessing the Everest UI and API:\n\n\033[1m%s\033[0m\n\nStore this token securely as you will not be able to retrieve it later. If you ever need to reset it, use the following command:\neverestctl token reset", r.Token)
 }
 
 // NewReset returns a new Reset struct.
