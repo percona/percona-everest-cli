@@ -61,6 +61,7 @@ func NewMonitoringCmd(l *zap.SugaredLogger) *cobra.Command {
 func initMonitoringFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().String("namespace", "percona-everest", "Namespace where Percona Everest is deployed")
+	cmd.Flags().Bool("skip-wizard", false, "Skip configuration wizard")
 	cmd.Flags().String("everest-url", "", "A URL to connect to Everest")
 	cmd.Flags().String("everest-token", "", "A Token to authenticate in Everest")
 	cmd.Flags().String("instance-name", "",
@@ -76,17 +77,18 @@ func initMonitoringFlags(cmd *cobra.Command) {
 }
 
 func initMonitoringViperFlags(cmd *cobra.Command) {
-	viper.BindEnv("kubeconfig")                                                              //nolint:errcheck,gosec
-	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))                          //nolint:errcheck,gosec
-	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))                            //nolint:errcheck,gosec
-	viper.BindPFlag("everest-url", cmd.Flags().Lookup("everest-url"))                        //nolint:errcheck,gosec
-	viper.BindPFlag("everest-token", cmd.Flags().Lookup("everest-token"))                    //nolint:errcheck,gosec
-	viper.BindPFlag("instance-name", cmd.Flags().Lookup("monitoring.instance-name"))         //nolint:errcheck,gosec
-	viper.BindPFlag("new-instance-name", cmd.Flags().Lookup("monitoring.new-instance-name")) //nolint:errcheck,gosec
-	viper.BindPFlag("type", cmd.Flags().Lookup("monitoring.type"))                           //nolint:errcheck,gosec
-	viper.BindPFlag("pmm.endpoint", cmd.Flags().Lookup("monitoring.pmm.endpoint"))           //nolint:errcheck,gosec
-	viper.BindPFlag("pmm.username", cmd.Flags().Lookup("monitoring.pmm.username"))           //nolint:errcheck,gosec
-	viper.BindPFlag("pmm.password", cmd.Flags().Lookup("monitoring.pmm.password"))           //nolint:errcheck,gosec
+	viper.BindEnv("kubeconfig")                                                   //nolint:errcheck,gosec
+	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))             //nolint:errcheck,gosec
+	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))               //nolint:errcheck,gosec
+	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))                 //nolint:errcheck,gosec
+	viper.BindPFlag("everest-url", cmd.Flags().Lookup("everest-url"))             //nolint:errcheck,gosec
+	viper.BindPFlag("everest-token", cmd.Flags().Lookup("everest-token"))         //nolint:errcheck,gosec
+	viper.BindPFlag("instance-name", cmd.Flags().Lookup("instance-name"))         //nolint:errcheck,gosec
+	viper.BindPFlag("new-instance-name", cmd.Flags().Lookup("new-instance-name")) //nolint:errcheck,gosec
+	viper.BindPFlag("type", cmd.Flags().Lookup("type"))                           //nolint:errcheck,gosec
+	viper.BindPFlag("pmm.endpoint", cmd.Flags().Lookup("pmm.endpoint"))           //nolint:errcheck,gosec
+	viper.BindPFlag("pmm.username", cmd.Flags().Lookup("pmm.username"))           //nolint:errcheck,gosec
+	viper.BindPFlag("pmm.password", cmd.Flags().Lookup("pmm.password"))           //nolint:errcheck,gosec
 }
 
 func parseResetConfig() (*monitoring.Config, error) {

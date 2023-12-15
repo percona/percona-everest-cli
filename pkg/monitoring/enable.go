@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -36,11 +37,12 @@ import (
 )
 
 const (
-	catalogSourceNamespace    = "olm"
-	everestBackendServiceName = "percona-everest-backend"
-	operatorGroup             = "percona-operators-group"
-	catalogSource             = "percona-everest-catalog"
-	vmOperatorName            = "victoriametrics-operator"
+	catalogSourceNamespace       = "olm"
+	everestBackendServiceName    = "percona-everest-backend"
+	everestBackendDeploymentName = "percona-everest"
+	operatorGroup                = "percona-operators-group"
+	catalogSource                = "percona-everest-catalog"
+	vmOperatorName               = "victoriametrics-operator"
 )
 
 // Monitoring implements the logic for provisioning monitoring.
@@ -139,7 +141,7 @@ func (m *Monitoring) populateConfig(ctx context.Context) error {
 		if err := m.runEverestWizard(ctx); err != nil {
 			return err
 		}
-		if err := m.runMonitoringWizard(); err != nil {
+		if err := m.runMonitoringWizard(ctx); err != nil {
 			return err
 		}
 	}
@@ -195,19 +197,30 @@ func (m *Monitoring) provisionMonitoring(ctx context.Context) error {
 	if err := m.kubeClient.RestartEverest(ctx, everestBackendServiceName, m.config.Namespace); err != nil {
 		return err
 	}
-	if err := m.checkEverestConnection(ctx); err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			m.l.Debug(err)
+	if err := m.kubeClient.WaitForRollout(ctx, everestBackendDeploymentName, m.config.Namespace); err != nil {
+		return errors.Join(err, errors.New("failed waiting for Everest to be ready"))
+	}
+	sleep := time.Second
+	for i := 0; i < 3; i++ {
+		time.Sleep(sleep)
+		sleep *= 2
+		if err := m.checkEverestConnection(ctx); err != nil {
+			if i != 2 {
+				continue
+			}
+			var u *url.Error
+			if errors.As(err, &u) {
+				m.l.Debug(err)
 
-			l := m.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-			l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this machine.",
-			)
-			return common.ErrExitWithError
+				l := m.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
+				l.Error("Could not connect to Everest. " +
+					"Make sure Everest is running and is accessible from this machine.",
+				)
+				return common.ErrExitWithError
+			}
+
+			return errors.Join(err, errors.New("could not check connection to Everest"))
 		}
-
-		return errors.Join(err, errors.New("could not check connection to Everest"))
 	}
 
 	// We retry for a bit since the MonitoringConfig may not be properly
@@ -243,7 +256,7 @@ func (m *Monitoring) resolveMonitoringInstanceName(ctx context.Context) error {
 		return nil
 	}
 
-	if m.config.NewInstanceName == "" {
+	if m.config.NewInstanceName == "" && m.monitoringInstanceName == "" {
 		return errors.New("monitoring.new-instance-name is required when creating a new monitoring instance")
 	}
 
@@ -306,6 +319,8 @@ func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 	); err != nil {
 		return err
 	}
+	m.config.EverestURL = strings.TrimSpace(m.config.EverestURL)
+	m.config.EverestToken = strings.TrimSpace(m.config.EverestToken)
 
 	if err := m.configureEverestConnector(); err != nil {
 		return err
@@ -316,9 +331,18 @@ func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 	return nil
 }
 
-func (m *Monitoring) runMonitoringWizard() error {
+func (m *Monitoring) runMonitoringWizard(ctx context.Context) error {
 	if m.config.PMM == nil {
 		m.config.PMM = &PMMConfig{}
+	}
+	pName := &survey.Input{
+		Message: "Registered instance name",
+	}
+	if err := survey.AskOne(
+		pName,
+		&m.config.InstanceName,
+	); err != nil {
+		return err
 	}
 
 	if m.config.InstanceName == "" {
@@ -342,6 +366,7 @@ func (m *Monitoring) runMonitoringNewURLWizard() error {
 	); err != nil {
 		return err
 	}
+	m.config.PMM.Endpoint = strings.TrimSpace(m.config.PMM.Endpoint)
 
 	pUser := &survey.Input{
 		Message: "Username",
