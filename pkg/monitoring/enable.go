@@ -37,11 +37,8 @@ import (
 )
 
 const (
-	catalogSourceNamespace       = "olm"
 	everestBackendServiceName    = "percona-everest-backend"
 	everestBackendDeploymentName = "percona-everest"
-	operatorGroup                = "percona-operators-group"
-	catalogSource                = "percona-everest-catalog"
 	vmOperatorName               = "victoriametrics-operator"
 )
 
@@ -164,9 +161,9 @@ func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	params := kubernetes.InstallOperatorRequest{
 		Namespace:              m.config.Namespace,
 		Name:                   vmOperatorName,
-		OperatorGroup:          operatorGroup,
-		CatalogSource:          catalogSource,
-		CatalogSourceNamespace: catalogSourceNamespace,
+		OperatorGroup:          kubernetes.OperatorGroup,
+		CatalogSource:          kubernetes.CatalogSource,
+		CatalogSourceNamespace: kubernetes.CatalogSourceNamespace,
 		Channel:                "stable-v0",
 		InstallPlanApproval:    v1alpha1.ApprovalManual,
 	}

@@ -67,6 +67,12 @@ const (
 
 	// PerconaEverestDeploymentName stores the name of everest backend deployment.
 	PerconaEverestDeploymentName = "percona-everest"
+	// CatalogSourceNamespace defines a namespace to use to find a catalog source.
+	CatalogSourceNamespace = "olm"
+	// CatalogSource is the name of OLM catalog source.
+	CatalogSource = "percona-everest-catalog"
+	// OperatorGroup defines the name of the configuration for subscriptions.
+	OperatorGroup = "percona-operators-group"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"

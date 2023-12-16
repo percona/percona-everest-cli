@@ -42,9 +42,6 @@ type Install struct {
 }
 
 const (
-	catalogSourceNamespace = "olm"
-	operatorGroup          = "percona-operators-group"
-	catalogSource          = "percona-everest-catalog"
 	everestOperatorName    = "everest-operator"
 	pxcOperatorName        = "percona-xtradb-cluster-operator"
 	psmdbOperatorName      = "percona-server-mongodb-operator"
@@ -339,9 +336,9 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 		params := kubernetes.InstallOperatorRequest{
 			Namespace:              o.config.Namespace,
 			Name:                   operatorName,
-			OperatorGroup:          operatorGroup,
-			CatalogSource:          catalogSource,
-			CatalogSourceNamespace: catalogSourceNamespace,
+			OperatorGroup:          kubernetes.OperatorGroup,
+			CatalogSource:          kubernetes.CatalogSource,
+			CatalogSourceNamespace: kubernetes.CatalogSourceNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
