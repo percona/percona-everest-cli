@@ -951,3 +951,8 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
 	return k.client.GetDeployment(ctx, name, namespace)
 }
+
+// WaitForRollout waits for rollout of a provided deployment in the provided namespace.
+func (k *Kubernetes) WaitForRollout(ctx context.Context, name, namespace string) error {
+	return k.client.DoRolloutWait(ctx, types.NamespacedName{Name: name, Namespace: namespace})
+}
