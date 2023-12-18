@@ -37,11 +37,8 @@ import (
 )
 
 const (
-	catalogSourceNamespace       = "olm"
 	everestBackendServiceName    = "percona-everest-backend"
 	everestBackendDeploymentName = "percona-everest"
-	operatorGroup                = "percona-operators-group"
-	catalogSource                = "percona-everest-catalog"
 	vmOperatorName               = "victoriametrics-operator"
 )
 
@@ -126,9 +123,6 @@ func (m *Monitoring) Run(ctx context.Context) error {
 	if err := m.provisionNamespace(ctx); err != nil {
 		return err
 	}
-	if err := m.configureEverestConnector(); err != nil {
-		return err
-	}
 	if err := m.provisionMonitoring(ctx); err != nil {
 		return err
 	}
@@ -144,6 +138,14 @@ func (m *Monitoring) populateConfig(ctx context.Context) error {
 		if err := m.runMonitoringWizard(); err != nil {
 			return err
 		}
+	}
+	m.config.EverestURL = strings.TrimSpace(m.config.EverestURL)
+
+	if err := m.configureEverestConnector(); err != nil {
+		return err
+	}
+	if err := m.checkEverestConnection(ctx); err != nil {
+		return err
 	}
 
 	return nil
@@ -164,9 +166,9 @@ func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	params := kubernetes.InstallOperatorRequest{
 		Namespace:              m.config.Namespace,
 		Name:                   vmOperatorName,
-		OperatorGroup:          operatorGroup,
-		CatalogSource:          catalogSource,
-		CatalogSourceNamespace: catalogSourceNamespace,
+		OperatorGroup:          kubernetes.OperatorGroup,
+		CatalogSource:          kubernetes.CatalogSource,
+		CatalogSourceNamespace: kubernetes.CatalogSourceNamespace,
 		Channel:                "stable-v0",
 		InstallPlanApproval:    v1alpha1.ApprovalManual,
 	}
@@ -265,7 +267,7 @@ func (m *Monitoring) resolveMonitoringInstanceName(ctx context.Context) error {
 	}
 
 	if m.config.NewInstanceName == "" && m.monitoringInstanceName == "" {
-		return errors.New("monitoring.new-instance-name is required when creating a new monitoring instance")
+		return errors.New("new-instance-name is required when creating a new monitoring instance")
 	}
 
 	err := m.createPMMMonitoringInstance(
@@ -325,15 +327,6 @@ func (m *Monitoring) runEverestWizard(ctx context.Context) error {
 		&m.config.EverestToken,
 		survey.WithValidator(survey.Required),
 	); err != nil {
-		return err
-	}
-	m.config.EverestURL = strings.TrimSpace(m.config.EverestURL)
-	m.config.EverestToken = strings.TrimSpace(m.config.EverestToken)
-
-	if err := m.configureEverestConnector(); err != nil {
-		return err
-	}
-	if err := m.checkEverestConnection(ctx); err != nil {
 		return err
 	}
 	return nil
