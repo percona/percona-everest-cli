@@ -140,7 +140,6 @@ func (m *Monitoring) populateConfig(ctx context.Context) error {
 		}
 	}
 	m.config.EverestURL = strings.TrimSpace(m.config.EverestURL)
-	m.config.EverestToken = strings.TrimSpace(m.config.EverestToken)
 
 	if err := m.configureEverestConnector(); err != nil {
 		return err
