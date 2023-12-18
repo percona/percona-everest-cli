@@ -115,7 +115,7 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 
 		err := o.resolveMonitoringInstanceName(context.Background())
 		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), "monitoring.new-instance-name is required"))
+		require.True(t, strings.Contains(err.Error(), "new-instance-name is required"))
 	})
 
 	t.Run("shall create a new PMM instance", func(t *testing.T) {
