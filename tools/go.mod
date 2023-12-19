@@ -3,14 +3,14 @@ module github.com/percona/percona-everest-cli/tools
 go 1.21
 
 require (
-	github.com/daixiang0/gci v0.11.2
+	github.com/daixiang0/gci v0.12.0
 	github.com/deepmap/oapi-codegen v1.16.2
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/quasilyte/go-consistent v0.6.0
 	github.com/reviewdog/reviewdog v0.15.0
 	github.com/vburenin/ifacemaker v1.2.1
-	github.com/vektra/mockery/v2 v2.36.1
-	golang.org/x/tools v0.16.0
+	github.com/vektra/mockery/v2 v2.38.0
+	golang.org/x/tools v0.16.1
 	mvdan.cc/gofumpt v0.5.0
 )
 
