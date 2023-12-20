@@ -4,13 +4,13 @@ metadata:
   labels:
     app.kubernetes.io/component: exporter
     app.kubernetes.io/name: kube-state-metrics
-    app.kubernetes.io/version: 2.5.0
     app.kubernetes.io/managed-by: everest
     everest.percona.com/type: monitoring
+    app.kubernetes.io/version: 2.10.1
   name: kube-state-metrics
   namespace: default
 spec:
-  clusterIP: None
+  type: ClusterIP
   ports:
   - name: http-metrics
     port: 8080
