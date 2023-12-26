@@ -120,7 +120,7 @@ func (m *Monitoring) Run(ctx context.Context) error {
 	if err := m.populateConfig(ctx); err != nil {
 		return err
 	}
-	if err := m.provisionNamespace(ctx); err != nil {
+	if err := m.checkNamespace(ctx); err != nil {
 		return err
 	}
 	if err := m.provisionMonitoring(ctx); err != nil {
@@ -132,7 +132,7 @@ func (m *Monitoring) Run(ctx context.Context) error {
 
 func (m *Monitoring) populateConfig(ctx context.Context) error {
 	if !m.config.SkipWizard {
-		if err := m.runEverestWizard(ctx); err != nil {
+		if err := m.runEverestWizard(); err != nil {
 			return err
 		}
 		if err := m.runMonitoringWizard(); err != nil {
@@ -151,11 +151,23 @@ func (m *Monitoring) populateConfig(ctx context.Context) error {
 	return nil
 }
 
-// provisionNamespace provisions a namespace for Everest.
-func (m *Monitoring) provisionNamespace(ctx context.Context) error {
+// checkNamespace provisions a namespace for Everest.
+func (m *Monitoring) checkNamespace(ctx context.Context) error {
 	_, err := m.kubeClient.GetNamespace(ctx, m.config.Namespace)
 	if err != nil && k8serrors.IsNotFound(err) {
 		return fmt.Errorf("namespace %s is not found", m.config.Namespace)
+	}
+	if err != nil {
+		return err
+	}
+
+	_, err = m.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, m.config.Namespace)
+	if err != nil && k8serrors.IsNotFound(err) {
+		return fmt.Errorf("no Everest installation exist in the %s namespace. Monitoring can be provisioned into the namespace where everest components are deployed", m.config.Namespace)
+	}
+	_, err = m.kubeClient.GetDeployment(ctx, kubernetes.EverestOperatorDeploymentName, m.config.Namespace)
+	if err != nil && k8serrors.IsNotFound(err) {
+		return fmt.Errorf("no Everest installation exist in the %s namespace. Monitoring can be provisioned into the namespace where everest components are deployed", m.config.Namespace)
 	}
 	return err
 }
@@ -309,7 +321,7 @@ func (m *Monitoring) configureEverestConnector() error {
 	return nil
 }
 
-func (m *Monitoring) runEverestWizard(ctx context.Context) error {
+func (m *Monitoring) runEverestWizard() error {
 	pURL := &survey.Input{
 		Message: "Everest URL endpoint",
 		Default: m.config.EverestURL,
