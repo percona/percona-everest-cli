@@ -17,7 +17,7 @@ import { test } from '@fixtures';
 test.describe('Everest CLI "version" validation', async () => {
   test('version validation', async ({ cli }) => {
     const out = await cli.everestExecSilent('version');
-    const hash = await cli.exec('shell git rev-parse --short HEAD');
+    const hash = await cli.exec('git rev-parse --short HEAD');
 
     await hash.assertSuccess();
     const version = `v0.0.0-${hash}`;
