@@ -108,6 +108,24 @@ jobs:
             exit 1 
           fi 
 
+      - name: Check the pkg/version/version.go references the dev manifest and catalog
+        run: |
+          if ! grep -q 'devCatalogImage     = "docker.io/perconalab/everest-catalog:latest"' pkg/version/version.go; then 
+            echo "default CLI release in install.sh should be latest" 
+            exit 1 
+          fi 
+          if ! grep -q 'devManifestURL      = "https://raw.githubusercontent.com/percona/percona-everest-backend/main' pkg/version/version.go; then 
+            echo "default BE manifest in install.sh should be taken from main" 
+            exit 1 
+          fi 
+
+      - name: Check the install.sh references the latest cli release
+        run: |
+          if ! grep -q "curl -sL  https://github.com/percona/percona-everest-cli/releases/download/latest" install.sh; then 
+            echo "default CLI release in install.sh should be latest" 
+            exit 1 
+          fi 
+
       - name: Run linters
         uses: reviewdog/action-golangci-lint@v2
         with:
