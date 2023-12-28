@@ -87,6 +87,27 @@ jobs:
       - name: Install tools
         run: make init
 
+      - name: Check the latest operator version is used
+        run: |
+          go get github.com/percona/everest-operator@main
+          echo "Checking there is no source code changes"
+          go mod tidy
+          git diff --exit-code
+
+      - name: Check the latest BE version is used
+        run: |
+          go get github.com/percona/percona-everest-backend@main
+          echo "Checking there is no source code changes"
+          go mod tidy
+          git diff --exit-code
+
+      - name: Check the Makefile references dev version
+        run: |
+          if ! grep -q "RELEASE_VERSION ?= v0.0.0" Makefile; then 
+            echo "default RELEASE_VERSION in Makefile should be 0.0.0" 
+            exit 1 
+          fi 
+
       - name: Run linters
         uses: reviewdog/action-golangci-lint@v2
         with:
