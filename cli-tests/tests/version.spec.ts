@@ -20,7 +20,7 @@ test.describe('Everest CLI "version" validation', async () => {
     const hash = await cli.exec('git rev-parse --short HEAD');
 
     await hash.assertSuccess();
-    const version = `v0.0.0-${hash}`;
+    const version = `v0.0.0-${hash.getStdOutLines()[0]}`;
 
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
