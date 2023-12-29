@@ -165,6 +165,9 @@ func (m *Monitoring) checkNamespace(ctx context.Context) error {
 	if err != nil && k8serrors.IsNotFound(err) {
 		return fmt.Errorf("no Everest installation exist in the %s namespace. Monitoring can be provisioned into the namespace where everest components are deployed", m.config.Namespace)
 	}
+	if err != nil {
+		return err
+	}
 	_, err = m.kubeClient.GetDeployment(ctx, kubernetes.EverestOperatorDeploymentName, m.config.Namespace)
 	if err != nil && k8serrors.IsNotFound(err) {
 		return fmt.Errorf("no Everest installation exist in the %s namespace. Monitoring can be provisioned into the namespace where everest components are deployed", m.config.Namespace)
