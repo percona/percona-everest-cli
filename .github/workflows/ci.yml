@@ -87,6 +87,45 @@ jobs:
       - name: Install tools
         run: make init
 
+      - name: Check the latest operator version is used
+        run: |
+          go get github.com/percona/everest-operator@main
+          echo "Checking there is no source code changes"
+          go mod tidy
+          git diff --exit-code
+
+      - name: Check the latest BE version is used
+        run: |
+          go get github.com/percona/percona-everest-backend@main
+          echo "Checking there is no source code changes"
+          go mod tidy
+          git diff --exit-code
+
+      - name: Check the Makefile references dev version
+        run: |
+          if ! grep -q "RELEASE_VERSION ?= v0.0.0" Makefile; then 
+            echo "default RELEASE_VERSION in Makefile should be 0.0.0" 
+            exit 1 
+          fi 
+
+      - name: Check the pkg/version/version.go references the dev manifest and catalog
+        run: |
+          if ! grep -q 'devCatalogImage     = "docker.io/perconalab/everest-catalog:latest"' pkg/version/version.go; then 
+            echo "default CLI release in install.sh should be latest" 
+            exit 1 
+          fi 
+          if ! grep -q 'devManifestURL      = "https://raw.githubusercontent.com/percona/percona-everest-backend/main' pkg/version/version.go; then 
+            echo "default BE manifest in install.sh should be taken from main" 
+            exit 1 
+          fi 
+
+      - name: Check the install.sh references the latest cli release
+        run: |
+          if ! grep -q "curl -sL  https://github.com/percona/percona-everest-cli/releases/download/latest" install.sh; then 
+            echo "default CLI release in install.sh should be latest" 
+            exit 1 
+          fi 
+
       - name: Run linters
         uses: reviewdog/action-golangci-lint@v2
         with:
@@ -258,7 +297,7 @@ jobs:
 
       - name: Attach the report
         if: ${{ always() && steps.cli-tests.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: cli-tests-report
           path: cli-tests/test-report
