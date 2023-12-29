@@ -73,11 +73,12 @@ const (
 	CatalogSource = "percona-everest-catalog"
 	// OperatorGroup defines the name of the configuration for subscriptions.
 	OperatorGroup = "percona-operators-group"
+	// EverestOperatorDeploymentName is the name of the deployment for everest operator.
+	EverestOperatorDeploymentName = "everest-operator-controller-manager"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
 	postgresDeploymentName       = "percona-postgresql-operator"
-	everestDeploymentName        = "everest-operator-controller-manager"
 	psmdbOperatorContainerName   = "percona-server-mongodb-operator"
 	pxcOperatorContainerName     = "percona-xtradb-cluster-operator"
 	everestOperatorContainerName = "manager"
@@ -288,7 +289,7 @@ func (k *Kubernetes) GetPXCOperatorVersion(ctx context.Context) (string, error) 
 
 // GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment.
 func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error) {
-	return k.getOperatorVersion(ctx, everestDeploymentName, everestOperatorContainerName)
+	return k.getOperatorVersion(ctx, EverestOperatorDeploymentName, everestOperatorContainerName)
 }
 
 // GetSecret returns secret by name.
@@ -655,7 +656,7 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	}
 	deploymentName := req.Name
 	if req.Name == "everest-operator" {
-		deploymentName = everestDeploymentName
+		deploymentName = EverestOperatorDeploymentName
 	}
 	if req.Name == "victoriametrics-operator" {
 		deploymentName = "vm-operator-vm-operator"
