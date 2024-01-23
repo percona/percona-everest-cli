@@ -17,7 +17,6 @@
 package commands
 
 import (
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -52,17 +51,6 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 		},
 	}
 	initInstallFlags(cmd)
-
-	oCmd := &cobra.Command{
-		Use:   "operators",
-		Short: "Deprecated. Please use everestctl install instead",
-		Run: func(cmd *cobra.Command, args []string) {
-			initInstallViperFlags(cmd)
-			log.Fatal("Command is deprecated. Please use `everestctl install` instead")
-		},
-	}
-	initInstallFlags(oCmd)
-	cmd.AddCommand(oCmd)
 
 	return cmd
 }
