@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/data"
+	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
@@ -92,7 +93,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	}
 	u.l.Info("Subscriptions have been patched")
 	u.l.Info("Upgrading Everest")
-	if err := u.kubeClient.InstallEverest(ctx, u.config.Namespace); err != nil {
+	if err := u.kubeClient.InstallEverest(ctx, install.EverestNamespace); err != nil {
 		return err
 	}
 	u.l.Info("Everest has been upgraded")

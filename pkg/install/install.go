@@ -47,6 +47,8 @@ const (
 	psmdbOperatorName      = "percona-server-mongodb-operator"
 	pgOperatorName         = "percona-postgresql-operator"
 	operatorInstallThreads = 1
+	// EverestNamespace is the namespace where everest is installed.
+	EverestNamespace       = "percona-everest"
 )
 
 type (
@@ -54,8 +56,6 @@ type (
 	Config struct {
 		// Name of the Kubernetes Cluster
 		Name string
-		// Namespace defines the namespace operators shall be installed to.
-		Namespace string
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -120,7 +120,7 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
-	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, o.config.Namespace)
+	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, EverestNamespace)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Join(err, errors.New("could not get the everest token secret"))
 	}
@@ -142,10 +142,6 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if o.config.Name == "" {
-		o.config.Name = o.kubeClient.ClusterName()
-	}
-
 	return nil
 }
 
@@ -153,7 +149,7 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	if err := o.provisionAllOperators(ctx); err != nil {
 		return err
 	}
-	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, o.config.Namespace)
+	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, EverestNamespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
@@ -163,8 +159,8 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 	}
 
 	if !everestExists {
-		o.l.Info(fmt.Sprintf("Deploying Everest to %s", o.config.Namespace))
-		err = o.kubeClient.InstallEverest(ctx, o.config.Namespace)
+		o.l.Info(fmt.Sprintf("Deploying Everest to %s", EverestNamespace))
+		err = o.kubeClient.InstallEverest(ctx, EverestNamespace)
 		if err != nil {
 			return err
 		}
@@ -182,11 +178,7 @@ func (o *Install) runWizard() error {
 }
 
 func (o *Install) runEverestWizard() error {
-	pNamespace := &survey.Input{
-		Message: "Namespace to deploy Everest to",
-		Default: o.config.Namespace,
-	}
-	return survey.AskOne(pNamespace, &o.config.Namespace)
+	return nil
 }
 
 func (o *Install) runInstallWizard() error {
@@ -243,13 +235,13 @@ func (o *Install) runInstallWizard() error {
 
 // provisionNamespace provisions a namespace for Everest.
 func (o *Install) provisionNamespace() error {
-	o.l.Infof("Creating namespace %s", o.config.Namespace)
-	err := o.kubeClient.CreateNamespace(o.config.Namespace)
+	o.l.Infof("Creating namespace %s", EverestNamespace)
+	err := o.kubeClient.CreateNamespace(EverestNamespace)
 	if err != nil {
 		return errors.Join(err, errors.New("could not provision namespace"))
 	}
 
-	o.l.Infof("Namespace %s has been created", o.config.Namespace)
+	o.l.Infof("Namespace %s has been created", EverestNamespace)
 	return nil
 }
 
@@ -286,7 +278,7 @@ func (o *Install) provisionOLM(ctx context.Context) error {
 }
 
 func (o *Install) provisionInstall(ctx context.Context) error {
-	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	deploymentsBefore, err := o.kubeClient.ListEngineDeploymentNames(ctx, EverestNamespace)
 	if err != nil {
 		return err
 	}
@@ -313,7 +305,7 @@ func (o *Install) provisionInstall(ctx context.Context) error {
 	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName)(); err != nil {
 		return err
 	}
-	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, o.config.Namespace)
+	deploymentsAfter, err := o.kubeClient.ListEngineDeploymentNames(ctx, EverestNamespace)
 	if err != nil {
 		return err
 	}
@@ -334,7 +326,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 		o.l.Infof("Installing %s operator", operatorName)
 
 		params := kubernetes.InstallOperatorRequest{
-			Namespace:              o.config.Namespace,
+			Namespace:              EverestNamespace,
 			Name:                   operatorName,
 			OperatorGroup:          kubernetes.OperatorGroup,
 			CatalogSource:          kubernetes.CatalogSource,
@@ -359,7 +351,7 @@ func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, erro
 	r, err := token.NewReset(
 		token.ResetConfig{
 			KubeconfigPath: o.config.KubeconfigPath,
-			Namespace:      o.config.Namespace,
+			Namespace:      EverestNamespace,
 		},
 		o.l,
 	)
@@ -376,5 +368,5 @@ func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, erro
 }
 
 func (o *Install) restartEverestOperatorPod(ctx context.Context) error {
-	return o.kubeClient.RestartEverest(ctx, "everest-operator", o.config.Namespace)
+	return o.kubeClient.RestartEverest(ctx, "everest-operator", EverestNamespace)
 }

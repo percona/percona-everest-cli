@@ -58,7 +58,6 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
-	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
@@ -78,7 +77,6 @@ func initInstallViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
-	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec

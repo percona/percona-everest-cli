@@ -60,7 +60,6 @@ func newUpgradeCmd(l *zap.SugaredLogger) *cobra.Command {
 func initUpgradeFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
 	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
-	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
 	cmd.Flags().Bool("upgrade-olm", false, "Upgrade OLM distribution")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 }
