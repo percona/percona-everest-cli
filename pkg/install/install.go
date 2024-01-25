@@ -54,8 +54,6 @@ const (
 type (
 	// Config stores configuration for the operators.
 	Config struct {
-		// Name of the Kubernetes Cluster
-		Name string
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
