@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/percona/percona-everest-backend/client"
 )
@@ -43,9 +44,13 @@ func NewEverest(everestClient *client.Client) *Everest {
 }
 
 // NewEverestFromURL returns a new Everest from a provided URL.
-func NewEverestFromURL(url, everestPwd string) (*Everest, error) {
+func NewEverestFromURL(rawURL, everestPwd string) (*Everest, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not parse Everest URL"))
+	}
 	everestCl, err := client.NewClient(
-		fmt.Sprintf("%s/v1", url),
+		u.JoinPath("v1").String(),
 		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
 			req.Header.Set("Cookie", fmt.Sprintf("everest_token=%s", everestPwd))
 			return nil
