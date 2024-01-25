@@ -46,8 +46,7 @@ func TestInstallOlmOperator(t *testing.T) {
 	//nolint:paralleltest
 	t.Run("Install OLM Operator", func(t *testing.T) {
 		k8sclient.On(
-			"CreateSubscriptionForCatalog", mock.Anything, mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+			"CreateSubscription", mock.Anything, mock.Anything, mock.Anything,
 		).Return(&v1alpha1.Subscription{}, nil)
 		k8sclient.On("GetDeployment", ctx, mock.Anything, "olm").Return(&appsv1.Deployment{}, nil)
 		k8sclient.On("ApplyFile", mock.Anything).Return(nil)
@@ -85,9 +84,8 @@ func TestInstallOlmOperator(t *testing.T) {
 			},
 		}
 		k8sclient.On(
-			"CreateSubscriptionForCatalog",
-			mock.Anything, subscriptionNamespace, operatorName, "olm",
-			catalogSource, operatorName, "stable", "", v1alpha1.ApprovalManual,
+			"CreateSubscription",
+			mock.Anything, subscriptionNamespace, mockSubscription,
 		).Return(mockSubscription, nil)
 		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
 		mockInstallPlan := &v1alpha1.InstallPlan{}

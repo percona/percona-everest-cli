@@ -33,6 +33,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/commands/common"
 	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
+	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
@@ -181,9 +182,9 @@ func (m *Monitoring) installVMOperator(ctx context.Context) error {
 	params := kubernetes.InstallOperatorRequest{
 		Namespace:              m.config.Namespace,
 		Name:                   vmOperatorName,
-		OperatorGroup:          kubernetes.OperatorGroup,
-		CatalogSource:          kubernetes.CatalogSource,
-		CatalogSourceNamespace: kubernetes.CatalogSourceNamespace,
+		OperatorGroup:          install.OperatorGroup,
+		CatalogSource:          install.CatalogSource,
+		CatalogSourceNamespace: install.CatalogSourceNamespace,
 		Channel:                "stable-v0",
 		InstallPlanApproval:    v1alpha1.ApprovalManual,
 	}
