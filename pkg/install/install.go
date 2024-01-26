@@ -57,6 +57,13 @@ const (
 	everestServiceAccountRoleBinding        = "everest-admin-role-binding"
 	everestServiceAccountClusterRoleBinding = "everest-admin-cluster-role-binding"
 
+	everestOperatorChannel = "stable-v0"
+	pxcOperatorChannel     = "stable-v1"
+	psmdbOperatorChannel   = "stable-v1"
+	pgOperatorChannel      = "fast-v2"
+	// VMOperatorChannel is the catalog channel for the VM Operator.
+	VMOperatorChannel = "stable-v0"
+
 	// CatalogSourceNamespace is the namespace where the catalog source is installed.
 	CatalogSourceNamespace = "olm"
 	// CatalogSource is the name of the catalog source.
@@ -77,7 +84,6 @@ type (
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
-		Channel  ChannelConfig
 		Operator OperatorConfig
 	}
 
@@ -89,19 +95,6 @@ type (
 		PSMDB bool `mapstructure:"mongodb"`
 		// PXC stores if XtraDB Cluster shall be installed.
 		PXC bool `mapstructure:"xtradb-cluster"`
-	}
-	// ChannelConfig stores configuration for operator channels.
-	ChannelConfig struct {
-		// Everest stores channel for Everest.
-		Everest string
-		// PG stores channel for PostgreSQL.
-		PG string `mapstructure:"postgresql"`
-		// PSMDB stores channel for MongoDB.
-		PSMDB string `mapstructure:"mongodb"`
-		// PXC stores channel for xtradb cluster.
-		PXC string `mapstructure:"xtradb-cluster"`
-		// VictoriaMetrics stores channel for VictoriaMetrics.
-		VictoriaMetrics string `mapstructure:"victoria-metrics"`
 	}
 )
 
@@ -187,7 +180,7 @@ func (o *Install) populateConfig() error {
 }
 
 func (o *Install) installEverest(ctx context.Context) error {
-	if err := o.installOperator(ctx, o.config.Channel.Everest, everestOperatorName, EverestNamespace)(); err != nil {
+	if err := o.installOperator(ctx, everestOperatorChannel, everestOperatorName, EverestNamespace)(); err != nil {
 		return err
 	}
 	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, EverestNamespace)
@@ -382,13 +375,13 @@ func (o *Install) provisionOperators(ctx context.Context, namespace string) erro
 	g.SetLimit(operatorInstallThreads)
 
 	if o.config.Operator.PXC {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName, namespace))
+		g.Go(o.installOperator(gCtx, pxcOperatorChannel, pxcOperatorName, namespace))
 	}
 	if o.config.Operator.PSMDB {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PSMDB, psmdbOperatorName, namespace))
+		g.Go(o.installOperator(gCtx, psmdbOperatorChannel, psmdbOperatorName, namespace))
 	}
 	if o.config.Operator.PG {
-		g.Go(o.installOperator(gCtx, o.config.Channel.PG, pgOperatorName, namespace))
+		g.Go(o.installOperator(gCtx, pgOperatorChannel, pgOperatorName, namespace))
 	}
 	if err := g.Wait(); err != nil {
 		return err

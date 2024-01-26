@@ -185,7 +185,7 @@ func (m *Monitoring) installVMOperator(ctx context.Context) error {
 		OperatorGroup:          install.OperatorGroup,
 		CatalogSource:          install.CatalogSource,
 		CatalogSourceNamespace: install.CatalogSourceNamespace,
-		Channel:                "stable-v0",
+		Channel:                install.VMOperatorChannel,
 		InstallPlanApproval:    v1alpha1.ApprovalManual,
 	}
 
