@@ -12,15 +12,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-import { test } from '@fixtures';
 
-test.describe('Backups', async () => {
-  test('backup.name is required', async ({ page, cli, request }) => {
-    const out = await cli.everestExecSkipWizard(`install operators --backup.enable --monitoring.enable=0 --name=cluster-name`);
+// Package commands ...
+package commands
 
-    await out.exitCodeEquals(1);
-    await out.outErrContainsNormalizedMany([
-      'Backup name cannot be empty',
-    ]);
-  });
-});
+import (
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+
+	"github.com/percona/percona-everest-cli/commands/token"
+)
+
+func newTokenCmd(l *zap.SugaredLogger) *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "token",
+	}
+
+	cmd.AddCommand(token.NewResetCmd(l))
+
+	return cmd
+}

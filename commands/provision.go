@@ -23,7 +23,7 @@ import (
 	"github.com/percona/percona-everest-cli/commands/provision"
 )
 
-func newProvisionCmd(l *zap.SugaredLogger) *cobra.Command {
+func newProvisionCmd(l *zap.SugaredLogger) *cobra.Command { //nolint:deadcode,unused
 	cmd := &cobra.Command{
 		Use: "provision",
 	}

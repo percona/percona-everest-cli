@@ -23,5 +23,5 @@ import (
 )
 
 type everestClientConnector interface {
-	ListDatabaseEngines(ctx context.Context, kubernetesID string) (*client.DatabaseEngineList, error)
+	ListDatabaseEngines(ctx context.Context) (*client.DatabaseEngineList, error)
 }

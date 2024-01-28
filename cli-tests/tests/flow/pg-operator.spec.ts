@@ -15,10 +15,8 @@
 import { test, expect } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
-import { apiVerifyClusterExists } from '@support/backend';
-import { cliDeleteCluster } from '@support/everest-cli';
 
-test.describe('Everest CLI install operators', async () => {
+test.describe('Everest CLI install', async () => {
   test.beforeEach(async ({ cli }) => {
     await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
     await cli.execute('minikube delete');
@@ -43,36 +41,35 @@ test.describe('Everest CLI install operators', async () => {
     };
     const clusterName = `test-${faker.number.int()}`;
 
-    await test.step('run everest install operators command', async () => {
+    await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=false --name=${clusterName}`,
       );
 
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Connected Kubernetes cluster to Everest',
       ]);
     });
 
     await page.waitForTimeout(10_000);
 
     await verifyClusterResources();
-    await apiVerifyClusterExists(request, clusterName);
 
-    await test.step('re-run everest install operators command', async () => {
+    await test.step('re-run everest install command', async () => {
       await page.waitForTimeout(60_000);
       const operator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await operator.assertSuccess();
 
       const out = await cli.everestExecSkipWizard(
-        `install operators --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install --operator.mongodb=false --operator.postgresql=true --operator.xtradb-cluster=true --name=${clusterName}`,
       );
       const restartedOperator = await cli.exec(`kubectl -n percona-everest get po | grep everest|awk {'print $1'}`);
       await restartedOperator.assertSuccess();
 
       expect(operator.getStdOutLines()[0]).not.toEqual(restartedOperator.getStdOutLines()[0]);
+
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'percona-xtradb-cluster-operator operator has been installed',
@@ -84,9 +81,6 @@ test.describe('Everest CLI install operators', async () => {
     });
     await page.waitForTimeout(10_000);
 
-    await verifyClusterResources();
-    await apiVerifyClusterExists(request, clusterName);
-    await cliDeleteCluster(cli, request, clusterName);
     await verifyClusterResources();
   });
 });

@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 )
 
 // KubeClientConnector ...
@@ -40,6 +41,8 @@ type KubeClientConnector interface {
 	GetStorageClasses(ctx context.Context) (*storagev1.StorageClassList, error)
 	// GetDeployment returns deployment by name.
 	GetDeployment(ctx context.Context, name string, namespace string) (*appsv1.Deployment, error)
+	// ListDeployments returns deployment by name.
+	ListDeployments(ctx context.Context, namespace string) (*appsv1.DeploymentList, error)
 	// GetSecret returns secret by name.
 	GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error)
 	// ListSecrets returns secrets.
@@ -48,6 +51,8 @@ type KubeClientConnector interface {
 	DeleteObject(obj runtime.Object) error
 	// ApplyObject applies object.
 	ApplyObject(obj runtime.Object) error
+	// Config returns stored *rest.Config.
+	Config() *rest.Config
 	// GetPersistentVolumes returns Persistent Volumes available in the cluster.
 	GetPersistentVolumes(ctx context.Context) (*corev1.PersistentVolumeList, error)
 	// GetPods returns list of pods.
@@ -65,6 +70,12 @@ type KubeClientConnector interface {
 	// ApplyFile accepts manifest file contents, parses into []runtime.Object
 	// and applies them against the cluster.
 	ApplyFile(fileBytes []byte) error
+	// ApplyManifestFile accepts manifest file contents, parses into []runtime.Object
+	// and applies them against the cluster.
+	ApplyManifestFile(fileBytes []byte, namespace string) error
+	// DeleteManifestFile accepts manifest file contents, parses into []runtime.Object
+	// and deletes them from the cluster.
+	DeleteManifestFile(fileBytes []byte, namespace string) error
 	// DoCSVWait waits until for a CSV to be applied.
 	DoCSVWait(ctx context.Context, key types.NamespacedName) error
 	// GetSubscriptionCSV retrieves a subscription CSV.
@@ -102,6 +113,8 @@ type KubeClientConnector interface {
 	// DeleteFile accepts manifest file contents parses into []runtime.Object
 	// and deletes them from the cluster.
 	DeleteFile(fileBytes []byte) error
+	// GetService returns k8s service by provided namespace and name.
+	GetService(ctx context.Context, namespace, name string) (*corev1.Service, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.

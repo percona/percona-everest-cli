@@ -68,13 +68,10 @@ func NewDatabaseEnginesCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initDatabaseEnginesFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
-	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID")
-	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 }
 
 func initDatabaseEnginesViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("kubernetes-id", cmd.Flags().Lookup("kubernetes-id"))       //nolint:errcheck,gosec
 }
 
 func parseDatabaseEnginesConfig() (*list.DBEnginesConfig, error) {

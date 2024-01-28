@@ -84,6 +84,8 @@ const (
 
 	defaultAPIURIPath  = "/api"
 	defaultAPIsURIPath = "/apis"
+
+	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
 // Each level has 2 spaces for PrefixWriter.
@@ -225,7 +227,7 @@ func (c *Client) initOperatorClients() error {
 	return err
 }
 
-func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn
+func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn,nolintlint
 	rcl, err := rest.HTTPClientFor(c.restConfig)
 	if err != nil {
 		return nil, err
@@ -339,6 +341,14 @@ func (c *Client) GetDeployment(ctx context.Context, name string, namespace strin
 	return c.clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+// ListDeployments returns deployment by name.
+func (c *Client) ListDeployments(ctx context.Context, namespace string) (*appsv1.DeploymentList, error) {
+	if namespace == "" {
+		namespace = c.namespace
+	}
+	return c.clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
+}
+
 // GetSecret returns secret by name.
 func (c *Client) GetSecret(ctx context.Context, name, namespace string) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -442,9 +452,7 @@ func (c *Client) retrieveMetaFromObject(obj runtime.Object) (string, string, err
 	return namespace, name, nil
 }
 
-func (c *Client) resourceClient( //nolint:ireturn
-	gv schema.GroupVersion,
-) (rest.Interface, error) {
+func (c *Client) resourceClient(gv schema.GroupVersion) (rest.Interface, error) { //nolint:ireturn
 	cfg := c.restConfig
 	cfg.ContentConfig = resource.UnstructuredPlusDefaultContentConfig()
 	cfg.GroupVersion = &gv
@@ -454,6 +462,11 @@ func (c *Client) resourceClient( //nolint:ireturn
 		cfg.APIPath = defaultAPIsURIPath
 	}
 	return rest.RESTClientFor(cfg)
+}
+
+// Config returns stored *rest.Config.
+func (c *Client) Config() *rest.Config {
+	return c.restConfig
 }
 
 func (c *Client) marshalKubeConfig(conf *Config) ([]byte, error) {
@@ -726,8 +739,149 @@ func (c *Client) ApplyFile(fileBytes []byte) error {
 	return nil
 }
 
-func (c *Client) getObjects(f []byte) ([]runtime.Object, error) {
-	objs := []runtime.Object{}
+// ApplyManifestFile accepts manifest file contents, parses into []runtime.Object
+// and applies them against the cluster.
+func (c *Client) ApplyManifestFile(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i]
+		if err := c.applyTemplateCustomization(o, namespace); err != nil {
+			return err
+		}
+		err := c.ApplyObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteManifestFile accepts manifest file contents, parses into []runtime.Object
+// and deletes them from the cluster.
+func (c *Client) DeleteManifestFile(fileBytes []byte, namespace string) error {
+	objs, err := c.getObjects(fileBytes)
+	if err != nil {
+		return err
+	}
+	for i := range objs {
+		o := objs[i]
+		if err := c.applyTemplateCustomization(o, namespace); err != nil {
+			return err
+		}
+		err := c.DeleteObject(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namespace string) error {
+	if err := unstructured.SetNestedField(u.Object, namespace, "metadata", "namespace"); err != nil {
+		return err
+	}
+
+	kind, ok, err := unstructured.NestedString(u.Object, "kind")
+	if err != nil {
+		return err
+	}
+
+	if ok && kind == "ClusterRoleBinding" {
+		if err := c.updateClusterRoleBinding(u, namespace); err != nil {
+			return err
+		}
+	}
+	if ok && kind == "Service" {
+		// During installation or upgrading of the everest backend
+		// CLI should keep spec.type untouched to prevent overriding of it.
+		if err := c.setEverestServiceType(u, namespace); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) setEverestServiceType(u *unstructured.Unstructured, namespace string) error {
+	s, err := c.GetService(context.Background(), namespace, "everest")
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err != nil && apierrors.IsNotFound(err) {
+		return nil
+	}
+	if s != nil && s.Name != "" {
+		if err := unstructured.SetNestedField(u.Object, string(s.Spec.Type), "spec", "type"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Client) updateClusterRoleBinding(u *unstructured.Unstructured, namespace string) error {
+	cl, err := c.kubeClient()
+	if err != nil {
+		return err
+	}
+	binding := &unstructured.Unstructured{}
+	binding.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "rbac.authorization.k8s.io",
+		Kind:    "ClusterRoleBinding",
+		Version: "v1",
+	})
+	err = cl.Get(context.Background(), types.NamespacedName{Name: "everest-admin-cluster-role-binding"}, binding)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	sub, ok, err := unstructured.NestedFieldNoCopy(u.Object, "subjects")
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return nil
+	}
+
+	subjects, ok := sub.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	for _, s := range subjects {
+		sub, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if err := unstructured.SetNestedField(sub, namespace, "namespace"); err != nil {
+			return err
+		}
+	}
+	if binding.GetName() == "" {
+		return nil
+	}
+
+	bindingSub, ok, err := unstructured.NestedFieldNoCopy(binding.Object, "subjects")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	bindingSubjects, ok := bindingSub.([]interface{})
+	if !ok {
+		return nil
+	}
+	subjects = append(subjects, bindingSubjects...)
+	return unstructured.SetNestedSlice(u.Object, subjects, "subjects")
+}
+
+func (c *Client) getObjects(f []byte) ([]*unstructured.Unstructured, error) {
+	objs := []*unstructured.Unstructured{}
 	decoder := yamlutil.NewYAMLOrJSONDecoder(bytes.NewReader(f), 100)
 	var err error
 	for {
@@ -1060,6 +1214,11 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
 	}
 
+	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+	if !ok || disableTelemetry != "true" {
+		disableTelemetry = "false"
+	}
+
 	subscription := &v1alpha1.Subscription{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha1.SubscriptionKind,
@@ -1076,9 +1235,16 @@ func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, na
 			Channel:                channel,
 			StartingCSV:            startingCSV,
 			InstallPlanApproval:    approval,
+			Config: &v1alpha1.SubscriptionConfig{
+				Env: []corev1.EnvVar{
+					{
+						Name:  disableTelemetryEnvVar,
+						Value: disableTelemetry,
+					},
+				},
+			},
 		},
 	}
-
 	sub, err := operatorClient.
 		OperatorsV1alpha1().
 		Subscriptions(namespace).
@@ -1242,4 +1408,9 @@ func (c *Client) DeleteFile(fileBytes []byte) error {
 		}
 	}
 	return nil
+}
+
+// GetService returns k8s service by provided namespace and name.
+func (c *Client) GetService(ctx context.Context, namespace, name string) (*corev1.Service, error) {
+	return c.clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 }

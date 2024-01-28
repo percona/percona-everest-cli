@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package install ...
-package install
+// Package monitoring ...
+package monitoring
 
 import (
 	"context"
@@ -25,18 +25,6 @@ import (
 //go:generate ../../bin/mockery --name=everestClientConnector --case=snake --inpackage --testonly
 
 type everestClientConnector interface {
-	ListKubernetesClusters(
-		ctx context.Context,
-	) ([]client.KubernetesCluster, error)
-	RegisterKubernetesCluster(
-		ctx context.Context,
-		body client.RegisterKubernetesClusterJSONRequestBody,
-	) (*client.KubernetesCluster, error)
-	CreateBackupStorage(
-		ctx context.Context,
-		body client.CreateBackupStorageJSONRequestBody,
-	) (*client.BackupStorage, error)
-
 	CreateMonitoringInstance(
 		ctx context.Context,
 		body client.CreateMonitoringInstanceJSONRequestBody,
@@ -49,7 +37,6 @@ type everestClientConnector interface {
 
 	SetKubernetesClusterMonitoring(
 		ctx context.Context,
-		kubernetesID string,
 		body client.SetKubernetesClusterMonitoringJSONRequestBody,
 	) error
 }

@@ -35,8 +35,7 @@ type DBEngines struct {
 type (
 	// DBEnginesConfig stores configuration for the database engines.
 	DBEnginesConfig struct {
-		KubernetesID string `mapstructure:"kubernetes-id"`
-		Everest      EverestConfig
+		Everest EverestConfig
 	}
 
 	// EverestConfig stores config for Everest.
@@ -78,7 +77,7 @@ func NewDatabaseEngines(c DBEnginesConfig, everestClient everestClientConnector,
 
 // Run runs the database engines list command.
 func (d *DBEngines) Run(ctx context.Context) (DBEnginesList, error) {
-	dbEngines, err := d.everestClient.ListDatabaseEngines(ctx, d.config.KubernetesID)
+	dbEngines, err := d.everestClient.ListDatabaseEngines(ctx)
 	if err != nil {
 		return nil, err
 	}

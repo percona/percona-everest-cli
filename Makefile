@@ -1,5 +1,14 @@
 FILES = $(shell find . -type f -name '*.go')
 
+RELEASE_VERSION ?= v0.0.0-$(shell git rev-parse --short HEAD)
+RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
+
+LD_FLAGS = -ldflags " \
+			-X 'github.com/percona/percona-everest-cli/pkg/version.ProjectName=everestctl' \
+			-X 'github.com/percona/percona-everest-cli/pkg/version.Version=$(RELEASE_VERSION)' \
+			-X 'github.com/percona/percona-everest-cli/pkg/version.FullCommit=$(RELEASE_FULLCOMMIT)' \
+			"
+
 default: help
 
 help:                   ## Display this help message
@@ -11,7 +20,7 @@ init:                   ## Install development tools
 	cd tools && go generate -x -tags=tools
 
 build:                  ## Build binaries
-	go build -race -o bin/everest ./cmd/everest
+	go build -race $(LD_FLAGS) -o bin/everest ./cmd/everest
 
 gen:                    ## Generate code
 	go generate ./...
@@ -42,8 +51,8 @@ k8s: ## Create a local minikube cluster
 	kubectl apply -f ./dev/kubevirt-hostpath-provisioner.yaml
 
 release:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o ./dist/everestctl-linux-amd64 ./cmd/everest
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v -o ./dist/everestctl-linux-arm64 ./cmd/everest
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v -o ./dist/everestctl-darwin-amd64 ./cmd/everest
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -v -o ./dist/everestctl-darwin-arm64 ./cmd/everest
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -v -o ./dist/everestctl.exe ./cmd/everest
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v $(LD_FLAGS) -o ./dist/everestctl-linux-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -v $(LD_FLAGS) -o ./dist/everestctl-linux-arm64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v $(LD_FLAGS) -o ./dist/everestctl-darwin-amd64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -v $(LD_FLAGS) -o ./dist/everestctl-darwin-arm64 ./cmd/everest
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -v $(LD_FLAGS) -o ./dist/everestctl.exe ./cmd/everest

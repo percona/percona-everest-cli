@@ -67,8 +67,6 @@ func initMySQLFlags(cmd *cobra.Command) {
 	cmd.Flags().String("name", "", "Cluster name")
 	cmd.MarkFlagRequired("name") //nolint:errcheck,gosec
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
-	cmd.Flags().String("kubernetes-id", "", "Kubernetes cluster ID in Everest")
-	cmd.MarkFlagRequired("kubernetes-id") //nolint:errcheck,gosec
 
 	cmd.Flags().String("db.version", "latest", "MySQL version")
 
@@ -83,7 +81,6 @@ func initMySQLFlags(cmd *cobra.Command) {
 func initMySQLViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("name", cmd.Flags().Lookup("name"))                         //nolint:errcheck,gosec
 	viper.BindPFlag("everest.endpoint", cmd.Flags().Lookup("everest.endpoint")) //nolint:errcheck,gosec
-	viper.BindPFlag("kubernetes-id", cmd.Flags().Lookup("kubernetes-id"))       //nolint:errcheck,gosec
 
 	viper.BindPFlag("db.version", cmd.Flags().Lookup("db.version")) //nolint:errcheck,gosec
 

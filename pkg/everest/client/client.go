@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 
 	"github.com/percona/percona-everest-backend/client"
 )
@@ -43,10 +44,20 @@ func NewEverest(everestClient *client.Client) *Everest {
 }
 
 // NewEverestFromURL returns a new Everest from a provided URL.
-func NewEverestFromURL(url string) (*Everest, error) {
-	everestCl, err := client.NewClient(fmt.Sprintf("%s/v1", url))
+func NewEverestFromURL(rawURL, everestPwd string) (*Everest, error) {
+	u, err := url.Parse(rawURL)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not initialize everest client"))
+		return nil, errors.Join(err, errors.New("could not parse Everest URL"))
+	}
+	everestCl, err := client.NewClient(
+		u.JoinPath("v1").String(),
+		client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("Cookie", fmt.Sprintf("everest_token=%s", everestPwd))
+			return nil
+		}),
+	)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("could not initialize Everest client"))
 	}
 	return NewEverest(everestCl), nil
 }
@@ -69,7 +80,6 @@ func makeRequest[B interface{}, R interface{}](
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusMultipleChoices {
 		return processErrorResponse(res, errorStatus)
 	}
-
 	err = json.NewDecoder(res.Body).Decode(ret)
 	if errors.Is(err, io.EOF) {
 		// In case the server returns no content, such as with the DELETE method,

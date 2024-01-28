@@ -3,10 +3,8 @@ init:               ## Install dependencies
 	npx playwright install
 
 install-operators:  ## Install operators to k8s
-	../bin/everest install operators \
+	../bin/everest install \
 		--skip-wizard \
-		--backup.enable=0 \
-		--monitoring.enable=0
 
 test-cli:           ## Run all tests
 	npx playwright test --project=cli

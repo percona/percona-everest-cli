@@ -57,10 +57,30 @@ export class CliHelper {
    * @param       command   sh command to execute
    * @return      {@link Output} instance
    */
+  async everestExec(command: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return test.step(`Run "${command}" command`, async () => {
+      return this.execute(`${this.pathToBinary} ${command}`);
+    });
+  }
+
+  /**
+   * Same as {@link exec()} but with "--skip-wizard" suffix.
+   *
+   * @param       command   sh command to execute
+   * @return      {@link Output} instance
+   */
   async everestExecSkipWizard(command: string) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return test.step(`Run "${command}" command with --skip-wizard`, async () => {
       return this.execute(`${this.pathToBinary} ${command} --skip-wizard`);
+    });
+  }
+
+  async everestExecSkipWizardWithEnv(command, env: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return test.step(`Run "${command}" command with env variables`, async () => {
+      return this.execute(`${env} ${this.pathToBinary} ${command} --skip-wizard`);
     });
   }
 

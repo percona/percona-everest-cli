@@ -15,10 +15,8 @@
 import { test } from '@fixtures';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { faker } from '@faker-js/faker';
-import { apiVerifyClusterExists } from '@support/backend';
-import { cliDeleteCluster } from '@support/everest-cli';
 
-test.describe('Everest CLI install operators', async () => {
+test.describe('Everest CLI install', async () => {
   test.beforeEach(async ({ cli }) => {
     await cli.execute('docker-compose -f quickstart.yml up -d --force-recreate --renew-anon-volumes');
     await cli.execute('minikube delete');
@@ -29,7 +27,7 @@ test.describe('Everest CLI install operators', async () => {
   test('install all operators', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
-        const out = await cli.exec('kubectl get pods --namespace=percona-everest');
+        const out = await cli.exec('kubectl get pods --namespace=percona-everest-all');
 
         await out.outContainsNormalizedMany([
           'percona-xtradb-cluster-operator',
@@ -41,9 +39,9 @@ test.describe('Everest CLI install operators', async () => {
     };
     const clusterName = `test-${faker.number.int()}`;
 
-    await test.step('run everest install operators command', async () => {
+    await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install operators --backup.enable=0 --monitoring.enable=0 --name=${clusterName}`,
+        `install --name=${clusterName} --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
@@ -52,24 +50,90 @@ test.describe('Everest CLI install operators', async () => {
         'percona-server-mongodb-operator operator has been installed',
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Connected Kubernetes cluster to Everest',
       ]);
     });
 
     await page.waitForTimeout(10_000);
 
     await verifyClusterResources();
-    await apiVerifyClusterExists(request, clusterName);
-    await cliDeleteCluster(cli, request, clusterName);
 
-    await test.step('try to delete cluster again', async () => {
-      const out = await cli.everestExecSilent('delete cluster');
+    await test.step('disable telemetry', async () => {
+      // check that the telemetry IS NOT disabled by default
+      let out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest-all -o yaml');
 
-      await out.exitCodeEquals(1);
+      await out.outContains(
+        'name: DISABLE_TELEMETRY\n          value: "false"',
+      );
+      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}}' --namespace=percona-everest-all`)
+
+      await out.assertSuccess();
+
+      out = await cli.everestExecSkipWizardWithEnv('upgrade --namespace=percona-everest-all', 'DISABLE_TELEMETRY=true');
+      await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
-        'no Kubernetes clusters found',
+        'Subscriptions have been patched\t{"component": "upgrade"}',
       ]);
+
+      await page.waitForTimeout(10_000);
+      // check that the telemetry IS disabled
+      out = await cli.exec('kubectl get deployments/percona-xtradb-cluster-operator --namespace=percona-everest-all -o yaml');
+      await out.outContains(
+        'name: DISABLE_TELEMETRY\n          value: "true"',
+      );
+      // check that the spec.type is not overrided
+      out = await cli.exec('kubectl get service/everest --namespace=percona-everest-all -o yaml');
+      await out.outContains(
+        'type: LoadBalancer',
+      );
     });
-    await verifyClusterResources();
+    await test.step('run everest install command using a different namespace', async () => {
+      const install = await cli.everestExecSkipWizard(
+        `install --namespace=different-everest`,
+      );
+
+      await install.assertSuccess();
+
+      let out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
+      await out.assertSuccess();
+
+      await out.outContainsNormalizedMany([
+        'namespace: percona-everest-all',
+        'namespace: different-everest',
+      ]);
+      await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      // Check that uninstall will fail because there's no everest deployment
+      out = await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      await out.outErrContainsNormalizedMany([
+        'no Everest deployment in different-everest namespace',
+      ]);
+
+    });
+
+    await test.step('uninstall Everest', async () => {
+      let out = await cli.everestExec(
+        `uninstall --namespace=percona-everest-all --assume-yes`,
+      );
+
+      await out.assertSuccess();
+      // check that the deployment does not exist
+      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all');
+
+      await out.outErrContainsNormalizedMany([
+        'Error from server (NotFound): deployments.apps "percona-everest" not found',
+      ]);
+
+    });
+
+    await test.step('uninstall Everest non existent namespace', async () => {
+      let out = await cli.everestExec(
+        `uninstall --namespace=not-exist --assume-yes`,
+      );
+
+      await out.outErrContainsNormalizedMany([
+        'namespace not-exist is not found',
+      ]);
+
+    });
+
   });
 });
