@@ -824,6 +824,7 @@ func (k *Kubernetes) victoriaMetricsCRDFiles() []string {
 		"crds/victoriametrics/kube-state-metrics/service-account.yaml",
 		"crds/victoriametrics/kube-state-metrics/cluster-role.yaml",
 		"crds/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"crds/victoriametrics/kube-state-metrics/configmap.yaml",
 		"crds/victoriametrics/kube-state-metrics/deployment.yaml",
 		"crds/victoriametrics/kube-state-metrics/service.yaml",
 		"crds/victoriametrics/kube-state-metrics.yaml",
