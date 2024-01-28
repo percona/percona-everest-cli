@@ -21,11 +21,19 @@ spec:
         app.kubernetes.io/name: kube-state-metrics
         app.kubernetes.io/version: 2.10.1
     spec:
+      volumes:
+      - configMap:
+          name: customresource-config-ksm
+        name: cr-config
       automountServiceAccountToken: true
       containers:
       - image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+        volumeMounts:
+        - mountPath: /go/src/k8s.io/kube-state-metrics/
+          name: cr-config      
         args:
         - --metric-labels-allowlist=pods=[app.kubernetes.io/component,app.kubernetes.io/instance,app.kubernetes.io/managed-by,app.kubernetes.io/name,app.kubernetes.io/part-of],persistentvolumeclaims=[app.kubernetes.io/component,app.kubernetes.io/instance,app.kubernetes.io/managed-by,app.kubernetes.io/name,app.kubernetes.io/part-of],jobs=[app.kubernetes.io/component,app.kubernetes.io/instance,app.kubernetes.io/managed-by,app.kubernetes.io/name,app.kubernetes.io/part-of]
+        - --custom-resource-state-config-file=/go/src/k8s.io/kube-state-metrics/config
         livenessProbe:
           httpGet:
             path: /healthz
