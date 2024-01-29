@@ -29,7 +29,8 @@ import (
 
 func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "install",
+		Use:     "install",
+		Example: "everestctl install --namespace dev --namespace staging --namespace prod --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard",
 		Run: func(cmd *cobra.Command, args []string) {
 			initInstallViperFlags(cmd)
 			c := &install.Config{}
@@ -57,19 +58,12 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringP("name", "n", "", "Kubernetes cluster name")
-	cmd.Flags().String("namespace", "percona-everest", "Namespace into which Percona Everest components are deployed to")
+	cmd.Flags().StringArray("namespace", []string{}, "Namespaces list Percona Everest can manage")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
 	cmd.Flags().Bool("operator.postgresql", true, "Install PostgreSQL operator")
 	cmd.Flags().Bool("operator.xtradb-cluster", true, "Install XtraDB Cluster operator")
-
-	cmd.Flags().String("channel.everest", "stable-v0", "Channel for Everest operator")
-	cmd.Flags().String("channel.victoria-metrics", "stable-v0", "Channel for VictoriaMetrics operator")
-	cmd.Flags().String("channel.xtradb-cluster", "stable-v1", "Channel for XtraDB Cluster operator")
-	cmd.Flags().String("channel.mongodb", "stable-v1", "Channel for MongoDB operator")
-	cmd.Flags().String("channel.postgresql", "fast-v2", "Channel for PostgreSQL operator")
 }
 
 func initInstallViperFlags(cmd *cobra.Command) {
@@ -77,16 +71,9 @@ func initInstallViperFlags(cmd *cobra.Command) {
 
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
-	viper.BindPFlag("name", cmd.Flags().Lookup("name"))             //nolint:errcheck,gosec
 	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
 	viper.BindPFlag("operator.xtradb-cluster", cmd.Flags().Lookup("operator.xtradb-cluster")) //nolint:errcheck,gosec
-
-	viper.BindPFlag("channel.victoria-metrics", cmd.Flags().Lookup("channel.victoria-metrics")) //nolint:errcheck,gosec
-	viper.BindPFlag("channel.xtradb-cluster", cmd.Flags().Lookup("channel.xtradb-cluster"))     //nolint:errcheck,gosec
-	viper.BindPFlag("channel.mongodb", cmd.Flags().Lookup("channel.mongodb"))                   //nolint:errcheck,gosec
-	viper.BindPFlag("channel.postgresql", cmd.Flags().Lookup("channel.postgresql"))             //nolint:errcheck,gosec
-	viper.BindPFlag("channel.everest", cmd.Flags().Lookup("channel.everest"))                   //nolint:errcheck,gosec
 }
