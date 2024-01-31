@@ -1,6 +1,6 @@
 FILES = $(shell find . -type f -name '*.go')
 
-RELEASE_VERSION ?= v0.0.0-$(shell git rev-parse --short HEAD)
+RELEASE_VERSION ?= v0.7.0
 RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 
 LD_FLAGS = -ldflags " \
