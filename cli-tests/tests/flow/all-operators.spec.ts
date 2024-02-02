@@ -41,7 +41,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0 --name=${clusterName} --namespace=percona-everest-all`,
+        `install --name=${clusterName} --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
@@ -50,7 +50,6 @@ test.describe('Everest CLI install', async () => {
         'percona-server-mongodb-operator operator has been installed',
         'percona-postgresql-operator operator has been installed',
         'everest-operator operator has been installed',
-        'Your new password is',
       ]);
     });
 
@@ -65,6 +64,9 @@ test.describe('Everest CLI install', async () => {
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "false"',
       );
+      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}}' --namespace=percona-everest-all`)
+
+      await out.assertSuccess();
 
       out = await cli.everestExecSkipWizardWithEnv('upgrade --namespace=percona-everest-all', 'DISABLE_TELEMETRY=true');
       await out.assertSuccess();
@@ -78,15 +80,20 @@ test.describe('Everest CLI install', async () => {
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "true"',
       );
+      // check that the spec.type is not overrided
+      out = await cli.exec('kubectl get service/everest --namespace=percona-everest-all -o yaml');
+      await out.outContains(
+        'type: LoadBalancer',
+      );
     });
     await test.step('run everest install command using a different namespace', async () => {
       const install = await cli.everestExecSkipWizard(
-        `install --monitoring.enable=0  --namespace=different-everest`,
+        `install --namespace=different-everest`,
       );
 
       await install.assertSuccess();
 
-      const out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
+      let out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
       await out.assertSuccess();
 
       await out.outContainsNormalizedMany([
@@ -94,6 +101,12 @@ test.describe('Everest CLI install', async () => {
         'namespace: different-everest',
       ]);
       await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      // Check that uninstall will fail because there's no everest deployment
+      out = await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
+      await out.outErrContainsNormalizedMany([
+        'no Everest deployment in different-everest namespace',
+      ]);
+
     });
 
     await test.step('uninstall Everest', async () => {
@@ -110,5 +123,17 @@ test.describe('Everest CLI install', async () => {
       ]);
 
     });
+
+    await test.step('uninstall Everest non existent namespace', async () => {
+      let out = await cli.everestExec(
+        `uninstall --namespace=not-exist --assume-yes`,
+      );
+
+      await out.outErrContainsNormalizedMany([
+        'namespace not-exist is not found',
+      ]);
+
+    });
+
   });
 });

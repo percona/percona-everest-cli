@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package install
+package monitoring
 
 import (
 	"context"
@@ -27,8 +27,7 @@ import (
 )
 
 const (
-	iName    = "monitoring-instance"
-	iDefault = "default"
+	iName = "monitoring-instance"
 )
 
 func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
@@ -37,28 +36,6 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 	l, err := zap.NewDevelopment()
 	require.NoError(t, err)
 
-	t.Run("shall work with monitoring disabled", func(t *testing.T) {
-		t.Parallel()
-
-		m := &mockEverestClientConnector{}
-		defer m.AssertExpectations(t)
-
-		o := &Install{
-			l: l.Sugar(),
-			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable: false,
-				},
-			},
-			everestClient:          m,
-			monitoringInstanceName: iDefault,
-		}
-
-		err := o.resolveMonitoringInstanceName(context.Background())
-		require.NoError(t, err)
-		require.Equal(t, iDefault, o.monitoringInstanceName)
-	})
-
 	t.Run("shall work with monitoring instance name", func(t *testing.T) {
 		t.Parallel()
 
@@ -66,13 +43,10 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Install{
+		o := &Monitoring{
 			l: l.Sugar(),
 			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable:       true,
-					InstanceName: "123",
-				},
+				InstanceName: "123",
 			},
 			everestClient: m,
 		}
@@ -89,13 +63,10 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(nil, errors.New("not-found"))
 		defer m.AssertExpectations(t)
 
-		o := &Install{
+		o := &Monitoring{
 			l: l.Sugar(),
 			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable:       true,
-					InstanceName: "123",
-				},
+				InstanceName: "123",
 			},
 			everestClient: m,
 		}
@@ -112,17 +83,14 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 		m.Mock.On("GetMonitoringInstance", mock.Anything, "123").Return(&client.MonitoringInstance{Name: iName}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Install{
+		o := &Monitoring{
 			l: l.Sugar(),
 			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable:       true,
-					InstanceName: "123",
-					PMM: &PMMConfig{
-						Endpoint: "http://localhost",
-						Username: "admin",
-						Password: "admin",
-					},
+				InstanceName: "123",
+				PMM: &PMMConfig{
+					Endpoint: "http://localhost",
+					Username: "admin",
+					Password: "admin",
 				},
 			},
 			everestClient: m,
@@ -139,19 +107,15 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 		m := &mockEverestClientConnector{}
 		defer m.AssertExpectations(t)
 
-		o := &Install{
-			l: l.Sugar(),
-			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable: true,
-				},
-			},
+		o := &Monitoring{
+			l:             l.Sugar(),
+			config:        Config{},
 			everestClient: m,
 		}
 
 		err := o.resolveMonitoringInstanceName(context.Background())
 		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), "monitoring.new-instance-name is required"))
+		require.True(t, strings.Contains(err.Error(), "new-instance-name is required"))
 	})
 
 	t.Run("shall create a new PMM instance", func(t *testing.T) {
@@ -169,17 +133,14 @@ func TestInstall_resolveMonitoringInstanceName(t *testing.T) {
 		}).Return(&client.MonitoringInstance{}, nil)
 		defer m.AssertExpectations(t)
 
-		o := &Install{
+		o := &Monitoring{
 			l: l.Sugar(),
 			config: Config{
-				Monitoring: MonitoringConfig{
-					Enable:          true,
-					NewInstanceName: "new-instance",
-					PMM: &PMMConfig{
-						Endpoint: "http://monitoring-url",
-						Username: "user",
-						Password: "pass",
-					},
+				NewInstanceName: "new-instance",
+				PMM: &PMMConfig{
+					Endpoint: "http://monitoring-url",
+					Username: "user",
+					Password: "pass",
 				},
 			},
 			everestClient: m,

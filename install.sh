@@ -21,8 +21,8 @@ fi
 
 
 echo "Downloading the latest release of Percona Everest CLI"
-echo "https://github.com/percona/percona-everest-cli/releases/download/v0.5.0/everestctl-$os-$arch"
-curl -sL  https://github.com/percona/percona-everest-cli/releases/download/v0.5.0/everestctl-$os-$arch -o everestctl
+echo "https://github.com/percona/percona-everest-cli/releases/download/latest/everestctl-$os-$arch"
+curl -sL  https://github.com/percona/percona-everest-cli/releases/download/latest/everestctl-$os-$arch -o everestctl
 chmod +x everestctl
 
 # If KUBECONFIG is set let the user know we are using it
@@ -35,7 +35,7 @@ fi
 echo "Provisioning Everest with monitoring disabled"
 echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
-./everestctl install --monitoring.enable=false --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
+./everestctl install --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
 
 echo "Your provisioned Everest instance will be available at http://127.0.0.1:8080"
 echo "Exposing Everest using kubectl port-forwarding. You can expose it manually"

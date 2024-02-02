@@ -22,51 +22,34 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
-	"github.com/percona/percona-everest-backend/client"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/percona/percona-everest-cli/commands/common"
-	everestClient "github.com/percona/percona-everest-cli/pkg/everest/client"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
-	"github.com/percona/percona-everest-cli/pkg/password"
+	"github.com/percona/percona-everest-cli/pkg/token"
 )
 
 // Install implements the main logic for commands.
 type Install struct {
 	l *zap.SugaredLogger
 
-	config        Config
-	everestClient everestClientConnector
-	kubeClient    *kubernetes.Kubernetes
-
-	// monitoringInstanceName stores the resolved monitoring instance name.
-	monitoringInstanceName string
+	config     Config
+	kubeClient *kubernetes.Kubernetes
 }
 
 const (
-	catalogSourceNamespace    = "olm"
-	everestBackendServiceName = "percona-everest-backend"
-	operatorGroup             = "percona-operators-group"
-	catalogSource             = "percona-everest-catalog"
-	everestOperatorName       = "everest-operator"
-	pxcOperatorName           = "percona-xtradb-cluster-operator"
-	psmdbOperatorName         = "percona-server-mongodb-operator"
-	pgOperatorName            = "percona-postgresql-operator"
-	vmOperatorName            = "victoriametrics-operator"
-	operatorInstallThreads    = 1
+	everestOperatorName    = "everest-operator"
+	pxcOperatorName        = "percona-xtradb-cluster-operator"
+	psmdbOperatorName      = "percona-server-mongodb-operator"
+	pgOperatorName         = "percona-postgresql-operator"
+	operatorInstallThreads = 1
 )
 
 type (
-	// MonitoringType identifies type of monitoring to be used.
-	MonitoringType string
-
 	// Config stores configuration for the operators.
 	Config struct {
 		// Name of the Kubernetes Cluster
@@ -78,25 +61,8 @@ type (
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 
-		Channel    ChannelConfig
-		Monitoring MonitoringConfig
-		Operator   OperatorConfig
-	}
-
-	// MonitoringConfig stores configuration for monitoring.
-	MonitoringConfig struct {
-		// Enable is true if monitoring shall be enabled.
-		Enable bool
-		// InstanceName stores monitoring instance name from Everest.
-		// If provided, the other monitoring configuration is ignored.
-		InstanceName string `mapstructure:"instance-name"`
-		// NewInstanceName defines name for a new monitoring instance
-		// if it's created.
-		NewInstanceName string `mapstructure:"new-instance-name"`
-		// Type stores the type of monitoring to be used.
-		Type MonitoringType
-		// PMM stores configuration for PMM monitoring type.
-		PMM *PMMConfig
+		Channel  ChannelConfig
+		Operator OperatorConfig
 	}
 
 	// OperatorConfig identifies which operators shall be installed.
@@ -108,17 +74,6 @@ type (
 		// PXC stores if XtraDB Cluster shall be installed.
 		PXC bool `mapstructure:"xtradb-cluster"`
 	}
-
-	// PMMConfig stores configuration for PMM monitoring type.
-	PMMConfig struct {
-		// Endpoint stores URL to PMM.
-		Endpoint string
-		// Username stores username for authentication against PMM.
-		Username string
-		// Password stores password for authentication against PMM.
-		Password string
-	}
-
 	// ChannelConfig stores configuration for operator channels.
 	ChannelConfig struct {
 		// Everest stores channel for Everest.
@@ -162,18 +117,20 @@ func (o *Install) Run(ctx context.Context) error {
 	if err := o.provisionNamespace(); err != nil {
 		return err
 	}
-	pwd, err := o.generatePassword(ctx)
-	if err != nil {
-		return err
-	}
-	if err := o.configureEverestConnector(pwd.Password); err != nil {
-		return err
-	}
 	if err := o.performProvisioning(ctx); err != nil {
 		return err
 	}
-
-	o.l.Info(pwd)
+	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, o.config.Namespace)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return errors.Join(err, errors.New("could not get the everest token secret"))
+	}
+	if err != nil && k8serrors.IsNotFound(err) {
+		pwd, err := o.generateToken(ctx)
+		if err != nil {
+			return err
+		}
+		o.l.Info("\n" + pwd.String() + "\n\n")
+	}
 
 	return nil
 }
@@ -190,12 +147,6 @@ func (o *Install) populateConfig() error {
 	}
 
 	return nil
-}
-
-func (o *Install) checkEverestConnection(ctx context.Context) error {
-	o.l.Info("Checking connection to Everest")
-	_, err := o.everestClient.ListMonitoringInstances(ctx)
-	return err
 }
 
 func (o *Install) performProvisioning(ctx context.Context) error {
@@ -218,134 +169,12 @@ func (o *Install) performProvisioning(ctx context.Context) error {
 			return err
 		}
 	}
-	o.l.Info("Everest has been installed. Configuring connection")
-	if o.config.Monitoring.Enable {
-		if err := o.provisionMonitoring(ctx, everestExists); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (o *Install) provisionMonitoring(ctx context.Context, everestExists bool) error {
-	l := o.l.With("action", "monitoring")
-	l.Info("Preparing k8s cluster for monitoring")
-	if err := o.kubeClient.ProvisionMonitoring(o.config.Namespace); err != nil {
-		return errors.Join(err, errors.New("could not provision monitoring configuration"))
-	}
-
-	l.Info("K8s cluster monitoring has been provisioned successfully")
-	if err := o.resolveMonitoringInstanceName(ctx); err != nil {
-		return err
-	}
-	o.l.Info("Deploying VMAgent to k8s cluster")
-	if everestExists {
-		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, o.config.Namespace); err != nil {
-			return err
-		}
-	}
-	if err := o.checkEverestConnection(ctx); err != nil {
-		var u *url.Error
-		if errors.As(err, &u) {
-			o.l.Debug(err)
-
-			l := o.l.WithOptions(zap.AddStacktrace(zap.DPanicLevel))
-			l.Error("Could not connect to Everest. " +
-				"Make sure Everest is running and is accessible from this machine.",
-			)
-			return common.ErrExitWithError
-		}
-
-		return errors.Join(err, errors.New("could not check connection to Everest"))
-	}
-
-	// We retry for a bit since the MonitoringConfig may not be properly
-	// deployed yet and we get a HTTP 500 in this case.
-	err := wait.PollUntilContextTimeout(ctx, 3*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-		o.l.Debug("Trying to enable Kubernetes cluster monitoring")
-		err := o.everestClient.SetKubernetesClusterMonitoring(ctx, client.KubernetesClusterMonitoring{
-			Enable:                 true,
-			MonitoringInstanceName: o.monitoringInstanceName,
-		})
-		if err != nil {
-			o.l.Debug(errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring")))
-			return false, nil
-		}
-
-		return true, nil
-	})
-	if err != nil {
-		return errors.Join(err, errors.New("could not enable Kubernetes cluster monitoring"))
-	}
-
-	o.l.Info("VMAgent deployed successfully")
-	return nil
-}
-
-func (o *Install) resolveMonitoringInstanceName(ctx context.Context) error {
-	if !o.config.Monitoring.Enable || o.monitoringInstanceName != "" {
-		return nil
-	}
-
-	if o.config.Monitoring.InstanceName != "" {
-		i, err := o.everestClient.GetMonitoringInstance(ctx, o.config.Monitoring.InstanceName)
-		if err != nil {
-			return errors.Join(err, fmt.Errorf("could not get monitoring instance with name %s from Everest", o.config.Monitoring.InstanceName))
-		}
-		o.monitoringInstanceName = i.Name
-		return nil
-	}
-
-	if o.config.Monitoring.NewInstanceName == "" {
-		return errors.New("monitoring.new-instance-name is required when creating a new monitoring instance")
-	}
-
-	err := o.createPMMMonitoringInstance(
-		ctx, o.config.Monitoring.NewInstanceName, o.config.Monitoring.PMM.Endpoint,
-		o.config.Monitoring.PMM.Username, o.config.Monitoring.PMM.Password,
-	)
-	if err != nil {
-		return errors.Join(err, errors.New("could not create a new PMM monitoring instance in Everest"))
-	}
-
-	o.monitoringInstanceName = o.config.Monitoring.NewInstanceName
-
-	return nil
-}
-
-func (o *Install) createPMMMonitoringInstance(ctx context.Context, name, url, username, password string) error {
-	_, err := o.everestClient.CreateMonitoringInstance(ctx, client.MonitoringInstanceCreateParams{
-		Type: client.MonitoringInstanceCreateParamsTypePmm,
-		Name: name,
-		Url:  url,
-		Pmm: &client.PMMMonitoringInstanceSpec{
-			User:     username,
-			Password: password,
-		},
-	})
-	if err != nil {
-		return errors.Join(err, errors.New("could not create a new monitoring instance"))
-	}
-
-	return nil
-}
-
-func (o *Install) configureEverestConnector(everestPwd string) error {
-	e, err := everestClient.NewProxiedEverest(o.kubeClient.Config(), o.config.Namespace, everestPwd)
-	if err != nil {
-		return err
-	}
-	o.everestClient = e
 	return nil
 }
 
 // runWizard runs installation wizard.
 func (o *Install) runWizard() error {
 	if err := o.runEverestWizard(); err != nil {
-		return err
-	}
-
-	if err := o.runMonitoringWizard(); err != nil {
 		return err
 	}
 
@@ -358,88 +187,6 @@ func (o *Install) runEverestWizard() error {
 		Default: o.config.Namespace,
 	}
 	return survey.AskOne(pNamespace, &o.config.Namespace)
-}
-
-func (o *Install) runMonitoringWizard() error {
-	pMonitor := &survey.Confirm{
-		Message: "Do you want to enable monitoring?",
-		Default: o.config.Monitoring.Enable,
-	}
-	err := survey.AskOne(pMonitor, &o.config.Monitoring.Enable)
-	if err != nil {
-		return err
-	}
-
-	if o.config.Monitoring.Enable {
-		if err := o.runMonitoringConfigWizard(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (o *Install) runMonitoringConfigWizard() error {
-	if o.config.Monitoring.PMM == nil {
-		o.config.Monitoring.PMM = &PMMConfig{}
-	}
-
-	if o.config.Monitoring.InstanceName == "" {
-		if err := o.runMonitoringNewURLWizard(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (o *Install) runMonitoringNewURLWizard() error {
-	pURL := &survey.Input{
-		Message: "PMM URL Endpoint",
-		Default: o.config.Monitoring.PMM.Endpoint,
-	}
-	if err := survey.AskOne(
-		pURL,
-		&o.config.Monitoring.PMM.Endpoint,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pUser := &survey.Input{
-		Message: "Username",
-		Default: o.config.Monitoring.PMM.Username,
-	}
-	if err := survey.AskOne(
-		pUser,
-		&o.config.Monitoring.PMM.Username,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pPass := &survey.Password{Message: "Password"}
-	if err := survey.AskOne(
-		pPass,
-		&o.config.Monitoring.PMM.Password,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	pName := &survey.Input{
-		Message: "Name for the new monitoring instance",
-		Default: o.config.Monitoring.NewInstanceName,
-	}
-	if err := survey.AskOne(
-		pName,
-		&o.config.Monitoring.NewInstanceName,
-		survey.WithValidator(survey.Required),
-	); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (o *Install) runInstallWizard() error {
@@ -550,10 +297,6 @@ func (o *Install) provisionInstall(ctx context.Context) error {
 	// The limit can be removed after it's refactored.
 	g.SetLimit(operatorInstallThreads)
 
-	if o.config.Monitoring.Enable {
-		g.Go(o.installOperator(gCtx, o.config.Channel.VictoriaMetrics, vmOperatorName))
-	}
-
 	if o.config.Operator.PXC {
 		g.Go(o.installOperator(gCtx, o.config.Channel.PXC, pxcOperatorName))
 	}
@@ -593,9 +336,9 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 		params := kubernetes.InstallOperatorRequest{
 			Namespace:              o.config.Namespace,
 			Name:                   operatorName,
-			OperatorGroup:          operatorGroup,
-			CatalogSource:          catalogSource,
-			CatalogSourceNamespace: catalogSourceNamespace,
+			OperatorGroup:          kubernetes.OperatorGroup,
+			CatalogSource:          kubernetes.CatalogSource,
+			CatalogSourceNamespace: kubernetes.CatalogSourceNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
@@ -610,26 +353,24 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName str
 	}
 }
 
-func (o *Install) generatePassword(ctx context.Context) (*password.ResetResponse, error) {
-	o.l.Info("Creating password for Everest")
+func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, error) {
+	o.l.Info("Creating token for Everest")
 
-	r, err := password.NewReset(
-		password.ResetConfig{
+	r, err := token.NewReset(
+		token.ResetConfig{
 			KubeconfigPath: o.config.KubeconfigPath,
 			Namespace:      o.config.Namespace,
 		},
 		o.l,
 	)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not initialize reset password"))
+		return nil, errors.Join(err, errors.New("could not initialize reset token"))
 	}
 
 	res, err := r.Run(ctx)
 	if err != nil {
-		return nil, errors.Join(err, errors.New("could not create password"))
+		return nil, errors.Join(err, errors.New("could not create token"))
 	}
-
-	o.l.Debug(res)
 
 	return res, nil
 }
