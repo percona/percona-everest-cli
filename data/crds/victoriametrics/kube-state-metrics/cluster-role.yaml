@@ -6,6 +6,7 @@ metadata:
     app.kubernetes.io/name: kube-state-metrics
     app.kubernetes.io/managed-by: everest
     everest.percona.com/type: monitoring
+    app.kubernetes.io/version: 2.10.1
   name: kube-state-metrics
   namespace: default
 rules:
@@ -79,6 +80,13 @@ rules:
   - list
   - watch
 - apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - storage.k8s.io
   resources:
   - storageclasses
@@ -110,12 +118,22 @@ rules:
   - list
   - watch
 - apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  - rolebindings
+  - roles
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
   verbs:
   - list
-  - watch    
+  - watch
 - apiGroups:
   - pxc.percona.com
   resources:
@@ -126,7 +144,6 @@ rules:
   - perconaxtradbclusterrestores
   - perconaxtradbclusterrestores/status
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -139,7 +156,6 @@ rules:
   - perconaservermongodbrestores
   - perconaservermongodbrestores/status
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -151,12 +167,7 @@ rules:
   - perconapgclusters
   - perconapgrestores
   - perconapgbackups
-  - pgclusters
-  - pgpolicies
-  - pgreplicas
-  - pgtasks
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -164,6 +175,6 @@ rules:
   resources:
   - perconaservermongodbs
   verbs:
-  - get    
+  - get
   - list
   - watch

@@ -20,15 +20,15 @@ import (
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 
-	"github.com/percona/percona-everest-cli/commands/delete"
+	"github.com/percona/percona-everest-cli/commands/monitoring"
 )
 
-func newDeleteCmd(l *zap.SugaredLogger) *cobra.Command {
+func newMonitoringCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "delete",
+		Use: "monitoring",
 	}
 
-	cmd.AddCommand(delete.NewMySQLCmd(l))
+	cmd.AddCommand(monitoring.NewMonitoringCmd(l))
 
 	return cmd
 }
