@@ -67,11 +67,18 @@ const (
 
 	// PerconaEverestDeploymentName stores the name of everest backend deployment.
 	PerconaEverestDeploymentName = "percona-everest"
+	// CatalogSourceNamespace defines a namespace to use to find a catalog source.
+	CatalogSourceNamespace = "olm"
+	// CatalogSource is the name of OLM catalog source.
+	CatalogSource = "percona-everest-catalog"
+	// OperatorGroup defines the name of the configuration for subscriptions.
+	OperatorGroup = "percona-operators-group"
+	// EverestOperatorDeploymentName is the name of the deployment for everest operator.
+	EverestOperatorDeploymentName = "everest-operator-controller-manager"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
 	postgresDeploymentName       = "percona-postgresql-operator"
-	everestDeploymentName        = "everest-operator-controller-manager"
 	psmdbOperatorContainerName   = "percona-server-mongodb-operator"
 	pxcOperatorContainerName     = "percona-xtradb-cluster-operator"
 	everestOperatorContainerName = "manager"
@@ -282,7 +289,7 @@ func (k *Kubernetes) GetPXCOperatorVersion(ctx context.Context) (string, error) 
 
 // GetDBaaSOperatorVersion parses DBaaS operator version from operator deployment.
 func (k *Kubernetes) GetDBaaSOperatorVersion(ctx context.Context) (string, error) {
-	return k.getOperatorVersion(ctx, everestDeploymentName, everestOperatorContainerName)
+	return k.getOperatorVersion(ctx, EverestOperatorDeploymentName, everestOperatorContainerName)
 }
 
 // GetSecret returns secret by name.
@@ -649,11 +656,13 @@ func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorReq
 	}
 	deploymentName := req.Name
 	if req.Name == "everest-operator" {
-		deploymentName = everestDeploymentName
+		deploymentName = EverestOperatorDeploymentName
 	}
 	if req.Name == "victoriametrics-operator" {
 		deploymentName = "vm-operator-vm-operator"
 	}
+
+	k.l.Debugf("Waiting for deployment rollout %s/%s", req.Namespace, deploymentName)
 
 	return k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: req.Namespace, Name: deploymentName})
 }
@@ -663,6 +672,8 @@ func (k *Kubernetes) approveInstallPlan(ctx context.Context, namespace, installP
 	if err != nil {
 		return false, err
 	}
+
+	k.l.Debugf("Approving install plan %s/%s", namespace, installPlanName)
 
 	ip.Spec.Approved = true
 	_, err = k.client.UpdateInstallPlan(ctx, namespace, ip)
@@ -807,11 +818,13 @@ func (k *Kubernetes) victoriaMetricsCRDFiles() []string {
 		"crds/victoriametrics/crs/vmagent_rbac_account.yaml",
 		"crds/victoriametrics/crs/vmagent_rbac_role.yaml",
 		"crds/victoriametrics/crs/vmagent_rbac_role_binding.yaml",
-		"crds/victoriametrics/crs/vmnodescrape.yaml",
+		"crds/victoriametrics/crs/vmnodescrape-cadvisor.yaml",
+		"crds/victoriametrics/crs/vmnodescrape-kubelet.yaml",
 		"crds/victoriametrics/crs/vmpodscrape.yaml",
 		"crds/victoriametrics/kube-state-metrics/service-account.yaml",
 		"crds/victoriametrics/kube-state-metrics/cluster-role.yaml",
 		"crds/victoriametrics/kube-state-metrics/cluster-role-binding.yaml",
+		"crds/victoriametrics/kube-state-metrics/configmap.yaml",
 		"crds/victoriametrics/kube-state-metrics/deployment.yaml",
 		"crds/victoriametrics/kube-state-metrics/service.yaml",
 		"crds/victoriametrics/kube-state-metrics.yaml",
@@ -906,7 +919,6 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error
 	}
 
 	err = k.client.ApplyManifestFile(data, namespace)
-
 	if err != nil {
 		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
@@ -946,4 +958,9 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 // GetDeployment returns k8s deployment by provided name and namespace.
 func (k *Kubernetes) GetDeployment(ctx context.Context, name, namespace string) (*appsv1.Deployment, error) {
 	return k.client.GetDeployment(ctx, name, namespace)
+}
+
+// WaitForRollout waits for rollout of a provided deployment in the provided namespace.
+func (k *Kubernetes) WaitForRollout(ctx context.Context, name, namespace string) error {
+	return k.client.DoRolloutWait(ctx, types.NamespacedName{Name: name, Namespace: namespace})
 }

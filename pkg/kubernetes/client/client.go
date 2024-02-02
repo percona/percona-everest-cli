@@ -794,7 +794,30 @@ func (c *Client) applyTemplateCustomization(u *unstructured.Unstructured, namesp
 			return err
 		}
 	}
+	if ok && kind == "Service" {
+		// During installation or upgrading of the everest backend
+		// CLI should keep spec.type untouched to prevent overriding of it.
+		if err := c.setEverestServiceType(u, namespace); err != nil {
+			return err
+		}
+	}
 
+	return nil
+}
+
+func (c *Client) setEverestServiceType(u *unstructured.Unstructured, namespace string) error {
+	s, err := c.GetService(context.Background(), namespace, "everest")
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err != nil && apierrors.IsNotFound(err) {
+		return nil
+	}
+	if s != nil && s.Name != "" {
+		if err := unstructured.SetNestedField(u.Object, string(s.Spec.Type), "spec", "type"); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

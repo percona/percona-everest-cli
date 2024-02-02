@@ -17,14 +17,15 @@ import { test } from '@fixtures';
 test.describe('Everest CLI "version" validation', async () => {
   test('version validation', async ({ cli }) => {
     const out = await cli.everestExecSilent('version');
-    const version = await cli.exec('git describe --always --dirty|cut -b2-');
-    await version.assertSuccess();
+    const hash = await cli.exec('git rev-parse --short HEAD');
+
+    await hash.assertSuccess();
+    const version = `v0.0.0-${hash.getStdOutLines()[0]}`;
 
     await out.assertSuccess();
     await out.outContainsNormalizedMany([
       'ProjectName: everestctl',
-      'Version: ' + version.getStdOutLines()[0],
+      `Version: ${version}`,
     ]);
   });
-
 });
