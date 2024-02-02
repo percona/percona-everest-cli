@@ -12,7 +12,7 @@ require (
 	github.com/percona/everest-operator v0.6.0-dev1.0.20240202093727-ceb0bb0fb02f
 	github.com/percona/percona-everest-backend v0.5.1-0.20240202100350-4bc9d2a75a1b
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.18.0
