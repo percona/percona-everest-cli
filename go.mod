@@ -10,7 +10,7 @@ require (
 	github.com/operator-framework/api v0.21.0
 	github.com/operator-framework/operator-lifecycle-manager v0.26.0
 	github.com/percona/everest-operator v0.6.0-dev1.0.20240202093727-ceb0bb0fb02f
-	github.com/percona/percona-everest-backend v0.5.1-0.20240202100350-4bc9d2a75a1b
+	github.com/percona/percona-everest-backend v0.7.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
