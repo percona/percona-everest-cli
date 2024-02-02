@@ -65,7 +65,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Enable Go modules cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
@@ -73,7 +73,7 @@ jobs:
             ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
 
       - name: Enable Go build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/go-build
           key: ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-${{ hashFiles('**') }}
@@ -191,7 +191,7 @@ jobs:
           echo "$GOBIN" >> $GITHUB_PATH
 
       - name: Enable Go modules cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-modules-${{ hashFiles('**/go.sum') }}
