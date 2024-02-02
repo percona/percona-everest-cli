@@ -919,7 +919,6 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string) error
 	}
 
 	err = k.client.ApplyManifestFile(data, namespace)
-
 	if err != nil {
 		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
