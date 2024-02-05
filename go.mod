@@ -7,7 +7,7 @@ require (
 	github.com/dchest/uniuri v1.2.0
 	github.com/go-logr/zapr v1.3.0
 	github.com/hashicorp/go-version v1.6.0
-	github.com/operator-framework/api v0.21.0
+	github.com/operator-framework/api v0.22.0
 	github.com/operator-framework/operator-lifecycle-manager v0.26.0
 	github.com/percona/everest-operator v0.6.0-dev1.0.20240202093727-ceb0bb0fb02f
 	github.com/percona/percona-everest-backend v0.5.1-0.20240202100350-4bc9d2a75a1b
