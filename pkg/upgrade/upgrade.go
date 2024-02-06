@@ -96,7 +96,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	}
 	u.l.Info("Subscriptions have been patched")
 	u.l.Info("Upgrading Everest")
-	if err := u.kubeClient.InstallEverest(ctx, install.EverestNamespace); err != nil {
+	if err := u.kubeClient.InstallEverest(ctx, install.SystemNamespace); err != nil {
 		return err
 	}
 	u.l.Info("Everest has been upgraded")
@@ -105,7 +105,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 
 func (u *Upgrade) runEverestWizard(ctx context.Context) error {
 	if !u.config.SkipWizard {
-		namespaces, err := u.kubeClient.GetWatchedNamespaces(ctx, install.EverestNamespace)
+		namespaces, err := u.kubeClient.GetWatchedNamespaces(ctx, install.SystemNamespace)
 		if err != nil {
 			return err
 		}

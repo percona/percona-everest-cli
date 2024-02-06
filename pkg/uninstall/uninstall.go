@@ -87,7 +87,7 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 	if err := u.uninstallK8sResources(ctx); err != nil {
 		return err
 	}
-	if err := u.kubeClient.DeleteEverest(ctx, install.EverestNamespace); err != nil {
+	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace); err != nil {
 		return err
 	}
 
@@ -95,23 +95,23 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 }
 
 func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
-	_, err := u.kubeClient.GetNamespace(ctx, install.EverestNamespace)
+	_, err := u.kubeClient.GetNamespace(ctx, install.SystemNamespace)
 	if err != nil && k8serrors.IsNotFound(err) {
-		return fmt.Errorf("namespace %s is not found", install.EverestNamespace)
+		return fmt.Errorf("namespace %s is not found", install.SystemNamespace)
 	}
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
 	}
-	_, err = u.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, install.EverestNamespace)
+	_, err = u.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, install.SystemNamespace)
 	if err != nil && k8serrors.IsNotFound(err) {
-		return fmt.Errorf("no Everest deployment in %s namespace", install.EverestNamespace)
+		return fmt.Errorf("no Everest deployment in %s namespace", install.SystemNamespace)
 	}
 	return err
 }
 
 func (u *Uninstall) uninstallK8sResources(ctx context.Context) error {
 	u.l.Info("Deleting all Kubernetes monitoring resources in Kubernetes cluster")
-	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, install.EverestNamespace); err != nil {
+	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, install.SystemNamespace); err != nil {
 		return errors.Join(err, errors.New("could not uninstall monitoring resources from the Kubernetes cluster"))
 	}
 
