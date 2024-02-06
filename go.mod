@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.20.0
 	github.com/operator-framework/operator-lifecycle-manager v0.26.0
-	github.com/percona/everest-operator v0.6.0-dev1.0.20240125162053-e43000fbf0b8
+	github.com/percona/everest-operator v0.6.0-dev1.0.20240205163640-b47371dba0a5
 	github.com/percona/percona-everest-backend v0.5.1-0.20240125151620-f38d8bb174fa
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.1
@@ -131,7 +131,7 @@ require (
 	go.starlark.net v0.0.0-20230525235612-a134d8f9ddca // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/mod v0.13.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
