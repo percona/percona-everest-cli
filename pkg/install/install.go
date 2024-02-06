@@ -177,7 +177,7 @@ func (o *Install) populateConfig() error {
 		return errors.New("namespace list is empty. Specify at least one namespace using the --namespace flag")
 	}
 	for _, ns := range o.config.Namespaces {
-		if ns == SystemNamespace {
+		if ns == SystemNamespace || ns == monitoringNamespace {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
 	}
