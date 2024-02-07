@@ -105,7 +105,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 
 func (u *Upgrade) runEverestWizard(ctx context.Context) error {
 	if !u.config.SkipWizard {
-		namespaces, err := u.kubeClient.GetWatchedNamespaces(ctx, install.SystemNamespace)
+		namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
 		if err != nil {
 			return err
 		}
