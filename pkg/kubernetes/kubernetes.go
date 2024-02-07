@@ -73,8 +73,9 @@ const (
 	// EverestOperatorDeploymentName is the name of the deployment for everest operator.
 	EverestOperatorDeploymentName = "everest-operator-controller-manager"
 
-	// EverestWatchNamespacesEnvVar is the name of the environment variable.
-	EverestWatchNamespacesEnvVar = "WATCH_NAMESPACES"
+	// EverestDBNamespacesEnvVar is the name of the environment variable that
+	// contains the list of monitored namespaces.
+	EverestDBNamespacesEnvVar = "DB_NAMESPACES"
 
 	pxcDeploymentName            = "percona-xtradb-cluster-operator"
 	psmdbDeploymentName          = "percona-server-mongodb-operator"
@@ -998,8 +999,8 @@ func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string) error 
 	return nil
 }
 
-// GetWatchedNamespaces returns list of watched namespaces.
-func (k *Kubernetes) GetWatchedNamespaces(ctx context.Context, namespace string) ([]string, error) {
+// GetDBNamespaces returns a list of namespaces that are monitored by the Everest operator.
+func (k *Kubernetes) GetDBNamespaces(ctx context.Context, namespace string) ([]string, error) {
 	deployment, err := k.GetDeployment(ctx, EverestOperatorDeploymentName, namespace)
 	if err != nil {
 		return nil, err
@@ -1010,7 +1011,7 @@ func (k *Kubernetes) GetWatchedNamespaces(ctx context.Context, namespace string)
 			continue
 		}
 		for _, envVar := range container.Env {
-			if envVar.Name != EverestWatchNamespacesEnvVar {
+			if envVar.Name != EverestDBNamespacesEnvVar {
 				continue
 			}
 			return strings.Split(envVar.Value, ","), nil

@@ -483,7 +483,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			params.SubscriptionConfig = &v1alpha1.SubscriptionConfig{
 				Env: []corev1.EnvVar{
 					{
-						Name:  kubernetes.EverestWatchNamespacesEnvVar,
+						Name:  kubernetes.EverestDBNamespacesEnvVar,
 						Value: strings.Join(o.config.Namespaces, ","),
 					},
 				},
