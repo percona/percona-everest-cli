@@ -23,7 +23,7 @@ import (
 	"github.com/percona/percona-everest-cli/commands/delete"
 )
 
-func newDeleteCmd(l *zap.SugaredLogger) *cobra.Command {
+func newDeleteCmd(l *zap.SugaredLogger) *cobra.Command { //nolint:deadcode,unused
 	cmd := &cobra.Command{
 		Use: "delete",
 	}

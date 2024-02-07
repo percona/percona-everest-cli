@@ -19,27 +19,25 @@ package upgrade
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 
 	"github.com/AlecAivazis/survey/v2"
 	goversion "github.com/hashicorp/go-version"
-	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/data"
+	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 )
 
 type (
 	// Config defines configuration required for upgrade command.
 	Config struct {
-		// Name of the Kubernetes Cluster
-		Name string
-		// Namespace defines the namespace operators shall be installed to.
-		Namespace string
+		// Namespaces defines namespaces that everest can operate in.
+		Namespaces []string `mapstructure:"namespace"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 		// UpgradeOLM defines do we need to upgrade OLM or not.
@@ -78,6 +76,12 @@ func NewUpgrade(c Config, l *zap.SugaredLogger) (*Upgrade, error) {
 
 // Run runs the operators installation process.
 func (u *Upgrade) Run(ctx context.Context) error {
+	if err := u.runEverestWizard(ctx); err != nil {
+		return err
+	}
+	if len(u.config.Namespaces) == 0 {
+		return errors.New("namespace list is empty. Specify at least one namespace")
+	}
 	if err := u.upgradeOLM(ctx); err != nil {
 		return err
 	}
@@ -92,35 +96,64 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	}
 	u.l.Info("Subscriptions have been patched")
 	u.l.Info("Upgrading Everest")
-	if err := u.kubeClient.InstallEverest(ctx, u.config.Namespace); err != nil {
+	if err := u.kubeClient.InstallEverest(ctx, install.SystemNamespace); err != nil {
 		return err
 	}
 	u.l.Info("Everest has been upgraded")
 	return nil
 }
 
-func (u *Upgrade) patchSubscriptions(ctx context.Context) error {
-	subList, err := u.kubeClient.ListSubscriptions(ctx, u.config.Namespace)
-	if err != nil {
-		return err
-	}
-	disableTelemetryEnvVar := "DISABLE_TELEMETRY"
-	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
-	if !ok || disableTelemetry != "true" {
-		disableTelemetry = "false"
-	}
-	for _, subscription := range subList.Items {
-		subscription := subscription
-		subscription.Spec.Config = &v1alpha1.SubscriptionConfig{
-			Env: []corev1.EnvVar{
-				{
-					Name:  disableTelemetryEnvVar,
-					Value: disableTelemetry,
-				},
-			},
-		}
-		if err := u.kubeClient.ApplyObject(&subscription); err != nil {
+func (u *Upgrade) runEverestWizard(ctx context.Context) error {
+	if !u.config.SkipWizard {
+		namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
+		if err != nil {
 			return err
+		}
+		pNamespace := &survey.MultiSelect{
+			Message: "Please select namespaces",
+			Options: namespaces,
+		}
+		if err := survey.AskOne(
+			pNamespace,
+			&u.config.Namespaces,
+			survey.WithValidator(survey.MinItems(1)),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *Upgrade) patchSubscriptions(ctx context.Context) error {
+	for _, namespace := range u.config.Namespaces {
+		namespace := namespace
+		subList, err := u.kubeClient.ListSubscriptions(ctx, namespace)
+		if err != nil {
+			return err
+		}
+		if len(subList.Items) == 0 {
+			u.l.Warn(fmt.Sprintf("No subscriptions found in '%s' namespace", namespace))
+			continue
+		}
+		disableTelemetryEnvVar := "DISABLE_TELEMETRY"
+		disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+		if !ok || disableTelemetry != "true" {
+			disableTelemetry = "false"
+		}
+		for _, subscription := range subList.Items {
+			u.l.Info(fmt.Sprintf("Patching %s subscription in '%s' namespace", subscription.Name, subscription.Namespace))
+			subscription := subscription
+			for i := range subscription.Spec.Config.Env {
+				env := subscription.Spec.Config.Env[i]
+				if env.Name == disableTelemetryEnvVar {
+					env.Value = disableTelemetry
+					subscription.Spec.Config.Env[i] = env
+				}
+			}
+			if err := u.kubeClient.ApplyObject(&subscription); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

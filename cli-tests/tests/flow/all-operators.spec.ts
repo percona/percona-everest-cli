@@ -27,13 +27,18 @@ test.describe('Everest CLI install', async () => {
   test('install all operators', async ({ page, cli, request }) => {
     const verifyClusterResources = async () => {
       await test.step('verify installed operators in k8s', async () => {
+        const perconaEverestPodsOut = await cli.exec('kubectl get pods --namespace=percona-everest');
+
+        await perconaEverestPodsOut.outContainsNormalizedMany([
+          'everest-operator-controller-manager',
+        ]);
+
         const out = await cli.exec('kubectl get pods --namespace=percona-everest-all');
 
         await out.outContainsNormalizedMany([
           'percona-xtradb-cluster-operator',
           'percona-server-mongodb-operator',
           'percona-postgresql-operator',
-          'everest-operator-controller-manager',
         ]);
       });
     };
@@ -41,7 +46,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --name=${clusterName} --namespace=percona-everest-all`,
+        `install --namespace=percona-everest-all`,
       );
 
       await out.assertSuccess();
@@ -64,7 +69,7 @@ test.describe('Everest CLI install', async () => {
       await out.outContains(
         'name: DISABLE_TELEMETRY\n          value: "false"',
       );
-      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}}' --namespace=percona-everest-all`)
+      out = await cli.exec(`kubectl patch service everest --patch '{"spec": {"type": "LoadBalancer"}}' --namespace=percona-everest`)
 
       await out.assertSuccess();
 
@@ -81,56 +86,23 @@ test.describe('Everest CLI install', async () => {
         'name: DISABLE_TELEMETRY\n          value: "true"',
       );
       // check that the spec.type is not overrided
-      out = await cli.exec('kubectl get service/everest --namespace=percona-everest-all -o yaml');
+      out = await cli.exec('kubectl get service/everest --namespace=percona-everest -o yaml');
       await out.outContains(
         'type: LoadBalancer',
       );
     });
-    await test.step('run everest install command using a different namespace', async () => {
-      const install = await cli.everestExecSkipWizard(
-        `install --namespace=different-everest`,
-      );
-
-      await install.assertSuccess();
-
-      let out = await cli.exec('kubectl get clusterrolebinding everest-admin-cluster-role-binding -o yaml');
-      await out.assertSuccess();
-
-      await out.outContainsNormalizedMany([
-        'namespace: percona-everest-all',
-        'namespace: different-everest',
-      ]);
-      await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
-      // Check that uninstall will fail because there's no everest deployment
-      out = await cli.everestExec('uninstall --namespace=different-everest --assume-yes');
-      await out.outErrContainsNormalizedMany([
-        'no Everest deployment in different-everest namespace',
-      ]);
-
-    });
 
     await test.step('uninstall Everest', async () => {
       let out = await cli.everestExec(
-        `uninstall --namespace=percona-everest-all --assume-yes`,
+        `uninstall --assume-yes`,
       );
 
       await out.assertSuccess();
       // check that the deployment does not exist
-      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest-all');
+      out = await cli.exec('kubectl get deploy percona-everest -n percona-everest');
 
       await out.outErrContainsNormalizedMany([
         'Error from server (NotFound): deployments.apps "percona-everest" not found',
-      ]);
-
-    });
-
-    await test.step('uninstall Everest non existent namespace', async () => {
-      let out = await cli.everestExec(
-        `uninstall --namespace=not-exist --assume-yes`,
-      );
-
-      await out.outErrContainsNormalizedMany([
-        'namespace not-exist is not found',
       ]);
 
     });

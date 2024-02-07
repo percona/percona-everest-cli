@@ -12,6 +12,7 @@ import (
 	mock "github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -138,9 +139,9 @@ func (_m *MockKubeClientConnector) CreateNamespace(name string) error {
 	return r0
 }
 
-// CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name
-func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string) (*v1.OperatorGroup, error) {
-	ret := _m.Called(ctx, namespace, name)
+// CreateOperatorGroup provides a mock function with given fields: ctx, namespace, name, targetNamespaces
+func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, namespace string, name string, targetNamespaces []string) (*v1.OperatorGroup, error) {
+	ret := _m.Called(ctx, namespace, name, targetNamespaces)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateOperatorGroup")
@@ -148,19 +149,49 @@ func (_m *MockKubeClientConnector) CreateOperatorGroup(ctx context.Context, name
 
 	var r0 *v1.OperatorGroup
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*v1.OperatorGroup, error)); ok {
-		return rf(ctx, namespace, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) (*v1.OperatorGroup, error)); ok {
+		return rf(ctx, namespace, name, targetNamespaces)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *v1.OperatorGroup); ok {
-		r0 = rf(ctx, namespace, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, []string) *v1.OperatorGroup); ok {
+		r0 = rf(ctx, namespace, name, targetNamespaces)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*v1.OperatorGroup)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, namespace, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, []string) error); ok {
+		r1 = rf(ctx, namespace, name, targetNamespaces)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateSubscription provides a mock function with given fields: ctx, namespace, subscription
+func (_m *MockKubeClientConnector) CreateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	ret := _m.Called(ctx, namespace, subscription)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateSubscription")
+	}
+
+	var r0 *v1alpha1.Subscription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) (*v1alpha1.Subscription, error)); ok {
+		return rf(ctx, namespace, subscription)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) *v1alpha1.Subscription); ok {
+		r0 = rf(ctx, namespace, subscription)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1alpha1.Subscription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, *v1alpha1.Subscription) error); ok {
+		r1 = rf(ctx, namespace, subscription)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -365,6 +396,36 @@ func (_m *MockKubeClientConnector) GenerateKubeConfigWithToken(user string, secr
 
 	if rf, ok := ret.Get(1).(func(string, *corev1.Secret) error); ok {
 		r1 = rf(user, secret)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetClusterRoleBinding provides a mock function with given fields: ctx, name
+func (_m *MockKubeClientConnector) GetClusterRoleBinding(ctx context.Context, name string) (*rbacv1.ClusterRoleBinding, error) {
+	ret := _m.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetClusterRoleBinding")
+	}
+
+	var r0 *rbacv1.ClusterRoleBinding
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*rbacv1.ClusterRoleBinding, error)); ok {
+		return rf(ctx, name)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *rbacv1.ClusterRoleBinding); ok {
+		r0 = rf(ctx, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*rbacv1.ClusterRoleBinding)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, name)
 	} else {
 		r1 = ret.Error(1)
 	}
