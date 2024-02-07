@@ -50,6 +50,7 @@ const (
 	pxcOperatorName           = "percona-xtradb-cluster-operator"
 	psmdbOperatorName         = "percona-server-mongodb-operator"
 	pgOperatorName            = "percona-postgresql-operator"
+	vmOperatorName            = "victoriametrics-operator"
 	operatorInstallThreads    = 1
 
 	everestServiceAccount                   = "everest-admin"
@@ -61,17 +62,24 @@ const (
 	pxcOperatorChannel     = "stable-v1"
 	psmdbOperatorChannel   = "stable-v1"
 	pgOperatorChannel      = "fast-v2"
-	// VMOperatorChannel is the catalog channel for the VM Operator.
-	VMOperatorChannel = "stable-v0"
+	vmOperatorChannel      = "stable-v0"
 
-	// CatalogSourceNamespace is the namespace where the catalog source is installed.
-	CatalogSourceNamespace = "olm"
-	// CatalogSource is the name of the catalog source.
-	CatalogSource = "percona-everest-catalog"
-	// OperatorGroup is the name of the operator group.
-	OperatorGroup = "percona-operators-group"
-	// EverestNamespace is the namespace where everest is installed.
-	EverestNamespace = "percona-everest"
+	// catalogSourceNamespace is the namespace where the catalog source is installed.
+	catalogSourceNamespace = "olm"
+	// catalogSource is the name of the catalog source.
+	catalogSource = "everest-catalog"
+
+	// systemOperatorGroup is the name of the system operator group.
+	systemOperatorGroup = "everest-system"
+	// monitoringOperatorGroup is the name of the monitoring operator group.
+	monitoringOperatorGroup = "everest-monitoring"
+	// dbsOperatorGroup is the name of the database operator group.
+	dbsOperatorGroup = "everest-databases"
+
+	// SystemNamespace is the namespace where everest is installed.
+	SystemNamespace = "percona-everest"
+	// monitoringNamespace is the namespace where the monitoring stack is installed.
+	monitoringNamespace = "percona-everest-monitoring"
 )
 
 type (
@@ -102,7 +110,7 @@ type (
 func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 	cli := &Install{
 		config: c,
-		l:      l.With("component", "install/operators"),
+		l:      l.With("component", "install"),
 	}
 
 	k, err := kubernetes.New(c.KubeconfigPath, cli.l)
@@ -119,42 +127,31 @@ func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 }
 
 // Run runs the operators installation process.
-func (o *Install) Run(ctx context.Context) error { //nolint:cyclop
+func (o *Install) Run(ctx context.Context) error {
 	if err := o.populateConfig(); err != nil {
 		return err
 	}
 
-	if len(o.config.Namespaces) == 0 {
-		return errors.New("namespace list is empty. Specify at least one namespace using the --namespace flag")
-	}
-	for _, ns := range o.config.Namespaces {
-		if ns == EverestNamespace {
-			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
-		}
-	}
-
-	if err := o.createNamespace(EverestNamespace); err != nil {
-		return err
-	}
 	if err := o.provisionOLM(ctx); err != nil {
 		return err
 	}
-	o.l.Info("Creating operator group for the everest")
-	if err := o.kubeClient.CreateOperatorGroup(ctx, OperatorGroup, EverestNamespace, o.config.Namespaces); err != nil {
-		return err
-	}
-	if err := o.provisionAllNamespaces(ctx); err != nil {
-		return err
-	}
-	if err := o.installEverest(ctx); err != nil {
-		return err
-	}
-	o.l.Info("Updating cluster role bindings for the everest-admin")
-	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
+
+	if err := o.provisionMonitoringStack(ctx); err != nil {
 		return err
 	}
 
-	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, EverestNamespace)
+	if err := o.provisionDBNamespaces(ctx); err != nil {
+		return err
+	}
+
+	if err := o.provisionEverestOperator(ctx); err != nil {
+		return err
+	}
+
+	if err := o.provisionEverest(ctx); err != nil {
+		return err
+	}
+	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, SystemNamespace)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Join(err, errors.New("could not get the everest token secret"))
 	}
@@ -176,14 +173,80 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
+	if len(o.config.Namespaces) == 0 {
+		return errors.New("namespace list is empty. Specify at least one namespace using the --namespace flag")
+	}
+	for _, ns := range o.config.Namespaces {
+		if ns == SystemNamespace || ns == monitoringNamespace {
+			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
+		}
+	}
+
 	return nil
 }
 
-func (o *Install) installEverest(ctx context.Context) error {
-	if err := o.installOperator(ctx, everestOperatorChannel, everestOperatorName, EverestNamespace)(); err != nil {
+func (o *Install) installVMOperator(ctx context.Context) error {
+	o.l.Info("Creating operator group for everest")
+	if err := o.kubeClient.CreateOperatorGroup(ctx, monitoringOperatorGroup, monitoringNamespace, []string{}); err != nil {
 		return err
 	}
-	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, EverestNamespace)
+	o.l.Infof("Installing %s operator", vmOperatorName)
+
+	params := kubernetes.InstallOperatorRequest{
+		Namespace:              monitoringNamespace,
+		Name:                   vmOperatorName,
+		OperatorGroup:          monitoringOperatorGroup,
+		CatalogSource:          catalogSource,
+		CatalogSourceNamespace: catalogSourceNamespace,
+		Channel:                vmOperatorChannel,
+		InstallPlanApproval:    v1alpha1.ApprovalManual,
+	}
+
+	if err := o.kubeClient.InstallOperator(ctx, params); err != nil {
+		o.l.Errorf("failed installing %s operator", vmOperatorName)
+		return err
+	}
+	o.l.Infof("%s operator has been installed", vmOperatorName)
+	return nil
+}
+
+func (o *Install) provisionMonitoringStack(ctx context.Context) error {
+	l := o.l.With("action", "monitoring")
+	if err := o.createNamespace(monitoringNamespace); err != nil {
+		return err
+	}
+
+	l.Info("Preparing k8s cluster for monitoring")
+	if err := o.installVMOperator(ctx); err != nil {
+		return err
+	}
+	if err := o.kubeClient.ProvisionMonitoring(monitoringNamespace); err != nil {
+		return errors.Join(err, errors.New("could not provision monitoring configuration"))
+	}
+
+	l.Info("K8s cluster monitoring has been provisioned successfully")
+	return nil
+}
+
+func (o *Install) provisionEverestOperator(ctx context.Context) error {
+	if err := o.createNamespace(SystemNamespace); err != nil {
+		return err
+	}
+
+	o.l.Info("Creating operator group for everest")
+	if err := o.kubeClient.CreateOperatorGroup(ctx, systemOperatorGroup, SystemNamespace, o.config.Namespaces); err != nil {
+		return err
+	}
+
+	if err := o.installOperator(ctx, everestOperatorChannel, everestOperatorName, SystemNamespace)(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *Install) provisionEverest(ctx context.Context) error {
+	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, SystemNamespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return err
@@ -193,30 +256,36 @@ func (o *Install) installEverest(ctx context.Context) error {
 	}
 
 	if !everestExists {
-		o.l.Info(fmt.Sprintf("Deploying Everest to %s", EverestNamespace))
-		err = o.kubeClient.InstallEverest(ctx, EverestNamespace)
+		o.l.Info(fmt.Sprintf("Deploying Everest to %s", SystemNamespace))
+		err = o.kubeClient.InstallEverest(ctx, SystemNamespace)
 		if err != nil {
 			return err
 		}
 	} else {
 		o.l.Info("Restarting Everest")
-		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, EverestNamespace); err != nil {
+		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, SystemNamespace); err != nil {
 			return err
 		}
-		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, EverestNamespace); err != nil {
+		if err := o.kubeClient.RestartEverest(ctx, everestBackendServiceName, SystemNamespace); err != nil {
 			return err
 		}
 	}
+
+	o.l.Info("Updating cluster role bindings for everest-admin")
+	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (o *Install) provisionAllNamespaces(ctx context.Context) error {
+func (o *Install) provisionDBNamespaces(ctx context.Context) error {
 	for _, namespace := range o.config.Namespaces {
 		namespace := namespace
 		if err := o.createNamespace(namespace); err != nil {
 			return err
 		}
-		if err := o.kubeClient.CreateOperatorGroup(ctx, OperatorGroup, namespace, []string{}); err != nil {
+		if err := o.kubeClient.CreateOperatorGroup(ctx, dbsOperatorGroup, namespace, []string{}); err != nil {
 			return err
 		}
 
@@ -271,7 +340,7 @@ func (o *Install) runEverestWizard() error {
 			continue
 		}
 
-		if ns == EverestNamespace {
+		if ns == SystemNamespace {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
 
@@ -403,9 +472,9 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 		params := kubernetes.InstallOperatorRequest{
 			Namespace:              namespace,
 			Name:                   operatorName,
-			OperatorGroup:          OperatorGroup,
-			CatalogSource:          CatalogSource,
-			CatalogSourceNamespace: CatalogSourceNamespace,
+			OperatorGroup:          systemOperatorGroup,
+			CatalogSource:          catalogSource,
+			CatalogSourceNamespace: catalogSourceNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 		}
@@ -414,7 +483,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			params.SubscriptionConfig = &v1alpha1.SubscriptionConfig{
 				Env: []corev1.EnvVar{
 					{
-						Name:  kubernetes.EverestWatchNamespacesEnvVar,
+						Name:  kubernetes.EverestDBNamespacesEnvVar,
 						Value: strings.Join(o.config.Namespaces, ","),
 					},
 				},
@@ -487,7 +556,7 @@ func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, erro
 	r, err := token.NewReset(
 		token.ResetConfig{
 			KubeconfigPath: o.config.KubeconfigPath,
-			Namespace:      EverestNamespace,
+			Namespace:      SystemNamespace,
 		},
 		o.l,
 	)
