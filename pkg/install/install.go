@@ -61,7 +61,7 @@ const (
 	everestOperatorChannel = "stable-v0"
 	pxcOperatorChannel     = "stable-v1"
 	psmdbOperatorChannel   = "stable-v1"
-	pgOperatorChannel      = "fast-v2"
+	pgOperatorChannel      = "stable-v2"
 	vmOperatorChannel      = "stable-v0"
 
 	// catalogSourceNamespace is the namespace where the catalog source is installed.
