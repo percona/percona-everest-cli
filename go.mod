@@ -9,8 +9,8 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/operator-framework/api v0.22.0
 	github.com/operator-framework/operator-lifecycle-manager v0.26.0
-	github.com/percona/everest-operator v0.6.0-dev1.0.20240202093727-ceb0bb0fb02f
-	github.com/percona/percona-everest-backend v0.5.1-0.20240202100350-4bc9d2a75a1b
+	github.com/percona/everest-operator v0.6.0-dev1.0.20240207102146-b96be266f4d9
+	github.com/percona/percona-everest-backend v0.5.1-0.20240205094045-e23451782e1a
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
@@ -45,13 +45,13 @@ require (
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/flosch/pongo2/v6 v6.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/getkin/kin-openapi v0.122.0 // indirect
+	github.com/getkin/kin-openapi v0.123.0 // indirect
 	github.com/go-errors/errors v1.5.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
-	github.com/go-openapi/jsonpointer v0.20.0 // indirect
+	github.com/go-openapi/jsonpointer v0.20.2 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
-	github.com/go-openapi/swag v0.22.4 // indirect
+	github.com/go-openapi/swag v0.22.8 // indirect
 	github.com/go-sql-driver/mysql v1.7.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

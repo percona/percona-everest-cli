@@ -1,10 +1,10 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: percona-everest-catalog
+  name: everest-catalog
   namespace: olm
 spec:
-  displayName: Percona Everest Catalog
+  displayName: Everest Catalog
   publisher: Percona
   sourceType: grpc
   grpcPodConfig:
