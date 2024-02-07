@@ -80,6 +80,8 @@ const (
 	SystemNamespace = "percona-everest"
 	// monitoringNamespace is the namespace where the monitoring stack is installed.
 	monitoringNamespace = "percona-everest-monitoring"
+	// EverestMonitoringNamespaceEnvVar is the name of the environment variable that holds the monitoring namespace.
+	EverestMonitoringNamespaceEnvVar = "MONITORING_NAMESPACE"
 )
 
 type (
@@ -485,6 +487,10 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 					{
 						Name:  kubernetes.EverestDBNamespacesEnvVar,
 						Value: strings.Join(o.config.Namespaces, ","),
+					},
+					{
+						Name:  EverestMonitoringNamespaceEnvVar,
+						Value: monitoringNamespace,
 					},
 				},
 			}
