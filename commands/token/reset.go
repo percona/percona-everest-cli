@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
+	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/output"
 	"github.com/percona/percona-everest-cli/pkg/token"
 )
@@ -39,6 +40,7 @@ func NewResetCmd(l *zap.SugaredLogger) *cobra.Command {
 				os.Exit(1)
 			}
 
+			c.Namespace = install.SystemNamespace
 			command, err := token.NewReset(*c, l)
 			if err != nil {
 				output.PrintError(err, l)
@@ -62,13 +64,11 @@ func NewResetCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initResetFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().String("namespace", "percona-everest", "Namespace where Percona Everest is deployed")
 }
 
 func initResetViperFlags(cmd *cobra.Command) {
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
-	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
 }
 
 func parseResetConfig() (*token.ResetConfig, error) {
