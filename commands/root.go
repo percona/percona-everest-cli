@@ -37,9 +37,6 @@ func NewRootCmd(l *zap.SugaredLogger) *cobra.Command {
 	rootCmd.PersistentFlags().Bool("json", false, "Set output type to JSON")
 
 	rootCmd.AddCommand(newInstallCmd(l))
-	// rootCmd.AddCommand(newProvisionCmd(l))
-	// rootCmd.AddCommand(newListCmd(l))
-	// rootCmd.AddCommand(newDeleteCmd(l))
 	rootCmd.AddCommand(newTokenCmd(l))
 	rootCmd.AddCommand(newVersionCmd(l))
 	rootCmd.AddCommand(newUpgradeCmd(l))
