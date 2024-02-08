@@ -77,9 +77,9 @@ const (
 	dbsOperatorGroup = "everest-databases"
 
 	// SystemNamespace is the namespace where everest is installed.
-	SystemNamespace = "percona-everest"
+	SystemNamespace = "everest-system"
 	// monitoringNamespace is the namespace where the monitoring stack is installed.
-	monitoringNamespace = "percona-everest-monitoring"
+	monitoringNamespace = "everest-monitoring"
 	// EverestMonitoringNamespaceEnvVar is the name of the environment variable that holds the monitoring namespace.
 	EverestMonitoringNamespaceEnvVar = "MONITORING_NAMESPACE"
 )
