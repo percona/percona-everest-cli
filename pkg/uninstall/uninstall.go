@@ -22,11 +22,13 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
+	goversion "github.com/hashicorp/go-version"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
+	"github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // Uninstall implements logic for the cluster command.
@@ -87,7 +89,11 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 	if err := u.uninstallK8sResources(ctx); err != nil {
 		return err
 	}
-	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace); err != nil {
+	v, err := goversion.NewVersion(version.Version)
+	if err != nil {
+		return err
+	}
+	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace, v); err != nil {
 		return err
 	}
 

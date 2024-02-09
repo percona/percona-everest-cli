@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	goversion "github.com/hashicorp/go-version"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -34,6 +35,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"github.com/percona/percona-everest-cli/pkg/token"
+	"github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // Install implements the main logic for commands.
@@ -259,8 +261,12 @@ func (o *Install) provisionEverest(ctx context.Context) error {
 
 	if !everestExists {
 		o.l.Info(fmt.Sprintf("Deploying Everest to %s", SystemNamespace))
-		err = o.kubeClient.InstallEverest(ctx, SystemNamespace)
+		v, err := goversion.NewVersion(version.Version)
 		if err != nil {
+			return err
+		}
+
+		if err = o.kubeClient.InstallEverest(ctx, SystemNamespace, v); err != nil {
 			return err
 		}
 	} else {
@@ -428,7 +434,13 @@ func (o *Install) provisionOLM(ctx context.Context) error {
 	}
 	o.l.Info("OLM has been installed")
 	o.l.Info("Installing Percona OLM Catalog")
-	if err := o.kubeClient.InstallPerconaCatalog(ctx); err != nil {
+
+	v, err := goversion.NewVersion(version.Version)
+	if err != nil {
+		return err
+	}
+
+	if err := o.kubeClient.InstallPerconaCatalog(ctx, v); err != nil {
 		o.l.Errorf("failed installing OLM catalog: %v", err)
 		return err
 	}

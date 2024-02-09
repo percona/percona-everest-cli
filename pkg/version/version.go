@@ -44,26 +44,18 @@ var (
 )
 
 // CatalogImage returns a catalog image needed for the build of everestctl
-//
-// for dev builds it returns https://raw.githubusercontent.com/percona/percona-everest-backend/main/deploy/quickstart-k8s.yaml
-// for the release builds it returns https://raw.githubusercontent.com/percona/percona-everest-backend/vX.Y.Z/deploy/quickstart-k8s.yaml
-func CatalogImage() string {
+func CatalogImage(v *goversion.Version) string {
 	catalogImage = devCatalogImage
-	v, err := goversion.NewSemver(Version)
-	if Version != "" && err == nil && v.Prerelease() == "" {
-		catalogImage = fmt.Sprintf(releaseCatalogImage, Version)
+	if Version != "" && v.Prerelease() == "" {
+		catalogImage = fmt.Sprintf(releaseCatalogImage, v)
 	}
 	return catalogImage
 }
 
 // ManifestURL returns a manifest URL to install everest
-//
-// for dev builds it returns everest-catalog:latest
-// for the release it returns everest-catalog:X.Y.Z.
-func ManifestURL() string {
+func ManifestURL(v *goversion.Version) string {
 	url := devManifestURL
-	v, err := goversion.NewSemver(Version)
-	if Version != "" && err == nil && v.Prerelease() == "" {
+	if Version != "" && v.Prerelease() == "" {
 		url = fmt.Sprintf(releaseManifestURL, Version)
 	}
 	return url
