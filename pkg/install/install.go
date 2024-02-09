@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -82,6 +83,8 @@ const (
 	monitoringNamespace = "everest-monitoring"
 	// EverestMonitoringNamespaceEnvVar is the name of the environment variable that holds the monitoring namespace.
 	EverestMonitoringNamespaceEnvVar = "MONITORING_NAMESPACE"
+	// disableTelemetryEnvVar is the name of the environment variable that disables telemetry.
+	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
 type (
@@ -471,6 +474,11 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 
 		o.l.Infof("Installing %s operator", operatorName)
 
+		disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
+		if !ok || disableTelemetry != "true" {
+			disableTelemetry = "false"
+		}
+
 		params := kubernetes.InstallOperatorRequest{
 			Namespace:              namespace,
 			Name:                   operatorName,
@@ -479,21 +487,27 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			CatalogSourceNamespace: catalogSourceNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
-		}
-		if len(o.config.Namespaces) != 0 && operatorName == everestOperatorName {
-			params.TargetNamespaces = o.config.Namespaces
-			params.SubscriptionConfig = &v1alpha1.SubscriptionConfig{
+			SubscriptionConfig: &v1alpha1.SubscriptionConfig{
 				Env: []corev1.EnvVar{
 					{
-						Name:  kubernetes.EverestDBNamespacesEnvVar,
-						Value: strings.Join(o.config.Namespaces, ","),
-					},
-					{
-						Name:  EverestMonitoringNamespaceEnvVar,
-						Value: monitoringNamespace,
+						Name:  disableTelemetryEnvVar,
+						Value: disableTelemetry,
 					},
 				},
-			}
+			},
+		}
+		if operatorName == everestOperatorName {
+			params.TargetNamespaces = o.config.Namespaces
+			params.SubscriptionConfig.Env = append(params.SubscriptionConfig.Env, []corev1.EnvVar{
+				{
+					Name:  EverestMonitoringNamespaceEnvVar,
+					Value: monitoringNamespace,
+				},
+				{
+					Name:  kubernetes.EverestDBNamespacesEnvVar,
+					Value: strings.Join(o.config.Namespaces, ","),
+				},
+			}...)
 		}
 
 		if err := o.kubeClient.InstallOperator(ctx, params); err != nil {

@@ -1192,6 +1192,22 @@ func (c *Client) CreateSubscription(ctx context.Context, namespace string, subsc
 	return sub, nil
 }
 
+// UpdateSubscription updates an OLM subscription.
+func (c *Client) UpdateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	operatorClient, err := versioned.NewForConfig(c.restConfig)
+	if err != nil {
+		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
+	}
+	sub, err := operatorClient.
+		OperatorsV1alpha1().
+		Subscriptions(namespace).
+		Update(ctx, subscription, metav1.UpdateOptions{})
+	if err != nil {
+		return sub, err
+	}
+	return sub, nil
+}
+
 // CreateSubscriptionForCatalog creates an OLM subscription.
 func (c *Client) CreateSubscriptionForCatalog(ctx context.Context, namespace, name, catalogNamespace, catalog,
 	packageName, channel, startingCSV string, approval v1alpha1.Approval,

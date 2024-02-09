@@ -26,7 +26,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -87,7 +87,6 @@ const (
 	databaseClusterAPIVersion    = "everest.percona.com/v1alpha1"
 	restartAnnotationKey         = "everest.percona.com/restart"
 	managedByKey                 = "everest.percona.com/managed-by"
-	disableTelemetryEnvVar       = "DISABLE_TELEMETRY"
 	// ContainerStateWaiting represents a state when container requires some
 	// operations being done in order to complete start up.
 	ContainerStateWaiting ContainerState = "waiting"
@@ -629,47 +628,112 @@ type InstallOperatorRequest struct {
 	SubscriptionConfig     *olmv1alpha1.SubscriptionConfig
 }
 
+func mergeNamespacesEnvVar(str1, str2 string) string {
+	ns1 := strings.Split(str1, ",")
+	ns2 := strings.Split(str2, ",")
+	nsMap := map[string]struct{}{}
+
+	for _, ns := range ns1 {
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = struct{}{}
+	}
+
+	for _, ns := range ns2 {
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = struct{}{}
+	}
+
+	namespaces := []string{}
+	for ns := range nsMap {
+		namespaces = append(namespaces, ns)
+	}
+
+	sort.Strings(namespaces)
+
+	return strings.Join(namespaces, ",")
+}
+
+func mergeSubscriptionConfig(sub *olmv1alpha1.SubscriptionConfig, cfg *olmv1alpha1.SubscriptionConfig) *olmv1alpha1.SubscriptionConfig {
+	if sub == nil {
+		sub = &olmv1alpha1.SubscriptionConfig{Env: []corev1.EnvVar{}}
+	}
+
+	if cfg == nil {
+		return sub
+	}
+
+	for _, e := range cfg.Env {
+		found := false
+		for i, se := range sub.Env {
+			if e.Name == se.Name {
+				found = true
+				// If the environment variable is not the namespaces, just override it
+				if e.Name != EverestDBNamespacesEnvVar {
+					sub.Env[i].Value = e.Value
+					break
+				}
+
+				// Merge the namespaces
+				sub.Env[i].Value = mergeNamespacesEnvVar(se.Value, e.Value)
+
+				break
+			}
+		}
+		if !found {
+			sub.Env = append(sub.Env, e)
+		}
+	}
+
+	return sub
+}
+
 // InstallOperator installs an operator via OLM.
 func (k *Kubernetes) InstallOperator(ctx context.Context, req InstallOperatorRequest) error { //nolint:funlen
-	disableTelemetry, ok := os.LookupEnv(disableTelemetryEnvVar)
-	if !ok || disableTelemetry != "true" {
-		disableTelemetry = "false"
+	subscription, err := k.client.GetSubscription(ctx, req.Namespace, req.Name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Join(err, errors.New("cannot get subscription"))
 	}
-	config := &olmv1alpha1.SubscriptionConfig{Env: []corev1.EnvVar{}}
-	if req.SubscriptionConfig != nil {
-		config = req.SubscriptionConfig
+	if apierrors.IsNotFound(err) {
+		subscription = &olmv1alpha1.Subscription{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       olmv1alpha1.SubscriptionKind,
+				APIVersion: olmv1alpha1.SubscriptionCRDAPIVersion,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+			Spec: &olmv1alpha1.SubscriptionSpec{
+				CatalogSource:          req.CatalogSource,
+				CatalogSourceNamespace: req.CatalogSourceNamespace,
+				Package:                req.Name,
+				Channel:                req.Channel,
+				StartingCSV:            req.StartingCSV,
+				InstallPlanApproval:    req.InstallPlanApproval,
+			},
+		}
 	}
-	config.Env = append(config.Env, corev1.EnvVar{
-		Name:  disableTelemetryEnvVar,
-		Value: disableTelemetry,
-	})
-	subscription := &olmv1alpha1.Subscription{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       olmv1alpha1.SubscriptionKind,
-			APIVersion: olmv1alpha1.SubscriptionCRDAPIVersion,
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: req.Namespace,
-			Name:      req.Name,
-		},
-		Spec: &olmv1alpha1.SubscriptionSpec{
-			CatalogSource:          req.CatalogSource,
-			CatalogSourceNamespace: req.CatalogSourceNamespace,
-			Package:                req.Name,
-			Channel:                req.Channel,
-			StartingCSV:            req.StartingCSV,
-			InstallPlanApproval:    req.InstallPlanApproval,
-			Config:                 config,
-		},
-	}
-	subs, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)
-	if err != nil {
-		return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
+
+	subscription.Spec.Config = mergeSubscriptionConfig(subscription.Spec.Config, req.SubscriptionConfig)
+	if apierrors.IsNotFound(err) {
+		_, err := k.client.CreateSubscription(ctx, req.Namespace, subscription)
+		if err != nil {
+			return errors.Join(err, errors.New("cannot create a subscription to install the operator"))
+		}
+	} else {
+		_, err := k.client.UpdateSubscription(ctx, req.Namespace, subscription)
+		if err != nil {
+			return errors.Join(err, errors.New("cannot update a subscription to install the operator"))
+		}
 	}
 
 	err = wait.PollUntilContextTimeout(ctx, pollInterval, pollDuration, false, func(ctx context.Context) (bool, error) {
 		k.l.Debugf("Polling subscription %s/%s", req.Namespace, req.Name)
-		subs, err = k.client.GetSubscription(ctx, req.Namespace, req.Name)
+		subs, err := k.client.GetSubscription(ctx, req.Namespace, req.Name)
 		if err != nil {
 			return false, errors.Join(err, fmt.Errorf("cannot get an install plan for the operator subscription: %q", req.Name))
 		}
