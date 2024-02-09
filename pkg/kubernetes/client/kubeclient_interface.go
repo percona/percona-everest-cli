@@ -91,6 +91,8 @@ type KubeClientConnector interface {
 	CreateOperatorGroup(ctx context.Context, namespace, name string, targetNamespaces []string) (*v1.OperatorGroup, error)
 	// CreateSubscription creates an OLM subscription.
 	CreateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error)
+	// UpdateSubscription updates an OLM subscription.
+	UpdateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error)
 	// CreateSubscriptionForCatalog creates an OLM subscription.
 	CreateSubscriptionForCatalog(ctx context.Context, namespace, name, catalogNamespace, catalog, packageName, channel, startingCSV string, approval v1alpha1.Approval) (*v1alpha1.Subscription, error)
 	// GetSubscription retrieves an OLM subscription by namespace and name.
