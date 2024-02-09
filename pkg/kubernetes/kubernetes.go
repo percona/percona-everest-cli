@@ -26,6 +26,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -627,6 +628,35 @@ type InstallOperatorRequest struct {
 	SubscriptionConfig     *olmv1alpha1.SubscriptionConfig
 }
 
+func mergeNamespacesEnvVar(str1, str2 string) string {
+	ns1 := strings.Split(str1, ",")
+	ns2 := strings.Split(str2, ",")
+	nsMap := map[string]struct{}{}
+
+	for _, ns := range ns1 {
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = struct{}{}
+	}
+
+	for _, ns := range ns2 {
+		if ns == "" {
+			continue
+		}
+		nsMap[ns] = struct{}{}
+	}
+
+	namespaces := []string{}
+	for ns := range nsMap {
+		namespaces = append(namespaces, ns)
+	}
+
+	sort.Strings(namespaces)
+
+	return strings.Join(namespaces, ",")
+}
+
 func mergeSubscriptionConfig(sub *olmv1alpha1.SubscriptionConfig, cfg *olmv1alpha1.SubscriptionConfig) *olmv1alpha1.SubscriptionConfig {
 	if sub == nil {
 		sub = &olmv1alpha1.SubscriptionConfig{Env: []corev1.EnvVar{}}
@@ -648,20 +678,7 @@ func mergeSubscriptionConfig(sub *olmv1alpha1.SubscriptionConfig, cfg *olmv1alph
 				}
 
 				// Merge the namespaces
-				subNamespaces := strings.Split(se.Value, ",")
-				cfgNamespaces := strings.Split(e.Value, ",")
-				namespacesMap := map[string]struct{}{}
-				for _, ns := range subNamespaces {
-					namespacesMap[ns] = struct{}{}
-				}
-				for _, ns := range cfgNamespaces {
-					namespacesMap[ns] = struct{}{}
-				}
-				namespaces := []string{}
-				for ns := range namespacesMap {
-					namespaces = append(namespaces, ns)
-				}
-				sub.Env[i].Value = strings.Join(namespaces, ",")
+				sub.Env[i].Value = mergeNamespacesEnvVar(se.Value, e.Value)
 
 				break
 			}

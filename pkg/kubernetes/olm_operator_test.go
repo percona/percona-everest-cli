@@ -27,6 +27,8 @@ import (
 	"go.uber.org/zap"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client"
@@ -83,11 +85,16 @@ func TestInstallOlmOperator(t *testing.T) {
 				},
 			},
 		}
+		groupResource := schema.GroupResource{
+			Group:    "operators.coreos.com",
+			Resource: "subscriptions",
+		}
+		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(&v1alpha1.Subscription{}, apierrors.NewNotFound(groupResource, operatorName)).Once()
 		k8sclient.On(
 			"CreateSubscription",
 			mock.Anything, subscriptionNamespace, mockSubscription,
 		).Return(mockSubscription, nil)
-		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil)
+		k8sclient.On("GetSubscription", mock.Anything, subscriptionNamespace, operatorName).Return(mockSubscription, nil).Once()
 		mockInstallPlan := &v1alpha1.InstallPlan{}
 		k8sclient.On(
 			"GetInstallPlan", mock.Anything,
