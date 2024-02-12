@@ -280,7 +280,7 @@ jobs:
           make build
 
       - name: Create KIND cluster
-        uses: helm/kind-action@v1.8.0
+        uses: helm/kind-action@v1.9.0
 
       - name: Configure git for private modules
         env:
