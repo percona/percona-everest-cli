@@ -66,7 +66,7 @@ func initUpgradeFlags(cmd *cobra.Command) {
 	cmd.Flags().String("everest.endpoint", "http://127.0.0.1:8080", "Everest endpoint URL")
 	cmd.Flags().String("everest.token", "", "Everest token to authenticate against Everest")
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
+	cmd.Flags().String("namespace", "everest-system", "Namespace where Everest is installed")
 	cmd.Flags().String("version-metadata-url", "https://check.percona.com", "URL to retrieve version metadata information from")
 }
 
@@ -75,7 +75,7 @@ func initUpgradeViperFlags(cmd *cobra.Command) {
 	viper.BindPFlag("everest.token", cmd.Flags().Lookup("everest.token"))               //nolint:errcheck,gosec
 	viper.BindEnv("kubeconfig")                                                         //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig"))                     //nolint:errcheck,gosec
-	viper.BindPFlag("skip-wizard", cmd.Flags().Lookup("skip-wizard"))                   //nolint:errcheck,gosec
+	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))                       //nolint:errcheck,gosec
 	viper.BindPFlag("version-metadata-url", cmd.Flags().Lookup("version-metadata-url")) //nolint:errcheck,gosec
 }
 

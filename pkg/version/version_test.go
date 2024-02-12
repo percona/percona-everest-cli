@@ -10,19 +10,18 @@ import (
 
 func TestCatalogImage(t *testing.T) {
 	t.Parallel()
-	v, err := goversion.NewVersion("v0.3.0")
+	Version = "v0.3.0"
+	v, err := goversion.NewVersion(Version)
 	assert.NoError(t, err)
 	assert.Equal(t, fmt.Sprintf(releaseCatalogImage, v.String()), CatalogImage(v))
 
-	v, err = goversion.NewVersion("v0.3.0-1-asd-dirty")
+	Version = "v0.3.0-1-asd-dirty"
+	v, err = goversion.NewVersion(Version)
 	assert.NoError(t, err)
 	assert.Equal(t, devCatalogImage, CatalogImage(v))
 
-	v, err = goversion.NewVersion("c09550")
-	assert.NoError(t, err)
-	assert.Equal(t, devCatalogImage, CatalogImage(v))
-
-	v, err = goversion.NewVersion("0.3.0-37-gf1f07f6")
+	Version = "0.3.0-37-gf1f07f6"
+	v, err = goversion.NewVersion(Version)
 	assert.NoError(t, err)
 	assert.Equal(t, devCatalogImage, CatalogImage(v))
 }

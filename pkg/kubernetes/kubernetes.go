@@ -1026,10 +1026,13 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string, versi
 		return errors.Join(err, errors.New("failed downloading everest monitoring file"))
 	}
 
+	k.l.Debug("Applying manifest file")
 	err = k.client.ApplyManifestFile(data, namespace)
 	if err != nil {
 		return errors.Join(err, errors.New("failed applying manifest file"))
 	}
+
+	k.l.Debug("Waiting for manifest rollout")
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Name: PerconaEverestDeploymentName, Namespace: namespace}); err != nil {
 		return errors.Join(err, errors.New("failed waiting for the Everest deployment to be ready"))
 	}
@@ -1037,7 +1040,10 @@ func (k *Kubernetes) InstallEverest(ctx context.Context, namespace string, versi
 }
 
 func (k *Kubernetes) getManifestData(ctx context.Context, version *goversion.Version) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, everestVersion.ManifestURL(version), nil)
+	m := everestVersion.ManifestURL(version)
+	k.l.Debugf("Downloading manifest file %s", m)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1050,6 +1056,7 @@ func (k *Kubernetes) getManifestData(ctx context.Context, version *goversion.Ver
 }
 
 // DeleteEverest downloads the manifest file and deletes it from provisioned k8s cluster.
+// TODO: how do we need to change this after upgrade changes.
 func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string, version *goversion.Version) error {
 	data, err := k.getManifestData(ctx, version)
 	if err != nil {

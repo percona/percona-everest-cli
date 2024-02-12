@@ -34,6 +34,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	versionpb "github.com/Percona-Lab/percona-version-service/versionpb"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	"github.com/percona/percona-everest-cli/pkg/token"
 	"github.com/percona/percona-everest-cli/pkg/version"
@@ -98,6 +99,8 @@ type (
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
+		// VersionMetadataURL stores hostname to retrieve version metadata information from.
+		VersionMetadataURL string `mapstructure:"version-metadata-url"`
 
 		Operator OperatorConfig
 	}
@@ -139,7 +142,17 @@ func (o *Install) Run(ctx context.Context) error {
 		return err
 	}
 
-	if err := o.provisionOLM(ctx); err != nil {
+	meta, err := version.Metadata(ctx, o.config.VersionMetadataURL)
+	if err != nil {
+		return err
+	}
+
+	latest, err := o.latestVersion(meta)
+	if err != nil {
+		return err
+	}
+
+	if err := o.provisionOLM(ctx, latest); err != nil {
 		return err
 	}
 
@@ -147,18 +160,20 @@ func (o *Install) Run(ctx context.Context) error {
 		return err
 	}
 
+	// TODO: revisit - we need to install correct version based on metadata.
 	if err := o.provisionDBNamespaces(ctx); err != nil {
 		return err
 	}
 
+	// TODO: install correct version based on metadata.
 	if err := o.provisionEverestOperator(ctx); err != nil {
 		return err
 	}
 
-	if err := o.provisionEverest(ctx); err != nil {
+	if err := o.provisionEverest(ctx, latest); err != nil {
 		return err
 	}
-	_, err := o.kubeClient.GetSecret(ctx, token.SecretName, SystemNamespace)
+	_, err = o.kubeClient.GetSecret(ctx, token.SecretName, SystemNamespace)
 	if err != nil && !k8serrors.IsNotFound(err) {
 		return errors.Join(err, errors.New("could not get the everest token secret"))
 	}
@@ -190,6 +205,28 @@ func (o *Install) populateConfig() error {
 	}
 
 	return nil
+}
+
+func (o *Install) latestVersion(meta *versionpb.MetadataResponse) (*goversion.Version, error) {
+	var latest *goversion.Version
+	for _, v := range meta.Versions {
+		ver, err := goversion.NewSemver(v.Version)
+		if err != nil {
+			o.l.Debugf("Could not parse version %s. Error: %s", v.Version, err)
+			continue
+		}
+
+		if latest == nil || latest.GreaterThan(ver) {
+			latest = ver
+			continue
+		}
+	}
+
+	if latest == nil {
+		return nil, errors.New("could not determine the latest Everest version")
+	}
+
+	return latest, nil
 }
 
 func (o *Install) installVMOperator(ctx context.Context) error {
@@ -224,6 +261,7 @@ func (o *Install) provisionMonitoringStack(ctx context.Context) error {
 	}
 
 	l.Info("Preparing k8s cluster for monitoring")
+	// TODO: shall we grab VM operator version from metadata?
 	if err := o.installVMOperator(ctx); err != nil {
 		return err
 	}
@@ -252,7 +290,7 @@ func (o *Install) provisionEverestOperator(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) provisionEverest(ctx context.Context) error {
+func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) error {
 	d, err := o.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, SystemNamespace)
 	var everestExists bool
 	if err != nil && !k8serrors.IsNotFound(err) {
@@ -264,15 +302,11 @@ func (o *Install) provisionEverest(ctx context.Context) error {
 
 	if !everestExists {
 		o.l.Info(fmt.Sprintf("Deploying Everest to %s", SystemNamespace))
-		v, err := goversion.NewVersion(version.Version)
-		if err != nil {
-			return err
-		}
-
 		if err = o.kubeClient.InstallEverest(ctx, SystemNamespace, v); err != nil {
 			return err
 		}
 	} else {
+		// TODO: revisit - we shall probably not restart but offer upgrade.
 		o.l.Info("Restarting Everest")
 		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, SystemNamespace); err != nil {
 			return err
@@ -282,6 +316,7 @@ func (o *Install) provisionEverest(ctx context.Context) error {
 		}
 	}
 
+	// TODO: get from Everest, not cli.
 	o.l.Info("Updating cluster role bindings for everest-admin")
 	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
 		return err
@@ -305,6 +340,7 @@ func (o *Install) provisionDBNamespaces(ctx context.Context) error {
 			return err
 		}
 		o.l.Info("Creating role for the Everest service account")
+		// TODO: this shall come from Everest, not cli.
 		err := o.kubeClient.CreateRole(namespace, everestServiceAccountRole, o.serviceAccountRolePolicyRules())
 		if err != nil {
 			return errors.Join(err, errors.New("could not create role"))
@@ -429,19 +465,15 @@ func (o *Install) createNamespace(namespace string) error {
 	return nil
 }
 
-func (o *Install) provisionOLM(ctx context.Context) error {
+func (o *Install) provisionOLM(ctx context.Context, v *goversion.Version) error {
 	o.l.Info("Installing Operator Lifecycle Manager")
+	// TODO: do we upgrade OLM if the version is too old?
 	if err := o.kubeClient.InstallOLMOperator(ctx, false); err != nil {
 		o.l.Error("failed installing OLM")
 		return err
 	}
 	o.l.Info("OLM has been installed")
 	o.l.Info("Installing Percona OLM Catalog")
-
-	v, err := goversion.NewVersion(version.Version)
-	if err != nil {
-		return err
-	}
 
 	if err := o.kubeClient.InstallPerconaCatalog(ctx, v); err != nil {
 		o.l.Errorf("failed installing OLM catalog: %v", err)

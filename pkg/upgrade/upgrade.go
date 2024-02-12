@@ -18,20 +18,17 @@ package upgrade
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 
-	"github.com/AlecAivazis/survey/v2"
 	version "github.com/Percona-Lab/percona-version-service/versionpb"
 	goversion "github.com/hashicorp/go-version"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
+	cliVersion "github.com/percona/percona-everest-cli/pkg/version"
 )
 
 type (
@@ -44,12 +41,10 @@ type (
 			Token string
 		}
 
-		// Namespaces defines namespaces that everest can operate in.
-		Namespaces []string `mapstructure:"namespace"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
-		// SkipWizard skips wizard during installation.
-		SkipWizard bool `mapstructure:"skip-wizard"`
+		// Namespace holds namespace where Everest is installed.
+		Namespace string
 		// VersionMetadataURL stores hostname to retrieve version metadata information from.
 		VersionMetadataURL string `mapstructure:"version-metadata-url"`
 	}
@@ -94,15 +89,13 @@ func NewUpgrade(cfg *UpgradeConfig, everestClient everestClientConnector, l *zap
 
 // Run runs the operators installation process.
 func (u *Upgrade) Run(ctx context.Context) error {
-	if err := u.runEverestWizard(ctx); err != nil {
-		return err
-	}
-	if len(u.config.Namespaces) == 0 {
-		return errors.New("namespace list is empty. Specify at least one namespace")
-	}
-
+	// Check prerequisites
 	upgradeEverestTo, minVer, err := u.canUpgrade(ctx)
 	if err != nil {
+		if errors.Is(err, ErrNoUpdateAvailable) {
+			u.l.Info("You're running the latest version of Everest")
+			return nil
+		}
 		return err
 	}
 
@@ -111,17 +104,18 @@ func (u *Upgrade) Run(ctx context.Context) error {
 		return err
 	}
 
-	u.l.Infof("Upgrading Percona Catalog to %s", minVer.catalog)
-	if err := u.kubeClient.InstallPerconaCatalog(ctx, minVer.catalog); err != nil {
+	// TODO: figure out catalog version
+	u.l.Infof("Upgrading Percona Catalog to %s", upgradeEverestTo)
+	if err := u.kubeClient.InstallPerconaCatalog(ctx, upgradeEverestTo); err != nil {
 		return err
 	}
 
-	u.l.Infof("Upgrading Everest to %s", upgradeEverestTo)
-	if err := u.kubeClient.InstallEverest(ctx, install.SystemNamespace, upgradeEverestTo); err != nil {
+	u.l.Infof("Upgrading Everest to %s in namespace %s", upgradeEverestTo, u.config.Namespace)
+	if err := u.kubeClient.InstallEverest(ctx, u.config.Namespace, upgradeEverestTo); err != nil {
 		return err
 	}
 
-	u.l.Info("Everest has been upgraded to version %s", upgradeEverestTo)
+	u.l.Infof("Everest has been upgraded to version %s", upgradeEverestTo)
 
 	return nil
 }
@@ -138,6 +132,8 @@ func (u *Upgrade) canUpgrade(ctx context.Context) (*goversion.Version, *minimumV
 	if err != nil {
 		return nil, nil, errors.Join(err, fmt.Errorf("invalid Everest version %s", eVer.Version))
 	}
+
+	u.l.Infof("Current Everest version is %s", everestVersion)
 
 	// Determine version to upgrade to.
 	upgradeEverestTo, meta, err := u.versionToUpgradeTo(ctx, everestVersion)
@@ -158,7 +154,7 @@ func (u *Upgrade) canUpgrade(ctx context.Context) (*goversion.Version, *minimumV
 func (u *Upgrade) versionToUpgradeTo(
 	ctx context.Context, currentEverestVersion *goversion.Version,
 ) (*goversion.Version, *version.MetadataVersion, error) {
-	req, err := u.versionMetadata(ctx)
+	req, err := cliVersion.Metadata(ctx, u.config.VersionMetadataURL)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -205,54 +201,6 @@ func (u *Upgrade) versionToUpgradeTo(
 	}
 
 	return upgradeTo, meta, nil
-}
-
-func (u *Upgrade) runEverestWizard(ctx context.Context) error {
-	if !u.config.SkipWizard {
-		namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
-		if err != nil {
-			return err
-		}
-		pNamespace := &survey.MultiSelect{
-			Message: "Please select namespaces",
-			Options: namespaces,
-		}
-		if err := survey.AskOne(
-			pNamespace,
-			&u.config.Namespaces,
-			survey.WithValidator(survey.MinItems(1)),
-		); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (u *Upgrade) versionMetadata(ctx context.Context) (*version.MetadataResponse, error) {
-	p, err := url.Parse(u.config.VersionMetadataURL)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not parse version metadata URL"))
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.JoinPath("metadata/v1/everest").String(), nil)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not create requirements request"))
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, errors.Join(err, errors.New("could not retrieve requirements"))
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid response from requirements endpoint http %d", res.StatusCode)
-	}
-	requirements := &version.MetadataResponse{}
-	if err = json.NewDecoder(res.Body).Decode(requirements); err != nil {
-		return nil, errors.Join(err, errors.New("could not decode from requirements"))
-	}
-
-	return requirements, nil
 }
 
 func (u *Upgrade) verifyMinimumRequirements(ctx context.Context, meta *version.MetadataVersion) (*minimumVersion, error) {

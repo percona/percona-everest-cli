@@ -39,26 +39,39 @@ var (
 	Version string //nolint:gochecknoglobals
 	// FullCommit is a git commit hash.
 	FullCommit string //nolint:gochecknoglobals
-	// CatalogImage is a image path for OLM catalog.
-	catalogImage string //nolint:gochecknoglobals
 )
 
-// CatalogImage returns a catalog image needed for the build of everestctl
+// CatalogImage returns a catalog image name.
 func CatalogImage(v *goversion.Version) string {
-	catalogImage = devCatalogImage
-	if Version != "" && v.Prerelease() == "" {
-		catalogImage = fmt.Sprintf(releaseCatalogImage, v)
+	if isDevVersion() {
+		return devCatalogImage
 	}
-	return catalogImage
+	return fmt.Sprintf(releaseCatalogImage, v)
 }
 
-// ManifestURL returns a manifest URL to install everest
+// ManifestURL returns a manifest URL to install Everest.
 func ManifestURL(v *goversion.Version) string {
-	url := devManifestURL
-	if Version != "" && v.Prerelease() == "" {
-		url = fmt.Sprintf(releaseManifestURL, Version)
+	if isDevVersion() {
+		return devManifestURL
 	}
-	return url
+	return fmt.Sprintf(releaseManifestURL, v)
+}
+
+func isDevVersion() bool {
+	if Version == "" {
+		return true
+	}
+
+	v, err := goversion.NewSemver(Version)
+	if err != nil {
+		panic(err)
+	}
+
+	if v.Prerelease() != "" && !strings.HasSuffix(v.Prerelease(), "-upgrade-test") {
+		return true
+	}
+
+	return false
 }
 
 // FullVersionInfo returns full version report.
