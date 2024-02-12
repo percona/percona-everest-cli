@@ -1267,6 +1267,36 @@ func (_m *MockKubeClientConnector) UpdateInstallPlan(ctx context.Context, namesp
 	return r0, r1
 }
 
+// UpdateSubscription provides a mock function with given fields: ctx, namespace, subscription
+func (_m *MockKubeClientConnector) UpdateSubscription(ctx context.Context, namespace string, subscription *v1alpha1.Subscription) (*v1alpha1.Subscription, error) {
+	ret := _m.Called(ctx, namespace, subscription)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateSubscription")
+	}
+
+	var r0 *v1alpha1.Subscription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) (*v1alpha1.Subscription, error)); ok {
+		return rf(ctx, namespace, subscription)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, *v1alpha1.Subscription) *v1alpha1.Subscription); ok {
+		r0 = rf(ctx, namespace, subscription)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1alpha1.Subscription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, *v1alpha1.Subscription) error); ok {
+		r1 = rf(ctx, namespace, subscription)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewMockKubeClientConnector creates a new instance of MockKubeClientConnector. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockKubeClientConnector(t interface {
