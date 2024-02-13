@@ -11,18 +11,6 @@ metadata:
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/warn-version: latest
 ---
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: operators
-  labels:
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/enforce-version: latest
-    pod-security.kubernetes.io/audit: restricted
-    pod-security.kubernetes.io/audit-version: latest
-    pod-security.kubernetes.io/warn: restricted
-    pod-security.kubernetes.io/warn-version: latest
----
 kind: ServiceAccount
 apiVersion: v1
 metadata:
@@ -217,12 +205,6 @@ rules:
 - apiGroups: ["packages.operators.coreos.com"]
   resources: ["packagemanifests", "packagemanifests/icon"]
   verbs: ["get", "list", "watch"]
----
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: global-operators
-  namespace: operators
 ---
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
