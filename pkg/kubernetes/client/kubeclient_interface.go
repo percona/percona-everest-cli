@@ -31,11 +31,11 @@ type KubeClientConnector interface {
 	// UpdateBackupStorage updates an backupStorage.
 	UpdateBackupStorage(ctx context.Context, storage *everestv1alpha1.BackupStorage) error
 	// GetBackupStorage returns the backupStorage.
-	GetBackupStorage(ctx context.Context, name string) (*everestv1alpha1.BackupStorage, error)
+	GetBackupStorage(ctx context.Context, namespace, name string) (*everestv1alpha1.BackupStorage, error)
 	// ListBackupStorages returns the backupStorage.
-	ListBackupStorages(ctx context.Context, options metav1.ListOptions) (*everestv1alpha1.BackupStorageList, error)
+	ListBackupStorages(ctx context.Context, namespace string, options metav1.ListOptions) (*everestv1alpha1.BackupStorageList, error)
 	// DeleteBackupStorage deletes the backupStorage.
-	DeleteBackupStorage(ctx context.Context, name string) error
+	DeleteBackupStorage(ctx context.Context, namespace, name string) error
 	// ClusterName returns the name of the k8s cluster.
 	ClusterName() string
 	// GetSecretsForServiceAccount returns secret by given service account name.
