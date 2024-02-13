@@ -112,6 +112,11 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
+	// BackupStorages have finalizers, so we need to delete them first
+	if err := u.deleteBackupStorages(ctx); err != nil {
+		return err
+	}
+
 	if err := u.checkResourcesExist(ctx); err != nil {
 		return err
 	}
@@ -249,6 +254,42 @@ func (u *Uninstall) deleteDBNamespaces(ctx context.Context) error {
 	}
 
 	return u.deleteNamespaces(ctx, namespaces)
+}
+
+func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
+	storages, err := u.kubeClient.ListBackupStorages(ctx, install.SystemNamespace)
+	if err != nil {
+		return err
+	}
+
+	for _, storage := range storages.Items {
+		u.l.Infof("Deleting backup storage '%s' in namespace '%s'", storage.Name, install.SystemNamespace)
+		if err := u.kubeClient.DeleteBackupStorage(ctx, install.SystemNamespace, storage.Name); err != nil {
+			return err
+		}
+	}
+
+	// Wait for all backup storages to be deleted, or timeout after 5 minutes.
+	u.l.Infof("Waiting for backup storages to be deleted")
+	timeout := time.After(5 * time.Minute)
+	tick := time.Tick(5 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for backup storages to be deleted")
+		case <-tick:
+			storages, err := u.kubeClient.ListBackupStorages(ctx, install.SystemNamespace)
+			if err != nil {
+				return err
+			}
+
+			if len(storages.Items) == 0 {
+				u.l.Info("All backup storages have been deleted")
+
+				return nil
+			}
+		}
+	}
 }
 
 func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
