@@ -66,7 +66,7 @@ const (
 	vmOperatorChannel      = "stable-v0"
 
 	// catalogSourceNamespace is the namespace where the catalog source is installed.
-	catalogSourceNamespace = "olm"
+	catalogSourceNamespace = "everest-olm"
 	// catalogSource is the name of the catalog source.
 	catalogSource = "everest-catalog"
 

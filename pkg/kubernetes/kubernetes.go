@@ -94,7 +94,8 @@ const (
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 
-	olmNamespace = "olm"
+	olmNamespace    = "everest-olm"
+	olmOperatorName = "olm-operator"
 
 	// APIVersionCoreosV1 constant for some API requests.
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
@@ -445,7 +446,7 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
 func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
-	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
+	deployment, err := k.client.GetDeployment(ctx, olmOperatorName, olmNamespace)
 	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
@@ -464,7 +465,7 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error
 		return err
 	}
 
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "packageserver"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: olmNamespace, Name: "packageserver"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
@@ -568,11 +569,11 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{
 		Namespace: olmNamespace,
-		Name:      "olm-operator",
+		Name:      olmOperatorName,
 	}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "catalog-operator"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: olmNamespace, Name: "catalog-operator"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
