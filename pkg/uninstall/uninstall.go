@@ -117,10 +117,13 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
-	if err := u.checkResourcesExist(ctx); err != nil {
+	// There are no resources with finalizers in the monitoring namespace, so
+	// we can delete it directly
+	if err := u.deleteNamespaces(ctx, []string{install.MonitoringNamespace}); err != nil {
 		return err
 	}
-	if err := u.uninstallK8sResources(ctx); err != nil {
+
+	if err := u.checkResourcesExist(ctx); err != nil {
 		return err
 	}
 	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace); err != nil {
@@ -305,13 +308,4 @@ func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
 		return fmt.Errorf("no Everest deployment in %s namespace", install.SystemNamespace)
 	}
 	return err
-}
-
-func (u *Uninstall) uninstallK8sResources(ctx context.Context) error {
-	u.l.Info("Deleting all Kubernetes monitoring resources in Kubernetes cluster")
-	if err := u.kubeClient.DeleteAllMonitoringResources(ctx, install.SystemNamespace); err != nil {
-		return errors.Join(err, errors.New("could not uninstall monitoring resources from the Kubernetes cluster"))
-	}
-
-	return nil
 }

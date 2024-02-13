@@ -79,8 +79,8 @@ const (
 
 	// SystemNamespace is the namespace where everest is installed.
 	SystemNamespace = "everest-system"
-	// monitoringNamespace is the namespace where the monitoring stack is installed.
-	monitoringNamespace = "everest-monitoring"
+	// MonitoringNamespace is the namespace where the monitoring stack is installed.
+	MonitoringNamespace = "everest-monitoring"
 	// EverestMonitoringNamespaceEnvVar is the name of the environment variable that holds the monitoring namespace.
 	EverestMonitoringNamespaceEnvVar = "MONITORING_NAMESPACE"
 	// disableTelemetryEnvVar is the name of the environment variable that disables telemetry.
@@ -182,7 +182,7 @@ func (o *Install) populateConfig() error {
 		return errors.New("namespace list is empty. Specify at least one namespace using the --namespace flag")
 	}
 	for _, ns := range o.config.Namespaces {
-		if ns == SystemNamespace || ns == monitoringNamespace {
+		if ns == SystemNamespace || ns == MonitoringNamespace {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
 	}
@@ -192,13 +192,13 @@ func (o *Install) populateConfig() error {
 
 func (o *Install) installVMOperator(ctx context.Context) error {
 	o.l.Info("Creating operator group for everest")
-	if err := o.kubeClient.CreateOperatorGroup(ctx, monitoringOperatorGroup, monitoringNamespace, []string{}); err != nil {
+	if err := o.kubeClient.CreateOperatorGroup(ctx, monitoringOperatorGroup, MonitoringNamespace, []string{}); err != nil {
 		return err
 	}
 	o.l.Infof("Installing %s operator", vmOperatorName)
 
 	params := kubernetes.InstallOperatorRequest{
-		Namespace:              monitoringNamespace,
+		Namespace:              MonitoringNamespace,
 		Name:                   vmOperatorName,
 		OperatorGroup:          monitoringOperatorGroup,
 		CatalogSource:          catalogSource,
@@ -217,7 +217,7 @@ func (o *Install) installVMOperator(ctx context.Context) error {
 
 func (o *Install) provisionMonitoringStack(ctx context.Context) error {
 	l := o.l.With("action", "monitoring")
-	if err := o.createNamespace(monitoringNamespace); err != nil {
+	if err := o.createNamespace(MonitoringNamespace); err != nil {
 		return err
 	}
 
@@ -225,7 +225,7 @@ func (o *Install) provisionMonitoringStack(ctx context.Context) error {
 	if err := o.installVMOperator(ctx); err != nil {
 		return err
 	}
-	if err := o.kubeClient.ProvisionMonitoring(monitoringNamespace); err != nil {
+	if err := o.kubeClient.ProvisionMonitoring(MonitoringNamespace); err != nil {
 		return errors.Join(err, errors.New("could not provision monitoring configuration"))
 	}
 
@@ -501,7 +501,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			params.SubscriptionConfig.Env = append(params.SubscriptionConfig.Env, []corev1.EnvVar{
 				{
 					Name:  EverestMonitoringNamespaceEnvVar,
-					Value: monitoringNamespace,
+					Value: MonitoringNamespace,
 				},
 				{
 					Name:  kubernetes.EverestDBNamespacesEnvVar,
