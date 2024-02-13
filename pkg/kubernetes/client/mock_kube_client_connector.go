@@ -319,6 +319,24 @@ func (_m *MockKubeClientConnector) DeleteManifestFile(fileBytes []byte, namespac
 	return r0
 }
 
+// DeleteNamespace provides a mock function with given fields: ctx, name
+func (_m *MockKubeClientConnector) DeleteNamespace(ctx context.Context, name string) error {
+	ret := _m.Called(ctx, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteNamespace")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+		r0 = rf(ctx, name)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteObject provides a mock function with given fields: obj
 func (_m *MockKubeClientConnector) DeleteObject(obj runtime.Object) error {
 	ret := _m.Called(obj)

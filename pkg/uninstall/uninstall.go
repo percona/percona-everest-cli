@@ -108,10 +108,13 @@ This will uninstall Everest and all its components from the cluster.`
 		}
 	}
 
-	if err := u.checkResourcesExist(ctx); err != nil {
+	if err := u.deleteDBNamespaces(ctx); err != nil {
 		return err
 	}
 
+	if err := u.checkResourcesExist(ctx); err != nil {
+		return err
+	}
 	if err := u.uninstallK8sResources(ctx); err != nil {
 		return err
 	}
@@ -199,6 +202,53 @@ func (u *Uninstall) deleteAllDBs(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (u *Uninstall) deleteNamespaces(ctx context.Context, namespaces []string) error {
+	for _, ns := range namespaces {
+		u.l.Infof("Deleting namespace '%s'", ns)
+		if err := u.kubeClient.DeleteNamespace(ctx, ns); err != nil {
+			return err
+		}
+	}
+
+	// Wait for all namespaces to be deleted, or timeout after 5 minutes.
+	u.l.Infof("Waiting for namespaces to be deleted")
+	timeout := time.After(5 * time.Minute)
+	tick := time.Tick(5 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for namespaces to be deleted")
+		case <-tick:
+			namespacesPendingDeletion := false
+			for _, ns := range namespaces {
+				_, err := u.kubeClient.GetNamespace(ctx, ns)
+				if err != nil && !k8serrors.IsNotFound(err) {
+					return err
+				}
+				if err == nil {
+					namespacesPendingDeletion = true
+					break
+				}
+			}
+
+			if !namespacesPendingDeletion {
+				u.l.Infof("All namespaces have been deleted")
+
+				return nil
+			}
+		}
+	}
+}
+
+func (u *Uninstall) deleteDBNamespaces(ctx context.Context) error {
+	namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
+	if err != nil {
+		return err
+	}
+
+	return u.deleteNamespaces(ctx, namespaces)
 }
 
 func (u *Uninstall) checkResourcesExist(ctx context.Context) error {

@@ -148,4 +148,6 @@ type KubeClientConnector interface {
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
 	// GetNamespace returns a namespace.
 	GetNamespace(ctx context.Context, name string) (*corev1.Namespace, error)
+	// DeleteNamespace deletes a namespace.
+	DeleteNamespace(ctx context.Context, name string) error
 }
