@@ -65,8 +65,6 @@ const (
 	pgOperatorChannel      = "stable-v2"
 	vmOperatorChannel      = "stable-v0"
 
-	// catalogSourceNamespace is the namespace where the catalog source is installed.
-	catalogSourceNamespace = "everest-olm"
 	// catalogSource is the name of the catalog source.
 	catalogSource = "everest-catalog"
 
@@ -202,7 +200,7 @@ func (o *Install) installVMOperator(ctx context.Context) error {
 		Name:                   vmOperatorName,
 		OperatorGroup:          monitoringOperatorGroup,
 		CatalogSource:          catalogSource,
-		CatalogSourceNamespace: catalogSourceNamespace,
+		CatalogSourceNamespace: kubernetes.OLMNamespace,
 		Channel:                vmOperatorChannel,
 		InstallPlanApproval:    v1alpha1.ApprovalManual,
 	}
@@ -484,7 +482,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			Name:                   operatorName,
 			OperatorGroup:          systemOperatorGroup,
 			CatalogSource:          catalogSource,
-			CatalogSourceNamespace: catalogSourceNamespace,
+			CatalogSourceNamespace: kubernetes.OLMNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
 			SubscriptionConfig: &v1alpha1.SubscriptionConfig{

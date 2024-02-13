@@ -94,7 +94,8 @@ const (
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 
-	olmNamespace    = "everest-olm"
+	// OLMNamespace is the namespace where OLM is installed.
+	OLMNamespace    = "everest-olm"
 	olmOperatorName = "olm-operator"
 
 	// APIVersionCoreosV1 constant for some API requests.
@@ -396,7 +397,7 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
 func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
-	deployment, err := k.client.GetDeployment(ctx, olmOperatorName, olmNamespace)
+	deployment, err := k.client.GetDeployment(ctx, olmOperatorName, OLMNamespace)
 	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
@@ -415,7 +416,7 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error
 		return err
 	}
 
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: olmNamespace, Name: "packageserver"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: OLMNamespace, Name: "packageserver"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
@@ -518,12 +519,12 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 
 func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{
-		Namespace: olmNamespace,
+		Namespace: OLMNamespace,
 		Name:      olmOperatorName,
 	}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: olmNamespace, Name: "catalog-operator"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: OLMNamespace, Name: "catalog-operator"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 

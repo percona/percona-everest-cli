@@ -18,7 +18,6 @@ package uninstall
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -127,6 +126,12 @@ This will uninstall Everest and all its components from the cluster.`
 	// BackupStorages) have already been deleted, so we can delete the
 	// namespace directly
 	if err := u.deleteNamespaces(ctx, []string{install.SystemNamespace}); err != nil {
+		return err
+	}
+
+	// There are no resources with finalizers in the monitoring namespace, so
+	// we can delete it directly
+	if err := u.deleteNamespaces(ctx, []string{kubernetes.OLMNamespace}); err != nil {
 		return err
 	}
 
