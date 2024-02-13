@@ -123,10 +123,10 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
-	if err := u.checkResourcesExist(ctx); err != nil {
-		return err
-	}
-	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace); err != nil {
+	// All resources with finalizers in the system namespace (DBCs and
+	// BackupStorages) have already been deleted, so we can delete the
+	// namespace directly
+	if err := u.deleteNamespaces(ctx, []string{install.SystemNamespace}); err != nil {
 		return err
 	}
 
@@ -293,19 +293,4 @@ func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
 			}
 		}
 	}
-}
-
-func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
-	_, err := u.kubeClient.GetNamespace(ctx, install.SystemNamespace)
-	if err != nil && k8serrors.IsNotFound(err) {
-		return fmt.Errorf("namespace %s is not found", install.SystemNamespace)
-	}
-	if err != nil && !k8serrors.IsNotFound(err) {
-		return err
-	}
-	_, err = u.kubeClient.GetDeployment(ctx, kubernetes.PerconaEverestDeploymentName, install.SystemNamespace)
-	if err != nil && k8serrors.IsNotFound(err) {
-		return fmt.Errorf("no Everest deployment in %s namespace", install.SystemNamespace)
-	}
-	return err
 }
