@@ -184,56 +184,6 @@ func (k *Kubernetes) ClusterName() string {
 	return k.client.ClusterName()
 }
 
-// ListDatabaseClusters returns list of managed PCX clusters.
-func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error) {
-	return k.client.ListDatabaseClusters(ctx)
-}
-
-// GetDatabaseCluster returns PXC clusters by provided name.
-func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error) {
-	return k.client.GetDatabaseCluster(ctx, name)
-}
-
-// RestartDatabaseCluster restarts database cluster.
-func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) error {
-	cluster, err := k.client.GetDatabaseCluster(ctx, name)
-	if err != nil {
-		return err
-	}
-	cluster.TypeMeta.APIVersion = databaseClusterAPIVersion
-	cluster.TypeMeta.Kind = databaseClusterKind
-	if cluster.ObjectMeta.Annotations == nil {
-		cluster.ObjectMeta.Annotations = make(map[string]string)
-	}
-	cluster.ObjectMeta.Annotations[restartAnnotationKey] = "true"
-	return k.client.ApplyObject(cluster)
-}
-
-// PatchDatabaseCluster patches CR of managed Database cluster.
-func (k *Kubernetes) PatchDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
-	return k.client.ApplyObject(cluster)
-}
-
-// CreateDatabaseCluster creates database cluster.
-func (k *Kubernetes) CreateDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
-	if cluster.ObjectMeta.Annotations == nil {
-		cluster.ObjectMeta.Annotations = make(map[string]string)
-	}
-	cluster.ObjectMeta.Annotations[managedByKey] = "pmm"
-	return k.client.ApplyObject(cluster)
-}
-
-// DeleteDatabaseCluster deletes database cluster.
-func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) error {
-	cluster, err := k.client.GetDatabaseCluster(ctx, name)
-	if err != nil {
-		return err
-	}
-	cluster.TypeMeta.APIVersion = databaseClusterAPIVersion
-	cluster.TypeMeta.Kind = databaseClusterKind
-	return k.client.DeleteObject(cluster)
-}
-
 // GetDefaultStorageClassName returns first storageClassName from kubernetes cluster.
 func (k *Kubernetes) GetDefaultStorageClassName(ctx context.Context) (string, error) {
 	storageClasses, err := k.client.GetStorageClasses(ctx)
