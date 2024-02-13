@@ -20,8 +20,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -65,7 +67,7 @@ func NewUninstall(c Config, l *zap.SugaredLogger) (*Uninstall, error) {
 func (u *Uninstall) Run(ctx context.Context) error {
 	if !u.config.AssumeYes {
 		msg := `You are about to uninstall Everest from the Kubernetes cluster.
-This will uninstall Everest and all monitoring resources deployed by it. All other resources such as Databases and Database Backups will not be affected.`
+This will uninstall Everest and all its components from the cluster.`
 		fmt.Printf("\n%s\n\n", msg) //nolint:forbidigo
 		confirm := &survey.Confirm{
 			Message: "Are you sure you want to uninstall Everest?",
@@ -80,6 +82,32 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 			return nil
 		}
 	}
+
+	dbsExist, err := u.dbsExist(ctx)
+	if err != nil {
+		return err
+	}
+	if dbsExist {
+		if !u.config.Force {
+			confirm := &survey.Confirm{
+				Message: "There are still database clusters managed by Everest. Do you want to delete them?",
+			}
+			prompt := false
+			if err := survey.AskOne(confirm, &prompt); err != nil {
+				return err
+			}
+
+			if !prompt {
+				u.l.Info("Can't proceed without deleting database clusters")
+				return nil
+			}
+		}
+
+		if err := u.deleteAllDBs(ctx); err != nil {
+			return err
+		}
+	}
+
 	if err := u.checkResourcesExist(ctx); err != nil {
 		return err
 	}
@@ -92,6 +120,85 @@ This will uninstall Everest and all monitoring resources deployed by it. All oth
 	}
 
 	return nil
+}
+
+func (u *Uninstall) getAllDBs(ctx context.Context) (map[string]*everestv1alpha1.DatabaseClusterList, error) {
+	namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	allDBs := map[string]*everestv1alpha1.DatabaseClusterList{}
+	for _, ns := range namespaces {
+		dbs, err := u.kubeClient.ListDatabaseClusters(ctx, ns)
+		if err != nil {
+			return nil, err
+		}
+
+		allDBs[ns] = dbs
+	}
+
+	return allDBs, nil
+}
+
+func (u *Uninstall) dbsExist(ctx context.Context) (bool, error) {
+	allDBs, err := u.getAllDBs(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	exist := false
+	for ns, dbs := range allDBs {
+		if len(dbs.Items) == 0 {
+			continue
+		}
+
+		exist = true
+		u.l.Warnf("Database clusters in namespace '%s':", ns)
+		for _, db := range dbs.Items {
+			u.l.Warnf("  - %s", db.Name)
+		}
+	}
+
+	return exist, nil
+}
+
+func (u *Uninstall) deleteAllDBs(ctx context.Context) error {
+	allDBs, err := u.getAllDBs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for ns, dbs := range allDBs {
+		for _, db := range dbs.Items {
+			u.l.Infof("Deleting database cluster '%s' in namespace '%s'", db.Name, ns)
+			if err := u.kubeClient.DeleteDatabaseCluster(ctx, ns, db.Name); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Wait for all database clusters to be deleted, or timeout after 5 minutes.
+	u.l.Info("Waiting for database clusters to be deleted")
+	timeout := time.After(5 * time.Minute)
+	tick := time.Tick(5 * time.Second)
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timeout waiting for database clusters to be deleted")
+		case <-tick:
+			allDBs, err := u.getAllDBs(ctx)
+			if err != nil {
+				return err
+			}
+
+			if len(allDBs) == 0 {
+				u.l.Info("All database clusters have been deleted")
+
+				return nil
+			}
+		}
+	}
 }
 
 func (u *Uninstall) checkResourcesExist(ctx context.Context) error {
