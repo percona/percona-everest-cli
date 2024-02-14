@@ -355,7 +355,11 @@ func (o *Install) runEverestWizard() error {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
 
-		o.config.Namespaces += "," + ns
+		if o.config.Namespaces != "" {
+			o.config.Namespaces += ","
+		}
+
+		o.config.Namespaces += ns
 	}
 
 	if len(o.config.NamespacesList()) == 0 {
