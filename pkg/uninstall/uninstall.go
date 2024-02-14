@@ -118,6 +118,11 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
+	// VMAgent has finalizers, so we need to delete the monitoring configs first
+	if err := u.deleteMonitoringConfigs(ctx); err != nil {
+		return err
+	}
+
 	// There are no resources with finalizers in the monitoring namespace, so
 	// we can delete it directly
 	if err := u.deleteNamespaces(ctx, []string{install.MonitoringNamespace}); err != nil {
@@ -282,6 +287,41 @@ func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
 		}
 
 		u.l.Info("All backup storages have been deleted")
+
+		return true, nil
+	})
+}
+
+func (u *Uninstall) deleteMonitoringConfigs(ctx context.Context) error {
+	monitoringConfigs, err := u.kubeClient.ListMonitoringConfigs(ctx, install.MonitoringNamespace)
+	if err != nil {
+		return err
+	}
+
+	if len(monitoringConfigs.Items) == 0 {
+		return nil
+	}
+
+	for _, config := range monitoringConfigs.Items {
+		u.l.Infof("Deleting monitoring config '%s'", config.Name)
+		if err := u.kubeClient.DeleteMonitoringConfig(ctx, install.MonitoringNamespace, config.Name); err != nil {
+			return err
+		}
+	}
+
+	// Wait for all monitoring configs to be deleted, or timeout after 5 minutes.
+	u.l.Infof("Waiting for monitoring configs to be deleted")
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		monitoringConfigs, err := u.kubeClient.ListMonitoringConfigs(ctx, install.MonitoringNamespace)
+		if err != nil {
+			return false, err
+		}
+
+		if len(monitoringConfigs.Items) != 0 {
+			return false, nil
+		}
+
+		u.l.Info("All monitoring configs have been deleted")
 
 		return true, nil
 	})
