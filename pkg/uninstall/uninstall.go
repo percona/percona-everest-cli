@@ -90,19 +90,14 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 	if dbsExist {
-		if !u.config.Force {
-			confirm := &survey.Confirm{
-				Message: "There are still database clusters managed by Everest. Do you want to delete them?",
-			}
-			prompt := false
-			if err := survey.AskOne(confirm, &prompt); err != nil {
-				return err
-			}
+		force, err := u.confirmForce()
+		if err != nil {
+			return err
+		}
 
-			if !prompt {
-				u.l.Info("Can't proceed without deleting database clusters")
-				return nil
-			}
+		if !force {
+			u.l.Info("Can't proceed without deleting database clusters")
+			return nil
 		}
 
 		if err := u.deleteDBs(ctx); err != nil {
@@ -145,6 +140,22 @@ This will uninstall Everest and all its components from the cluster.`
 
 	u.l.Info("Everest has been uninstalled successfully")
 	return nil
+}
+
+func (u *Uninstall) confirmForce() (bool, error) {
+	if u.config.Force {
+		return true, nil
+	}
+
+	confirm := &survey.Confirm{
+		Message: "There are still database clusters managed by Everest. Do you want to delete them?",
+	}
+	prompt := false
+	if err := survey.AskOne(confirm, &prompt); err != nil {
+		return false, err
+	}
+
+	return prompt, nil
 }
 
 func (u *Uninstall) getDBs(ctx context.Context) (map[string]*everestv1alpha1.DatabaseClusterList, error) {
@@ -259,7 +270,7 @@ func (u *Uninstall) deleteDBNamespaces(ctx context.Context) error {
 	return u.deleteNamespaces(ctx, namespaces)
 }
 
-func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
+func (u *Uninstall) deleteBackupStorages(ctx context.Context) error { //nolint:dupl
 	storages, err := u.kubeClient.ListBackupStorages(ctx, install.SystemNamespace)
 	if err != nil {
 		return err
@@ -294,7 +305,7 @@ func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
 	})
 }
 
-func (u *Uninstall) deleteMonitoringConfigs(ctx context.Context) error {
+func (u *Uninstall) deleteMonitoringConfigs(ctx context.Context) error { //nolint:dupl
 	monitoringConfigs, err := u.kubeClient.ListMonitoringConfigs(ctx, install.MonitoringNamespace)
 	if err != nil {
 		return err

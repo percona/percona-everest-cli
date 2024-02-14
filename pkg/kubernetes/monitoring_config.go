@@ -22,10 +22,6 @@ import (
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 )
 
-const (
-	monitoringConfigNameLabel = "monitoringConfigName"
-)
-
 // ListMonitoringConfigs returns list of managed monitoring configs.
 func (k *Kubernetes) ListMonitoringConfigs(ctx context.Context, namespace string) (*everestv1alpha1.MonitoringConfigList, error) {
 	return k.client.ListMonitoringConfigs(ctx, namespace)
