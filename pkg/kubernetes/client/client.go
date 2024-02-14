@@ -1375,6 +1375,19 @@ func (c *Client) ListClusterServiceVersion(
 	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(namespace).List(ctx, metav1.ListOptions{})
 }
 
+// DeleteClusterServiceVersion deletes a CSV by namespaced name.
+func (c *Client) DeleteClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) error {
+	operatorClient, err := versioned.NewForConfig(c.restConfig)
+	if err != nil {
+		return errors.Join(err, errors.New("cannot create an operator client instance"))
+	}
+
+	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(key.Namespace).Delete(ctx, key.Name, metav1.DeleteOptions{})
+}
+
 // DeleteFile accepts manifest file contents parses into []runtime.Object
 // and deletes them from the cluster.
 func (c *Client) DeleteFile(fileBytes []byte) error {

@@ -301,6 +301,24 @@ func (_m *MockKubeClientConnector) DeleteBackupStorage(ctx context.Context, name
 	return r0
 }
 
+// DeleteClusterServiceVersion provides a mock function with given fields: ctx, key
+func (_m *MockKubeClientConnector) DeleteClusterServiceVersion(ctx context.Context, key types.NamespacedName) error {
+	ret := _m.Called(ctx, key)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteClusterServiceVersion")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, types.NamespacedName) error); ok {
+		r0 = rf(ctx, key)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteFile provides a mock function with given fields: fileBytes
 func (_m *MockKubeClientConnector) DeleteFile(fileBytes []byte) error {
 	ret := _m.Called(fileBytes)

@@ -840,6 +840,14 @@ func (k *Kubernetes) ListClusterServiceVersion(
 	return k.client.ListClusterServiceVersion(ctx, namespace)
 }
 
+// DeleteClusterServiceVersion deletes a ClusterServiceVersion.
+func (k *Kubernetes) DeleteClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) error {
+	return k.client.DeleteClusterServiceVersion(ctx, key)
+}
+
 // DeleteObject deletes an object.
 func (k *Kubernetes) DeleteObject(obj runtime.Object) error {
 	return k.client.DeleteObject(obj)

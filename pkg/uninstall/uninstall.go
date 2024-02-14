@@ -19,13 +19,14 @@ package uninstall
 import (
 	"context"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/pkg/install"
@@ -138,10 +139,11 @@ This will uninstall Everest and all its components from the cluster.`
 
 	// There are no resources with finalizers in the monitoring namespace, so
 	// we can delete it directly
-	if err := u.deleteNamespaces(ctx, []string{kubernetes.OLMNamespace}); err != nil {
+	if err := u.deleteOLM(ctx); err != nil {
 		return err
 	}
 
+	u.l.Info("Everest has been uninstalled successfully")
 	return nil
 }
 
@@ -325,4 +327,33 @@ func (u *Uninstall) deleteMonitoringConfigs(ctx context.Context) error {
 
 		return true, nil
 	})
+}
+
+func (u *Uninstall) deleteOLM(ctx context.Context) error {
+	packageServerName := types.NamespacedName{Name: "packageserver", Namespace: kubernetes.OLMNamespace}
+	if err := u.kubeClient.DeleteClusterServiceVersion(ctx, packageServerName); err != nil {
+		return err
+	}
+
+	// Wait for the packageserver CSV to be deleted, or timeout after 5 minutes.
+	u.l.Infof("Waiting for packageserver CSV to be deleted")
+	err := wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		_, err := u.kubeClient.GetClusterServiceVersion(ctx, packageServerName)
+		if err != nil && !k8serrors.IsNotFound(err) {
+			return false, err
+		}
+
+		if err == nil {
+			return false, nil
+		}
+
+		u.l.Info("Packageserver CSV has been deleted")
+
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return u.deleteNamespaces(ctx, []string{kubernetes.OLMNamespace})
 }
