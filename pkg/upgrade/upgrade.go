@@ -21,8 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
-	"strings"
 
 	version "github.com/Percona-Lab/percona-version-service/versionpb"
 	goversion "github.com/hashicorp/go-version"

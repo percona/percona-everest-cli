@@ -112,9 +112,6 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
-	if err := u.uninstallK8sResources(ctx); err != nil {
-		return err
-	}
 	v, err := goversion.NewVersion(version.Version)
 	if err != nil {
 		return err
