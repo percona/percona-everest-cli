@@ -36,7 +36,6 @@ import (
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/client/clientset/versioned"
 	packagev1 "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/apis/operators/v1"
 	packageServerClient "github.com/operator-framework/operator-lifecycle-manager/pkg/package-server/client/clientset/versioned"
-	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	appsv1 "k8s.io/api/apps/v1"
@@ -71,6 +70,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/customresources"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/database"
 )
 
@@ -101,6 +101,7 @@ type Client struct {
 	l *zap.SugaredLogger
 
 	clientset        kubernetes.Interface
+	customClientSet  *customresources.Client
 	apiextClientset  apiextv1clientset.Interface
 	dynamicClientset dynamic.Interface
 	dbClusterClient  *database.DBClusterClient
@@ -217,11 +218,11 @@ func (c *Client) setup() error {
 
 // Initializes clients for operators.
 func (c *Client) initOperatorClients() error {
-	dbClusterClient, err := database.NewForConfig(c.restConfig)
+	customClient, err := customresources.NewForConfig(c.restConfig)
 	if err != nil {
 		return err
 	}
-	c.dbClusterClient = dbClusterClient
+	c.customClientSet = customClient
 	_, err = c.GetServerVersion()
 	return err
 }
@@ -311,20 +312,6 @@ func (c *Client) GenerateKubeConfigWithToken(user string, secret *corev1.Secret)
 // GetServerVersion returns server version.
 func (c *Client) GetServerVersion() (*version.Info, error) {
 	return c.clientset.Discovery().ServerVersion()
-}
-
-// ListDatabaseClusters returns list of managed PCX clusters.
-func (c *Client) ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error) {
-	return c.dbClusterClient.DBClusters(c.namespace).List(ctx, metav1.ListOptions{})
-}
-
-// GetDatabaseCluster returns PXC clusters by provided name.
-func (c *Client) GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error) {
-	cluster, err := c.dbClusterClient.DBClusters(c.namespace).Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return cluster, nil
 }
 
 // GetStorageClasses returns all storage classes available in the cluster.
@@ -1288,9 +1275,9 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 }
 
 // DoPackageWait for the package to be available in OLM.
-func (c *Client) DoPackageWait(ctx context.Context, name string) error {
+func (c *Client) DoPackageWait(ctx context.Context, namespace, name string) error {
 	packageInstalled := func(ctx context.Context) (bool, error) {
-		_, err := c.GetPackageManifest(ctx, name)
+		_, err := c.GetPackageManifest(ctx, namespace, name)
 		if err != nil {
 			if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
 				return false, err
@@ -1303,8 +1290,7 @@ func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 }
 
 // GetPackageManifest returns a package manifest by given name.
-func (c *Client) GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error) {
-	namespace := "olm"
+func (c *Client) GetPackageManifest(ctx context.Context, namespace, name string) (*packagev1.PackageManifest, error) {
 	operatorClient, err := packageServerClient.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))
@@ -1382,6 +1368,19 @@ func (c *Client) ListClusterServiceVersion(
 	}
 
 	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(namespace).List(ctx, metav1.ListOptions{})
+}
+
+// DeleteClusterServiceVersion deletes a CSV by namespaced name.
+func (c *Client) DeleteClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) error {
+	operatorClient, err := versioned.NewForConfig(c.restConfig)
+	if err != nil {
+		return errors.Join(err, errors.New("cannot create an operator client instance"))
+	}
+
+	return operatorClient.OperatorsV1alpha1().ClusterServiceVersions(key.Namespace).Delete(ctx, key.Name, metav1.DeleteOptions{})
 }
 
 // DeleteFile accepts manifest file contents parses into []runtime.Object

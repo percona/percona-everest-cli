@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"strings"
 
 	version "github.com/Percona-Lab/percona-version-service/versionpb"
 	goversion "github.com/hashicorp/go-version"
@@ -251,7 +253,7 @@ func (u *Upgrade) upgradeOLM(ctx context.Context, minimumVersion *goversion.Vers
 	u.l.Info("Checking OLM version")
 	csv, err := u.kubeClient.GetClusterServiceVersion(ctx, types.NamespacedName{
 		Name:      "packageserver",
-		Namespace: "olm",
+		Namespace: kubernetes.OLMNamespace,
 	})
 	if err != nil {
 		return errors.Join(err, errors.New("could not retrieve Cluster Service Version"))
