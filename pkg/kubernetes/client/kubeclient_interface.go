@@ -146,6 +146,16 @@ type KubeClientConnector interface {
 	GetDatabaseEngine(ctx context.Context, namespace, name string) (*everestv1alpha1.DatabaseEngine, error)
 	// DeleteAllMonitoringResources deletes all resources related to monitoring from k8s cluster.
 	DeleteAllMonitoringResources(ctx context.Context, namespace string) error
+	// CreateMonitoringConfig creates an monitoringConfig.
+	CreateMonitoringConfig(ctx context.Context, config *everestv1alpha1.MonitoringConfig) error
+	// UpdateMonitoringConfig updates an monitoringConfig.
+	UpdateMonitoringConfig(ctx context.Context, config *everestv1alpha1.MonitoringConfig) error
+	// GetMonitoringConfig returns the monitoringConfig.
+	GetMonitoringConfig(ctx context.Context, namespace, name string) (*everestv1alpha1.MonitoringConfig, error)
+	// ListMonitoringConfigs returns the monitoringConfig.
+	ListMonitoringConfigs(ctx context.Context, namespace string) (*everestv1alpha1.MonitoringConfigList, error)
+	// DeleteMonitoringConfig deletes the monitoringConfig.
+	DeleteMonitoringConfig(ctx context.Context, namespace, name string) error
 	// GetNamespace returns a namespace.
 	GetNamespace(ctx context.Context, name string) (*corev1.Namespace, error)
 	// DeleteNamespace deletes a namespace.

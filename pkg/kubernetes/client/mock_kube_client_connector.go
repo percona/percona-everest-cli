@@ -139,6 +139,24 @@ func (_m *MockKubeClientConnector) CreateBackupStorage(ctx context.Context, stor
 	return r0
 }
 
+// CreateMonitoringConfig provides a mock function with given fields: ctx, config
+func (_m *MockKubeClientConnector) CreateMonitoringConfig(ctx context.Context, config *v1alpha1.MonitoringConfig) error {
+	ret := _m.Called(ctx, config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateMonitoringConfig")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.MonitoringConfig) error); ok {
+		r0 = rf(ctx, config)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CreateNamespace provides a mock function with given fields: name
 func (_m *MockKubeClientConnector) CreateNamespace(name string) error {
 	ret := _m.Called(name)
@@ -312,6 +330,24 @@ func (_m *MockKubeClientConnector) DeleteManifestFile(fileBytes []byte, namespac
 	var r0 error
 	if rf, ok := ret.Get(0).(func([]byte, string) error); ok {
 		r0 = rf(fileBytes, namespace)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteMonitoringConfig provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) DeleteMonitoringConfig(ctx context.Context, namespace string, name string) error {
+	ret := _m.Called(ctx, namespace, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteMonitoringConfig")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, namespace, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -776,6 +812,36 @@ func (_m *MockKubeClientConnector) GetLogs(ctx context.Context, pod string, cont
 
 	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
 		r1 = rf(ctx, pod, container)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetMonitoringConfig provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) GetMonitoringConfig(ctx context.Context, namespace string, name string) (*v1alpha1.MonitoringConfig, error) {
+	ret := _m.Called(ctx, namespace, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMonitoringConfig")
+	}
+
+	var r0 *v1alpha1.MonitoringConfig
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*v1alpha1.MonitoringConfig, error)); ok {
+		return rf(ctx, namespace, name)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *v1alpha1.MonitoringConfig); ok {
+		r0 = rf(ctx, namespace, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1alpha1.MonitoringConfig)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, namespace, name)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -1441,6 +1507,36 @@ func (_m *MockKubeClientConnector) ListDeployments(ctx context.Context, namespac
 	return r0, r1
 }
 
+// ListMonitoringConfigs provides a mock function with given fields: ctx, namespace
+func (_m *MockKubeClientConnector) ListMonitoringConfigs(ctx context.Context, namespace string) (*v1alpha1.MonitoringConfigList, error) {
+	ret := _m.Called(ctx, namespace)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMonitoringConfigs")
+	}
+
+	var r0 *v1alpha1.MonitoringConfigList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*v1alpha1.MonitoringConfigList, error)); ok {
+		return rf(ctx, namespace)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *v1alpha1.MonitoringConfigList); ok {
+		r0 = rf(ctx, namespace)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*v1alpha1.MonitoringConfigList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, namespace)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListPods provides a mock function with given fields: ctx, namespace, options
 func (_m *MockKubeClientConnector) ListPods(ctx context.Context, namespace string, options metav1.ListOptions) (*corev1.PodList, error) {
 	ret := _m.Called(ctx, namespace, options)
@@ -1577,6 +1673,24 @@ func (_m *MockKubeClientConnector) UpdateInstallPlan(ctx context.Context, namesp
 	}
 
 	return r0, r1
+}
+
+// UpdateMonitoringConfig provides a mock function with given fields: ctx, config
+func (_m *MockKubeClientConnector) UpdateMonitoringConfig(ctx context.Context, config *v1alpha1.MonitoringConfig) error {
+	ret := _m.Called(ctx, config)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateMonitoringConfig")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *v1alpha1.MonitoringConfig) error); ok {
+		r0 = rf(ctx, config)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdateSubscription provides a mock function with given fields: ctx, namespace, subscription
