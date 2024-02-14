@@ -109,12 +109,12 @@ This will uninstall Everest and all its components from the cluster.`
 		}
 	}
 
-	if err := u.deleteDBNamespaces(ctx); err != nil {
+	// BackupStorages have finalizers, so we need to delete them first
+	if err := u.deleteBackupStorages(ctx); err != nil {
 		return err
 	}
 
-	// BackupStorages have finalizers, so we need to delete them first
-	if err := u.deleteBackupStorages(ctx); err != nil {
+	if err := u.deleteDBNamespaces(ctx); err != nil {
 		return err
 	}
 
