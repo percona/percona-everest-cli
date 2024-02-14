@@ -20,11 +20,13 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
@@ -102,7 +104,7 @@ This will uninstall Everest and all its components from the cluster.`
 			}
 		}
 
-		if err := u.deleteAllDBs(ctx); err != nil {
+		if err := u.deleteDBs(ctx); err != nil {
 			return err
 		}
 	}
@@ -138,7 +140,7 @@ This will uninstall Everest and all its components from the cluster.`
 	return nil
 }
 
-func (u *Uninstall) getAllDBs(ctx context.Context) (map[string]*everestv1alpha1.DatabaseClusterList, error) {
+func (u *Uninstall) getDBs(ctx context.Context) (map[string]*everestv1alpha1.DatabaseClusterList, error) {
 	namespaces, err := u.kubeClient.GetDBNamespaces(ctx, install.SystemNamespace)
 	if err != nil {
 		return nil, err
@@ -158,7 +160,7 @@ func (u *Uninstall) getAllDBs(ctx context.Context) (map[string]*everestv1alpha1.
 }
 
 func (u *Uninstall) dbsExist(ctx context.Context) (bool, error) {
-	allDBs, err := u.getAllDBs(ctx)
+	allDBs, err := u.getDBs(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -179,8 +181,8 @@ func (u *Uninstall) dbsExist(ctx context.Context) (bool, error) {
 	return exist, nil
 }
 
-func (u *Uninstall) deleteAllDBs(ctx context.Context) error {
-	allDBs, err := u.getAllDBs(ctx)
+func (u *Uninstall) deleteDBs(ctx context.Context) error {
+	allDBs, err := u.getDBs(ctx)
 	if err != nil {
 		return err
 	}
@@ -196,25 +198,22 @@ func (u *Uninstall) deleteAllDBs(ctx context.Context) error {
 
 	// Wait for all database clusters to be deleted, or timeout after 5 minutes.
 	u.l.Info("Waiting for database clusters to be deleted")
-	timeout := time.After(5 * time.Minute)
-	tick := time.Tick(5 * time.Second)
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for database clusters to be deleted")
-		case <-tick:
-			allDBs, err := u.getAllDBs(ctx)
-			if err != nil {
-				return err
-			}
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		allDBs, err := u.getDBs(ctx)
+		if err != nil {
+			return false, err
+		}
 
-			if len(allDBs) == 0 {
-				u.l.Info("All database clusters have been deleted")
-
-				return nil
+		for _, dbs := range allDBs {
+			if len(dbs.Items) != 0 {
+				return false, nil
 			}
 		}
-	}
+
+		u.l.Info("All database clusters have been deleted")
+
+		return true, nil
+	})
 }
 
 func (u *Uninstall) deleteNamespaces(ctx context.Context, namespaces []string) error {
@@ -226,33 +225,22 @@ func (u *Uninstall) deleteNamespaces(ctx context.Context, namespaces []string) e
 	}
 
 	// Wait for all namespaces to be deleted, or timeout after 5 minutes.
-	u.l.Infof("Waiting for namespaces to be deleted")
-	timeout := time.After(5 * time.Minute)
-	tick := time.Tick(5 * time.Second)
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for namespaces to be deleted")
-		case <-tick:
-			namespacesPendingDeletion := false
-			for _, ns := range namespaces {
-				_, err := u.kubeClient.GetNamespace(ctx, ns)
-				if err != nil && !k8serrors.IsNotFound(err) {
-					return err
-				}
-				if err == nil {
-					namespacesPendingDeletion = true
-					break
-				}
+	u.l.Infof("Waiting for namespace(s) '%s' to be deleted", strings.Join(namespaces, "', '"))
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		for _, ns := range namespaces {
+			_, err := u.kubeClient.GetNamespace(ctx, ns)
+			if err != nil && !k8serrors.IsNotFound(err) {
+				return false, err
 			}
-
-			if !namespacesPendingDeletion {
-				u.l.Infof("All namespaces have been deleted")
-
-				return nil
+			if err == nil {
+				return false, nil
 			}
 		}
-	}
+
+		u.l.Infof("Namespace(s) '%s' have been deleted", strings.Join(namespaces, "', '"))
+
+		return true, nil
+	})
 }
 
 func (u *Uninstall) deleteDBNamespaces(ctx context.Context) error {
@@ -270,8 +258,12 @@ func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
 		return err
 	}
 
+	if len(storages.Items) == 0 {
+		return nil
+	}
+
 	for _, storage := range storages.Items {
-		u.l.Infof("Deleting backup storage '%s' in namespace '%s'", storage.Name, install.SystemNamespace)
+		u.l.Infof("Deleting backup storage '%s'", storage.Name)
 		if err := u.kubeClient.DeleteBackupStorage(ctx, install.SystemNamespace, storage.Name); err != nil {
 			return err
 		}
@@ -279,23 +271,18 @@ func (u *Uninstall) deleteBackupStorages(ctx context.Context) error {
 
 	// Wait for all backup storages to be deleted, or timeout after 5 minutes.
 	u.l.Infof("Waiting for backup storages to be deleted")
-	timeout := time.After(5 * time.Minute)
-	tick := time.Tick(5 * time.Second)
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout waiting for backup storages to be deleted")
-		case <-tick:
-			storages, err := u.kubeClient.ListBackupStorages(ctx, install.SystemNamespace)
-			if err != nil {
-				return err
-			}
-
-			if len(storages.Items) == 0 {
-				u.l.Info("All backup storages have been deleted")
-
-				return nil
-			}
+	return wait.PollUntilContextTimeout(ctx, 5*time.Second, 5*time.Minute, false, func(ctx context.Context) (bool, error) {
+		storages, err := u.kubeClient.ListBackupStorages(ctx, install.SystemNamespace)
+		if err != nil {
+			return false, err
 		}
-	}
+
+		if len(storages.Items) != 0 {
+			return false, nil
+		}
+
+		u.l.Info("All backup storages have been deleted")
+
+		return true, nil
+	})
 }
