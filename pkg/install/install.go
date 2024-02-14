@@ -90,8 +90,8 @@ const (
 type (
 	// Config stores configuration for the operators.
 	Config struct {
-		// Namespaces defines namespaces that everest can operate in.
-		Namespaces []string `mapstructure:"namespace"`
+		// Namespaces defines comma-separated list of namespaces that everest can operate in.
+		Namespaces string `mapstructure:"namespaces"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -110,6 +110,11 @@ type (
 		PXC bool `mapstructure:"xtradb-cluster"`
 	}
 )
+
+// NamespacesList returns list of the namespaces that everest can operate in.
+func (c Config) NamespacesList() []string {
+	return strings.Split(c.Namespaces, ",")
+}
 
 // NewInstall returns a new Install struct.
 func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
@@ -178,10 +183,11 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if len(o.config.Namespaces) == 0 {
-		return errors.New("namespace list is empty. Specify at least one namespace using the --namespace flag")
+	if len(o.config.NamespacesList()) == 0 {
+		return errors.New("namespace list is empty. Specify the comma-separated list of namespaces using the --namespaces flag, at least one namespace is required")
 	}
-	for _, ns := range o.config.Namespaces {
+
+	for _, ns := range o.config.NamespacesList() {
 		if ns == SystemNamespace || ns == monitoringNamespace {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
@@ -239,7 +245,7 @@ func (o *Install) provisionEverestOperator(ctx context.Context) error {
 	}
 
 	o.l.Info("Creating operator group for everest")
-	if err := o.kubeClient.CreateOperatorGroup(ctx, systemOperatorGroup, SystemNamespace, o.config.Namespaces); err != nil {
+	if err := o.kubeClient.CreateOperatorGroup(ctx, systemOperatorGroup, SystemNamespace, o.config.NamespacesList()); err != nil {
 		return err
 	}
 
@@ -277,7 +283,7 @@ func (o *Install) provisionEverest(ctx context.Context) error {
 	}
 
 	o.l.Info("Updating cluster role bindings for everest-admin")
-	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.Namespaces); err != nil {
+	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.NamespacesList()); err != nil {
 		return err
 	}
 
@@ -285,7 +291,7 @@ func (o *Install) provisionEverest(ctx context.Context) error {
 }
 
 func (o *Install) provisionDBNamespaces(ctx context.Context) error {
-	for _, namespace := range o.config.Namespaces {
+	for _, namespace := range o.config.NamespacesList() {
 		namespace := namespace
 		if err := o.createNamespace(namespace); err != nil {
 			return err
@@ -349,10 +355,14 @@ func (o *Install) runEverestWizard() error {
 			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 		}
 
-		o.config.Namespaces = append(o.config.Namespaces, ns)
+		if o.config.Namespaces != "" {
+			o.config.Namespaces += ","
+		}
+
+		o.config.Namespaces += ns
 	}
 
-	if len(o.config.Namespaces) == 0 {
+	if len(o.config.NamespacesList()) == 0 {
 		return errors.New("namespace list is empty. Specify at least one namespace")
 	}
 
@@ -497,7 +507,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			},
 		}
 		if operatorName == everestOperatorName {
-			params.TargetNamespaces = o.config.Namespaces
+			params.TargetNamespaces = o.config.NamespacesList()
 			params.SubscriptionConfig.Env = append(params.SubscriptionConfig.Env, []corev1.EnvVar{
 				{
 					Name:  EverestMonitoringNamespaceEnvVar,
@@ -505,7 +515,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 				},
 				{
 					Name:  kubernetes.EverestDBNamespacesEnvVar,
-					Value: strings.Join(o.config.Namespaces, ","),
+					Value: o.config.Namespaces,
 				},
 			}...)
 		}
