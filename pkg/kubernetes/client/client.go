@@ -1279,9 +1279,9 @@ func (c *Client) GetInstallPlan(ctx context.Context, namespace string, name stri
 }
 
 // DoPackageWait for the package to be available in OLM.
-func (c *Client) DoPackageWait(ctx context.Context, name string) error {
+func (c *Client) DoPackageWait(ctx context.Context, namespace, name string) error {
 	packageInstalled := func(ctx context.Context) (bool, error) {
-		_, err := c.GetPackageManifest(ctx, name)
+		_, err := c.GetPackageManifest(ctx, namespace, name)
 		if err != nil {
 			if apierrors.ReasonForError(err) == metav1.StatusReasonUnknown {
 				return false, err
@@ -1294,8 +1294,7 @@ func (c *Client) DoPackageWait(ctx context.Context, name string) error {
 }
 
 // GetPackageManifest returns a package manifest by given name.
-func (c *Client) GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error) {
-	namespace := "olm"
+func (c *Client) GetPackageManifest(ctx context.Context, namespace, name string) (*packagev1.PackageManifest, error) {
 	operatorClient, err := packageServerClient.NewForConfig(c.restConfig)
 	if err != nil {
 		return nil, errors.Join(err, errors.New("cannot create an operator client instance"))

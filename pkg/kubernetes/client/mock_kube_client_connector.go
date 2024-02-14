@@ -445,17 +445,17 @@ func (_m *MockKubeClientConnector) DoCSVWait(ctx context.Context, key types.Name
 	return r0
 }
 
-// DoPackageWait provides a mock function with given fields: ctx, name
-func (_m *MockKubeClientConnector) DoPackageWait(ctx context.Context, name string) error {
-	ret := _m.Called(ctx, name)
+// DoPackageWait provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) DoPackageWait(ctx context.Context, namespace string, name string) error {
+	ret := _m.Called(ctx, namespace, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DoPackageWait")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, namespace, name)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -957,9 +957,9 @@ func (_m *MockKubeClientConnector) GetOperatorGroup(ctx context.Context, namespa
 	return r0, r1
 }
 
-// GetPackageManifest provides a mock function with given fields: ctx, name
-func (_m *MockKubeClientConnector) GetPackageManifest(ctx context.Context, name string) (*operatorsv1.PackageManifest, error) {
-	ret := _m.Called(ctx, name)
+// GetPackageManifest provides a mock function with given fields: ctx, namespace, name
+func (_m *MockKubeClientConnector) GetPackageManifest(ctx context.Context, namespace string, name string) (*operatorsv1.PackageManifest, error) {
+	ret := _m.Called(ctx, namespace, name)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPackageManifest")
@@ -967,19 +967,19 @@ func (_m *MockKubeClientConnector) GetPackageManifest(ctx context.Context, name 
 
 	var r0 *operatorsv1.PackageManifest
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (*operatorsv1.PackageManifest, error)); ok {
-		return rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*operatorsv1.PackageManifest, error)); ok {
+		return rf(ctx, namespace, name)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) *operatorsv1.PackageManifest); ok {
-		r0 = rf(ctx, name)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *operatorsv1.PackageManifest); ok {
+		r0 = rf(ctx, namespace, name)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*operatorsv1.PackageManifest)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, name)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, namespace, name)
 	} else {
 		r1 = ret.Error(1)
 	}

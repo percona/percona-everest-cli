@@ -108,9 +108,9 @@ type KubeClientConnector interface {
 	// GetInstallPlan retrieves an OLM install plan by namespace and name.
 	GetInstallPlan(ctx context.Context, namespace string, name string) (*v1alpha1.InstallPlan, error)
 	// DoPackageWait for the package to be available in OLM.
-	DoPackageWait(ctx context.Context, name string) error
+	DoPackageWait(ctx context.Context, namespace, name string) error
 	// GetPackageManifest returns a package manifest by given name.
-	GetPackageManifest(ctx context.Context, name string) (*packagev1.PackageManifest, error)
+	GetPackageManifest(ctx context.Context, namespace, name string) (*packagev1.PackageManifest, error)
 	// UpdateInstallPlan updates the existing install plan in the specified namespace.
 	UpdateInstallPlan(ctx context.Context, namespace string, installPlan *v1alpha1.InstallPlan) (*v1alpha1.InstallPlan, error)
 	// ListCRDs returns a list of CRDs.

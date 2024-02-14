@@ -470,7 +470,7 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Join(err, errors.New("cannot apply percona catalog file"))
 	}
-	if err := k.client.DoPackageWait(ctx, "everest-operator"); err != nil {
+	if err := k.client.DoPackageWait(ctx, OLMNamespace, "everest-operator"); err != nil {
 		return errors.Join(err, errors.New("timeout waiting for package"))
 	}
 	return nil
