@@ -94,7 +94,9 @@ const (
 	// then either ran to completion or failed for some reason.
 	ContainerStateTerminated ContainerState = "terminated"
 
-	olmNamespace = "olm"
+	// OLMNamespace is the namespace where OLM is installed.
+	OLMNamespace    = "everest-olm"
+	olmOperatorName = "olm-operator"
 
 	// APIVersionCoreosV1 constant for some API requests.
 	APIVersionCoreosV1 = "operators.coreos.com/v1"
@@ -181,56 +183,6 @@ func NewEmpty(l *zap.SugaredLogger) *Kubernetes {
 // ClusterName returns the name of the k8s cluster.
 func (k *Kubernetes) ClusterName() string {
 	return k.client.ClusterName()
-}
-
-// ListDatabaseClusters returns list of managed PCX clusters.
-func (k *Kubernetes) ListDatabaseClusters(ctx context.Context) (*everestv1alpha1.DatabaseClusterList, error) {
-	return k.client.ListDatabaseClusters(ctx)
-}
-
-// GetDatabaseCluster returns PXC clusters by provided name.
-func (k *Kubernetes) GetDatabaseCluster(ctx context.Context, name string) (*everestv1alpha1.DatabaseCluster, error) {
-	return k.client.GetDatabaseCluster(ctx, name)
-}
-
-// RestartDatabaseCluster restarts database cluster.
-func (k *Kubernetes) RestartDatabaseCluster(ctx context.Context, name string) error {
-	cluster, err := k.client.GetDatabaseCluster(ctx, name)
-	if err != nil {
-		return err
-	}
-	cluster.TypeMeta.APIVersion = databaseClusterAPIVersion
-	cluster.TypeMeta.Kind = databaseClusterKind
-	if cluster.ObjectMeta.Annotations == nil {
-		cluster.ObjectMeta.Annotations = make(map[string]string)
-	}
-	cluster.ObjectMeta.Annotations[restartAnnotationKey] = "true"
-	return k.client.ApplyObject(cluster)
-}
-
-// PatchDatabaseCluster patches CR of managed Database cluster.
-func (k *Kubernetes) PatchDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
-	return k.client.ApplyObject(cluster)
-}
-
-// CreateDatabaseCluster creates database cluster.
-func (k *Kubernetes) CreateDatabaseCluster(cluster *everestv1alpha1.DatabaseCluster) error {
-	if cluster.ObjectMeta.Annotations == nil {
-		cluster.ObjectMeta.Annotations = make(map[string]string)
-	}
-	cluster.ObjectMeta.Annotations[managedByKey] = "pmm"
-	return k.client.ApplyObject(cluster)
-}
-
-// DeleteDatabaseCluster deletes database cluster.
-func (k *Kubernetes) DeleteDatabaseCluster(ctx context.Context, name string) error {
-	cluster, err := k.client.GetDatabaseCluster(ctx, name)
-	if err != nil {
-		return err
-	}
-	cluster.TypeMeta.APIVersion = databaseClusterAPIVersion
-	cluster.TypeMeta.Kind = databaseClusterKind
-	return k.client.DeleteObject(cluster)
 }
 
 // GetDefaultStorageClassName returns first storageClassName from kubernetes cluster.
@@ -445,7 +397,7 @@ func (k *Kubernetes) GetStorageClasses(ctx context.Context) (*storagev1.StorageC
 
 // InstallOLMOperator installs the OLM in the Kubernetes cluster.
 func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error {
-	deployment, err := k.client.GetDeployment(ctx, "olm-operator", "olm")
+	deployment, err := k.client.GetDeployment(ctx, olmOperatorName, OLMNamespace)
 	if err == nil && deployment != nil && deployment.ObjectMeta.Name != "" && !upgrade {
 		k.l.Info("OLM operator is already installed")
 		return nil // already installed
@@ -464,7 +416,7 @@ func (k *Kubernetes) InstallOLMOperator(ctx context.Context, upgrade bool) error
 		return err
 	}
 
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "packageserver"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: OLMNamespace, Name: "packageserver"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
@@ -518,7 +470,7 @@ func (k *Kubernetes) InstallPerconaCatalog(ctx context.Context) error {
 	if err := k.client.ApplyFile(data); err != nil {
 		return errors.Join(err, errors.New("cannot apply percona catalog file"))
 	}
-	if err := k.client.DoPackageWait(ctx, "everest-operator"); err != nil {
+	if err := k.client.DoPackageWait(ctx, OLMNamespace, "everest-operator"); err != nil {
 		return errors.Join(err, errors.New("timeout waiting for package"))
 	}
 	return nil
@@ -567,12 +519,12 @@ func (k *Kubernetes) applyResources(ctx context.Context) ([]unstructured.Unstruc
 
 func (k *Kubernetes) waitForDeploymentRollout(ctx context.Context) error {
 	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{
-		Namespace: olmNamespace,
-		Name:      "olm-operator",
+		Namespace: OLMNamespace,
+		Name:      olmOperatorName,
 	}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
-	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: "olm", Name: "catalog-operator"}); err != nil {
+	if err := k.client.DoRolloutWait(ctx, types.NamespacedName{Namespace: OLMNamespace, Name: "catalog-operator"}); err != nil {
 		return errors.Join(err, errors.New("error while waiting for deployment rollout"))
 	}
 
@@ -886,6 +838,14 @@ func (k *Kubernetes) ListClusterServiceVersion(
 	namespace string,
 ) (*olmv1alpha1.ClusterServiceVersionList, error) {
 	return k.client.ListClusterServiceVersion(ctx, namespace)
+}
+
+// DeleteClusterServiceVersion deletes a ClusterServiceVersion.
+func (k *Kubernetes) DeleteClusterServiceVersion(
+	ctx context.Context,
+	key types.NamespacedName,
+) error {
+	return k.client.DeleteClusterServiceVersion(ctx, key)
 }
 
 // DeleteObject deletes an object.

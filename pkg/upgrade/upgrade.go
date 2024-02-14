@@ -168,7 +168,7 @@ func (u *Upgrade) patchSubscriptions(ctx context.Context) error {
 func (u *Upgrade) upgradeOLM(ctx context.Context) error {
 	csv, err := u.kubeClient.GetClusterServiceVersion(ctx, types.NamespacedName{
 		Name:      "packageserver",
-		Namespace: "olm",
+		Namespace: kubernetes.OLMNamespace,
 	})
 	if err != nil {
 		return err
