@@ -46,7 +46,7 @@ test.describe('Everest CLI install', async () => {
 
     await test.step('run everest install command', async () => {
       const out = await cli.everestExecSkipWizard(
-        `install --namespace=everest-all`,
+        `install --namespaces=everest-all`,
       );
 
       await out.assertSuccess();
@@ -73,7 +73,7 @@ test.describe('Everest CLI install', async () => {
 
       await out.assertSuccess();
 
-      out = await cli.everestExecSkipWizardWithEnv('upgrade --namespace=everest-all', 'DISABLE_TELEMETRY=true');
+      out = await cli.everestExecSkipWizardWithEnv('upgrade --namespaces=everest-all', 'DISABLE_TELEMETRY=true');
       await out.assertSuccess();
       await out.outErrContainsNormalizedMany([
         'Subscriptions have been patched\t{"component": "upgrade"}',

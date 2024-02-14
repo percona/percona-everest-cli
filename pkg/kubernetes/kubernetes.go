@@ -583,7 +583,7 @@ type InstallOperatorRequest struct {
 func mergeNamespacesEnvVar(str1, str2 string) string {
 	ns1 := strings.Split(str1, ",")
 	ns2 := strings.Split(str2, ",")
-	nsMap := map[string]struct{}{}
+	nsMap := make(map[string]struct{})
 
 	for _, ns := range ns1 {
 		if ns == "" {

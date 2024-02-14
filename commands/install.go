@@ -30,7 +30,7 @@ import (
 func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "install",
-		Example: "everestctl install --namespace dev --namespace staging --namespace prod --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard",
+		Example: "everestctl install --namespaces dev,staging,prod --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard",
 		Run: func(cmd *cobra.Command, args []string) {
 			initInstallViperFlags(cmd)
 			c := &install.Config{}
@@ -58,7 +58,7 @@ func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 
 func initInstallFlags(cmd *cobra.Command) {
 	cmd.Flags().StringP("kubeconfig", "k", "~/.kube/config", "Path to a kubeconfig")
-	cmd.Flags().StringArray("namespace", []string{}, "Namespaces list Percona Everest can manage")
+	cmd.Flags().String("namespaces", "", "Comma-separated namespaces list Percona Everest can manage")
 	cmd.Flags().Bool("skip-wizard", false, "Skip installation wizard")
 
 	cmd.Flags().Bool("operator.mongodb", true, "Install MongoDB operator")
@@ -71,7 +71,7 @@ func initInstallViperFlags(cmd *cobra.Command) {
 
 	viper.BindEnv("kubeconfig")                                     //nolint:errcheck,gosec
 	viper.BindPFlag("kubeconfig", cmd.Flags().Lookup("kubeconfig")) //nolint:errcheck,gosec
-	viper.BindPFlag("namespace", cmd.Flags().Lookup("namespace"))   //nolint:errcheck,gosec
+	viper.BindPFlag("namespaces", cmd.Flags().Lookup("namespaces")) //nolint:errcheck,gosec
 
 	viper.BindPFlag("operator.mongodb", cmd.Flags().Lookup("operator.mongodb"))               //nolint:errcheck,gosec
 	viper.BindPFlag("operator.postgresql", cmd.Flags().Lookup("operator.postgresql"))         //nolint:errcheck,gosec
