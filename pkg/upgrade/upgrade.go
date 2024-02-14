@@ -85,7 +85,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	if err := u.runEverestWizard(ctx); err != nil {
 		return err
 	}
-	if len(u.config.Namespaces) == 0 {
+	if len(u.config.NamespacesList()) == 0 {
 		return errors.New("namespace list is empty. Specify at least one namespace")
 	}
 	if err := u.upgradeOLM(ctx); err != nil {

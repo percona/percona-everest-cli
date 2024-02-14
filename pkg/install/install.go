@@ -183,7 +183,7 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if len(o.config.Namespaces) == 0 {
+	if len(o.config.NamespacesList()) == 0 {
 		return errors.New("namespace list is empty. Specify the comma-separated list of namespaces using the --namespaces flag, at least one namespace is required")
 	}
 
@@ -358,7 +358,7 @@ func (o *Install) runEverestWizard() error {
 		o.config.Namespaces += "," + ns
 	}
 
-	if len(o.config.Namespaces) == 0 {
+	if len(o.config.NamespacesList()) == 0 {
 		return errors.New("namespace list is empty. Specify at least one namespace")
 	}
 
