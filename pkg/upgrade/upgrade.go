@@ -37,7 +37,7 @@ import (
 type (
 	// Config defines configuration required for upgrade command.
 	Config struct {
-		// Namespaces defines namespaces that everest can operate in.
+		// Namespaces defines comma-separated list of namespaces that everest can operate in.
 		Namespaces string `mapstructure:"namespaces"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
@@ -55,6 +55,7 @@ type (
 	}
 )
 
+// NamespacesList returns list of the namespaces that everest can operate in.
 func (c Config) NamespacesList() []string {
 	return strings.Split(c.Namespaces, ",")
 }

@@ -90,7 +90,7 @@ const (
 type (
 	// Config stores configuration for the operators.
 	Config struct {
-		// Namespaces defines namespaces that everest can operate in.
+		// Namespaces defines comma-separated list of namespaces that everest can operate in.
 		Namespaces string `mapstructure:"namespaces"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
@@ -111,6 +111,7 @@ type (
 	}
 )
 
+// NamespacesList returns list of the namespaces that everest can operate in.
 func (c Config) NamespacesList() []string {
 	return strings.Split(c.Namespaces, ",")
 }
