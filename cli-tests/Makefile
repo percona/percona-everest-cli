@@ -4,7 +4,7 @@ init:               ## Install dependencies
 
 install-operators:  ## Install operators to k8s
 	../bin/everest install \
-		--namespace percona-everest-operators \
+		--namespaces percona-everest-operators \
 		--skip-wizard \
 
 test-cli:           ## Run all tests
