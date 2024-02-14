@@ -224,11 +224,7 @@ func (c *Client) initOperatorClients() error {
 	}
 	c.customClientSet = customClient
 	_, err = c.GetServerVersion()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (c *Client) kubeClient() (client.Client, error) { //nolint:ireturn,nolintlint
