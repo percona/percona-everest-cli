@@ -615,7 +615,7 @@ func ValidateNamespaces(str string) ([]string, error) {
 		m[ns] = struct{}{}
 	}
 
-	var list []string
+	list := make([]string, 0, len(m))
 	for k := range m {
 		list = append(list, k)
 	}
