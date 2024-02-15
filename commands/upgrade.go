@@ -31,6 +31,12 @@ import (
 func newUpgradeCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "upgrade",
+		// The command expects no arguments. So to prevent users from misspelling and confusion
+		// in cases with unexpected spaces like
+		//       ./everestctl upgrade --namespaces=aaa, a
+		// it will return
+		//        Error: unknown command "a" for "everestctl upgrade"
+		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			initUpgradeViperFlags(cmd)
 
