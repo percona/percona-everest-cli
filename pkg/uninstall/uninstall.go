@@ -164,7 +164,7 @@ func (u *Uninstall) getDBs(ctx context.Context) (map[string]*everestv1alpha1.Dat
 		return nil, err
 	}
 
-	allDBs := map[string]*everestv1alpha1.DatabaseClusterList{}
+	allDBs := make(map[string]*everestv1alpha1.DatabaseClusterList)
 	for _, ns := range namespaces {
 		dbs, err := u.kubeClient.ListDatabaseClusters(ctx, ns)
 		if err != nil {
