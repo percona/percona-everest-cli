@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	goversion "github.com/hashicorp/go-version"
@@ -37,8 +36,10 @@ import (
 type (
 	// Config defines configuration required for upgrade command.
 	Config struct {
-		// Namespaces defines comma-separated list of namespaces that everest can operate in.
+		// Namespaces is a user-defined string represents raw non-validated comma-separated list of namespaces for everest to operate in.
 		Namespaces string `mapstructure:"namespaces"`
+		// NamespacesList validated list of namespaces that everest can operate in.
+		NamespacesList []string `mapstructure:"namespaces-map"`
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
 		// UpgradeOLM defines do we need to upgrade OLM or not.
@@ -54,11 +55,6 @@ type (
 		kubeClient *kubernetes.Kubernetes
 	}
 )
-
-// NamespacesList returns list of the namespaces that everest can operate in.
-func (c Config) NamespacesList() []string {
-	return strings.Split(c.Namespaces, ",")
-}
 
 // NewUpgrade returns a new Upgrade struct.
 func NewUpgrade(c Config, l *zap.SugaredLogger) (*Upgrade, error) {
@@ -85,9 +81,11 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	if err := u.runEverestWizard(ctx); err != nil {
 		return err
 	}
-	if len(u.config.NamespacesList()) == 0 {
-		return errors.New("namespace list is empty. Specify at least one namespace")
+	l, err := install.ValidateNamespaces(u.config.Namespaces)
+	if err != nil {
+		return err
 	}
+	u.config.NamespacesList = l
 	if err := u.upgradeOLM(ctx); err != nil {
 		return err
 	}
@@ -132,7 +130,7 @@ func (u *Upgrade) runEverestWizard(ctx context.Context) error {
 }
 
 func (u *Upgrade) patchSubscriptions(ctx context.Context) error {
-	for _, namespace := range u.config.NamespacesList() {
+	for _, namespace := range u.config.NamespacesList {
 		namespace := namespace
 		subList, err := u.kubeClient.ListSubscriptions(ctx, namespace)
 		if err != nil {

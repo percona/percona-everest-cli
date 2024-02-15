@@ -29,7 +29,13 @@ import (
 
 func newInstallCmd(l *zap.SugaredLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "install",
+		Use: "install",
+		// The command expects no arguments. So to prevent users from misspelling and confusion
+		// in cases with unexpected spaces like
+		//       ./everestctl install --namespaces=aaa, a
+		// it will return
+		//        Error: unknown command "a" for "everestctl install"
+		Args:    cobra.NoArgs,
 		Example: "everestctl install --namespaces dev,staging,prod --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard",
 		Run: func(cmd *cobra.Command, args []string) {
 			initInstallViperFlags(cmd)
