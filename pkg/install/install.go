@@ -86,11 +86,15 @@ const (
 	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
+//nolint:gochecknoglobals
 var (
-	ErrNSEmpty    = errors.New("namespace list is empty. Specify at least one namespace")
+	// ErrNSEmpty appears when the provided list of the namespaces is considered empty.
+	ErrNSEmpty = errors.New("namespace list is empty. Specify at least one namespace")
+	// ErrNSReserved appears when some of the provided names are forbidden to use.
 	ErrNSReserved = func(ns string) error {
 		return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
 	}
+	// ErrNameNotRFC1035Compatible appears when some of the provided names are not RFC1035 compatible.
 	ErrNameNotRFC1035Compatible = func(fieldName string) error {
 		return fmt.Errorf(`'%s' is not RFC 1035 compatible. The name should contain only lowercase alphanumeric characters or '-', start with an alphabetic character, end with an alphanumeric character`,
 			fieldName,
@@ -590,7 +594,7 @@ func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, erro
 	return res, nil
 }
 
-// ValidateNamespaces validates a comma-separated namespaces string
+// ValidateNamespaces validates a comma-separated namespaces string.
 func ValidateNamespaces(str string) ([]string, error) {
 	nsList := strings.Split(str, ",")
 	m := make(map[string]struct{})
