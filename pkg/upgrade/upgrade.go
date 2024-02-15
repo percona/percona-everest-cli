@@ -20,12 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"os"
+
 	"github.com/AlecAivazis/survey/v2"
 	goversion "github.com/hashicorp/go-version"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
-	"net/url"
-	"os"
 
 	"github.com/percona/percona-everest-cli/data"
 	"github.com/percona/percona-everest-cli/pkg/install"
