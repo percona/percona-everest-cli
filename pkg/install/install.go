@@ -111,6 +111,9 @@ type (
 
 // NamespacesList returns list of the namespaces that everest can operate in.
 func (c Config) NamespacesList() []string {
+	if len(c.Namespaces) == 0 {
+		return []string{}
+	}
 	return strings.Split(c.Namespaces, ",")
 }
 
