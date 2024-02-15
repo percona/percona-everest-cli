@@ -35,7 +35,7 @@ import (
 type (
 	// Config defines configuration required for upgrade command.
 	Config struct {
-		// Namespaces defines comma-separated list of namespaces that everest can operate in.
+		// Namespaces is a user-defined string represents raw non-validated comma-separated list of namespaces for everest to operate in.
 		Namespaces string `mapstructure:"namespaces"`
 		// NamespacesList validated list of namespaces that everest can operate in.
 		NamespacesList []string `mapstructure:"namespaces-map"`
