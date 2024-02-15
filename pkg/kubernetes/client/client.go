@@ -104,7 +104,7 @@ type Client struct {
 	customClientSet  *customresources.Client
 	apiextClientset  apiextv1clientset.Interface
 	dynamicClientset dynamic.Interface
-	dbClusterClient  *database.DBClusterClient //nolint:structcheck
+	dbClusterClient  *database.DBClusterClient //nolint:structcheck,unused
 	rcLock           *sync.Mutex
 	restConfig       *rest.Config
 	namespace        string
