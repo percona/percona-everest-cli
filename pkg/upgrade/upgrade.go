@@ -127,13 +127,7 @@ func (u *Upgrade) runEverestWizard(ctx context.Context) error {
 		); err != nil {
 			return err
 		}
-
 		u.config.Namespaces = strings.Join(input, ",")
-		list, err := install.ValidateNamespaces(u.config.Namespaces)
-		if err != nil {
-			return err
-		}
-		u.config.NamespacesList = list
 	}
 
 	return nil
