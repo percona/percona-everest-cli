@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	goversion "github.com/hashicorp/go-version"
@@ -117,13 +118,22 @@ func (u *Upgrade) runEverestWizard(ctx context.Context) error {
 			Message: "Please select namespaces",
 			Options: namespaces,
 		}
+
+		var input []string
 		if err := survey.AskOne(
 			pNamespace,
-			&u.config.Namespaces,
+			&input,
 			survey.WithValidator(survey.MinItems(1)),
 		); err != nil {
 			return err
 		}
+
+		u.config.Namespaces = strings.Join(input, ",")
+		list, err := install.ValidateNamespaces(u.config.Namespaces)
+		if err != nil {
+			return err
+		}
+		u.config.NamespacesList = list
 	}
 
 	return nil

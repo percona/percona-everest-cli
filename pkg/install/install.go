@@ -356,6 +356,7 @@ func (o *Install) runEverestWizard() error {
 	if err != nil {
 		return err
 	}
+	o.config.Namespaces = namespaces
 	o.config.NamespacesList = list
 
 	return nil
