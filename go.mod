@@ -18,12 +18,12 @@ require (
 	golang.org/x/sync v0.6.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.29.1
+	k8s.io/api v0.29.2
 	k8s.io/apiextensions-apiserver v0.29.1
-	k8s.io/apimachinery v0.29.1
-	k8s.io/cli-runtime v0.29.1
-	k8s.io/client-go v0.29.1
-	k8s.io/kubectl v0.29.1
+	k8s.io/apimachinery v0.29.2
+	k8s.io/cli-runtime v0.29.2
+	k8s.io/client-go v0.29.2
+	k8s.io/kubectl v0.29.2
 	sigs.k8s.io/controller-runtime v0.17.1
 )
 
