@@ -24,7 +24,7 @@ require (
 	k8s.io/cli-runtime v0.29.1
 	k8s.io/client-go v0.29.1
 	k8s.io/kubectl v0.29.1
-	sigs.k8s.io/controller-runtime v0.17.1
+	sigs.k8s.io/controller-runtime v0.17.2
 )
 
 require (
