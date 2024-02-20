@@ -32,8 +32,6 @@ else
 	echo "KUBECONFIG is not set. Using default k8s cluster"
 fi
 
-echo "Provisioning Everest with monitoring disabled"
-echo "If you want to enable monitoring please refer to the everest installation documentation."
 echo ""
 ./everestctl install --namespaces everest --operator.mongodb=true --operator.postgresql=true --operator.xtradb-cluster=true --skip-wizard
 
