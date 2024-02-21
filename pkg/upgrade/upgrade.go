@@ -58,9 +58,10 @@ type (
 		kubeClient    *kubernetes.Kubernetes
 	}
 
-	minimumVersion struct {
-		catalog *goversion.Version
-		olm     *goversion.Version
+	supportedVersion struct {
+		catalog goversion.Constraints
+		cli     goversion.Constraints
+		olm     goversion.Constraints
 	}
 )
 
@@ -90,7 +91,7 @@ func NewUpgrade(cfg *UpgradeConfig, everestClient everestClientConnector, l *zap
 // Run runs the operators installation process.
 func (u *Upgrade) Run(ctx context.Context) error {
 	// Check prerequisites
-	upgradeEverestTo, minVer, err := u.canUpgrade(ctx)
+	upgradeEverestTo, recVer, err := u.canUpgrade(ctx)
 	if err != nil {
 		if errors.Is(err, ErrNoUpdateAvailable) {
 			u.l.Info("You're running the latest version of Everest")
@@ -100,7 +101,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 	}
 
 	// Start upgrade.
-	if err := u.upgradeOLM(ctx, minVer.olm); err != nil {
+	if err := u.upgradeOLM(ctx, recVer.OLM); err != nil {
 		return err
 	}
 
@@ -122,7 +123,7 @@ func (u *Upgrade) Run(ctx context.Context) error {
 
 // canUpgrade checks if there's a new Everest version available and if we can upgrade to it
 // based on minimum requirements.
-func (u *Upgrade) canUpgrade(ctx context.Context) (*goversion.Version, *minimumVersion, error) {
+func (u *Upgrade) canUpgrade(ctx context.Context) (*goversion.Version, *cliVersion.RecommendedVersion, error) {
 	// Get Everest version.
 	eVer, err := u.everestClient.Version(ctx)
 	if err != nil {
@@ -141,13 +142,17 @@ func (u *Upgrade) canUpgrade(ctx context.Context) (*goversion.Version, *minimumV
 		return nil, nil, err
 	}
 
-	// Check minimum requirements.
-	minVer, err := u.verifyMinimumRequirements(ctx, meta)
+	// Check requirements.
+	if err := u.verifyRequirements(ctx, meta); err != nil {
+		return nil, nil, err
+	}
+
+	recVer, err := cliVersion.RecommendedVersions(meta)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return upgradeEverestTo, minVer, nil
+	return upgradeEverestTo, recVer, nil
 }
 
 // versionToUpgradeTo returns version to which the current Everest version can be upgraded to.
@@ -203,46 +208,50 @@ func (u *Upgrade) versionToUpgradeTo(
 	return upgradeTo, meta, nil
 }
 
-func (u *Upgrade) verifyMinimumRequirements(ctx context.Context, meta *version.MetadataVersion) (*minimumVersion, error) {
-	minVer, err := u.minimumVersion(meta)
+func (u *Upgrade) verifyRequirements(ctx context.Context, meta *version.MetadataVersion) error {
+	supVer, err := u.supportedVersion(meta)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err := u.checkRequirements(minVer); err != nil {
-		return nil, err
+	if err := u.checkRequirements(supVer); err != nil {
+		return err
 	}
 
-	return minVer, nil
+	return nil
 }
 
-func (u *Upgrade) minimumVersion(meta *version.MetadataVersion) (*minimumVersion, error) {
-	olm, ok := meta.Requirements["olm"]
-	if !ok {
-		olm = "0.0.0"
-	}
-	catalog, ok := meta.Requirements["catalog"]
-	if !ok {
-		catalog = "0.0.0"
+func (u *Upgrade) supportedVersion(meta *version.MetadataVersion) (*supportedVersion, error) {
+	supVer := &supportedVersion{}
+
+	if cli, ok := meta.Supported["cli"]; ok {
+		c, err := goversion.NewConstraint(cli)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("invalid cli constraint %s", cli))
+		}
+		supVer.cli = c
 	}
 
-	vOLM, err := goversion.NewSemver(olm)
-	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("invalid OLM version %s", olm))
+	if olm, ok := meta.Supported["olm"]; ok {
+		c, err := goversion.NewConstraint(olm)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("invalid OLM constraint %s", olm))
+		}
+		supVer.olm = c
 	}
 
-	vCatalog, err := goversion.NewSemver(catalog)
-	if err != nil {
-		return nil, errors.Join(err, fmt.Errorf("invalid catalog version %s", catalog))
+	if catalog, ok := meta.Supported["catalog"]; ok {
+		c, err := goversion.NewConstraint(catalog)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("invalid catalog constraint %s", catalog))
+		}
+		supVer.catalog = c
 	}
 
-	return &minimumVersion{
-		olm:     vOLM,
-		catalog: vCatalog,
-	}, nil
+	return supVer, nil
 }
 
-func (u *Upgrade) checkRequirements(minVer *minimumVersion) error {
+func (u *Upgrade) checkRequirements(minVer *supportedVersion) error {
 	// TODO: to be implemented.
 	return nil
 }

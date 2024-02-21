@@ -150,7 +150,7 @@ func (o *Install) Run(ctx context.Context) error {
 		return err
 	}
 
-	latest, err := o.latestVersion(meta)
+	latest, latestMeta, err := o.latestVersion(meta)
 	if err != nil {
 		return err
 	}
@@ -163,13 +163,16 @@ func (o *Install) Run(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: revisit - we need to install correct version based on metadata.
-	if err := o.provisionDBNamespaces(ctx); err != nil {
+	recVer, err := version.RecommendedVersions(latestMeta)
+	if err != nil {
 		return err
 	}
 
-	// TODO: install correct version based on metadata.
-	if err := o.provisionEverestOperator(ctx); err != nil {
+	if err := o.provisionDBNamespaces(ctx, recVer); err != nil {
+		return err
+	}
+
+	if err := o.provisionEverestOperator(ctx, recVer); err != nil {
 		return err
 	}
 
@@ -211,8 +214,12 @@ func (o *Install) populateConfig() error {
 	return nil
 }
 
-func (o *Install) latestVersion(meta *versionpb.MetadataResponse) (*goversion.Version, error) {
-	var latest *goversion.Version
+func (o *Install) latestVersion(meta *versionpb.MetadataResponse) (*goversion.Version, *versionpb.MetadataVersion, error) {
+	var (
+		latest     *goversion.Version
+		latestMeta *versionpb.MetadataVersion
+	)
+
 	for _, v := range meta.Versions {
 		ver, err := goversion.NewSemver(v.Version)
 		if err != nil {
@@ -222,15 +229,16 @@ func (o *Install) latestVersion(meta *versionpb.MetadataResponse) (*goversion.Ve
 
 		if latest == nil || latest.GreaterThan(ver) {
 			latest = ver
+			latestMeta = v
 			continue
 		}
 	}
 
 	if latest == nil {
-		return nil, errors.New("could not determine the latest Everest version")
+		return nil, nil, errors.New("could not determine the latest Everest version")
 	}
 
-	return latest, nil
+	return latest, latestMeta, nil
 }
 
 func (o *Install) installVMOperator(ctx context.Context) error {
@@ -277,7 +285,7 @@ func (o *Install) provisionMonitoringStack(ctx context.Context) error {
 	return nil
 }
 
-func (o *Install) provisionEverestOperator(ctx context.Context) error {
+func (o *Install) provisionEverestOperator(ctx context.Context, recVer *version.RecommendedVersion) error {
 	if err := o.createNamespace(SystemNamespace); err != nil {
 		return err
 	}
@@ -287,7 +295,12 @@ func (o *Install) provisionEverestOperator(ctx context.Context) error {
 		return err
 	}
 
-	if err := o.installOperator(ctx, everestOperatorChannel, everestOperatorName, SystemNamespace)(); err != nil {
+	v := ""
+	if recVer.EverestOperator != nil {
+		v = recVer.EverestOperator.String()
+	}
+
+	if err := o.installOperator(ctx, everestOperatorChannel, everestOperatorName, SystemNamespace, v)(); err != nil {
 		return err
 	}
 
@@ -329,7 +342,7 @@ func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) er
 	return nil
 }
 
-func (o *Install) provisionDBNamespaces(ctx context.Context) error {
+func (o *Install) provisionDBNamespaces(ctx context.Context, recVer *version.RecommendedVersion) error {
 	for _, namespace := range o.config.NamespacesList() {
 		namespace := namespace
 		if err := o.createNamespace(namespace); err != nil {
@@ -340,7 +353,7 @@ func (o *Install) provisionDBNamespaces(ctx context.Context) error {
 		}
 
 		o.l.Infof("Installing operators into %s namespace", namespace)
-		if err := o.provisionOperators(ctx, namespace); err != nil {
+		if err := o.provisionOperators(ctx, namespace, recVer); err != nil {
 			return err
 		}
 		o.l.Info("Creating role for the Everest service account")
@@ -492,7 +505,7 @@ func (o *Install) provisionOLM(ctx context.Context, v *goversion.Version) error 
 	return nil
 }
 
-func (o *Install) provisionOperators(ctx context.Context, namespace string) error {
+func (o *Install) provisionOperators(ctx context.Context, namespace string, recVer *version.RecommendedVersion) error {
 	g, gCtx := errgroup.WithContext(ctx)
 	// We set the limit to 1 since operator installation
 	// requires an update to the same installation plan which
@@ -501,13 +514,25 @@ func (o *Install) provisionOperators(ctx context.Context, namespace string) erro
 	g.SetLimit(operatorInstallThreads)
 
 	if o.config.Operator.PXC {
-		g.Go(o.installOperator(gCtx, pxcOperatorChannel, pxcOperatorName, namespace))
+		v := ""
+		if recVer.PXC != nil {
+			v = recVer.PXC.String()
+		}
+		g.Go(o.installOperator(gCtx, pxcOperatorChannel, pxcOperatorName, namespace, v))
 	}
 	if o.config.Operator.PSMDB {
-		g.Go(o.installOperator(gCtx, psmdbOperatorChannel, psmdbOperatorName, namespace))
+		v := ""
+		if recVer.PSMDB != nil {
+			v = recVer.PSMDB.String()
+		}
+		g.Go(o.installOperator(gCtx, psmdbOperatorChannel, psmdbOperatorName, namespace, v))
 	}
 	if o.config.Operator.PG {
-		g.Go(o.installOperator(gCtx, pgOperatorChannel, pgOperatorName, namespace))
+		v := ""
+		if recVer.PG != nil {
+			v = recVer.PG.String()
+		}
+		g.Go(o.installOperator(gCtx, pgOperatorChannel, pgOperatorName, namespace, v))
 	}
 	if err := g.Wait(); err != nil {
 		return err
@@ -516,7 +541,7 @@ func (o *Install) provisionOperators(ctx context.Context, namespace string) erro
 	return nil
 }
 
-func (o *Install) installOperator(ctx context.Context, channel, operatorName, namespace string) func() error {
+func (o *Install) installOperator(ctx context.Context, channel, operatorName, namespace string, version string) func() error {
 	return func() error {
 		// We check if the context has not been cancelled yet to return early
 		if err := ctx.Err(); err != nil {
@@ -539,6 +564,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			CatalogSourceNamespace: kubernetes.OLMNamespace,
 			Channel:                channel,
 			InstallPlanApproval:    v1alpha1.ApprovalManual,
+			StartingCSV:            version,
 			SubscriptionConfig: &v1alpha1.SubscriptionConfig{
 				Env: []corev1.EnvVar{
 					{

@@ -24,7 +24,18 @@ import (
 	"net/url"
 
 	version "github.com/Percona-Lab/percona-version-service/versionpb"
+	goversion "github.com/hashicorp/go-version"
 )
+
+// RecommendedVersion holds recommended versions per component.
+type RecommendedVersion struct {
+	Catalog         *goversion.Version
+	EverestOperator *goversion.Version
+	OLM             *goversion.Version
+	PG              *goversion.Version
+	PSMDB           *goversion.Version
+	PXC             *goversion.Version
+}
 
 // Metadata returns metadata from a given metadata URL.
 func Metadata(ctx context.Context, versionMetadataURL string) (*version.MetadataResponse, error) {
@@ -51,4 +62,27 @@ func Metadata(ctx context.Context, versionMetadataURL string) (*version.Metadata
 	}
 
 	return requirements, nil
+}
+
+// RecommendedVersions returns recommended version information based on metadata.
+func RecommendedVersions(meta *version.MetadataVersion) (*RecommendedVersion, error) {
+	recVer := &RecommendedVersion{}
+
+	if olm, ok := meta.Recommended["olm"]; ok {
+		v, err := goversion.NewSemver(olm)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("invalid OLM version %s", olm))
+		}
+		recVer.OLM = v
+	}
+
+	if catalog, ok := meta.Recommended["catalog"]; ok {
+		v, err := goversion.NewSemver(catalog)
+		if err != nil {
+			return nil, errors.Join(err, fmt.Errorf("invalid catalog version %s", catalog))
+		}
+		recVer.Catalog = v
+	}
+
+	return recVer, nil
 }
