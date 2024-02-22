@@ -116,6 +116,7 @@ This will uninstall Everest and all its components from the cluster.`
 	if err != nil {
 		return err
 	}
+	// TODO: How do we ensure we delete all resources based on the correct Everest version?
 	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace, v); err != nil {
 		return err
 	}

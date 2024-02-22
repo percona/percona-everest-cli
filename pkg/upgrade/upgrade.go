@@ -105,9 +105,10 @@ func (u *Upgrade) Run(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: figure out catalog version
-	u.l.Infof("Upgrading Percona Catalog to %s", upgradeEverestTo)
-	if err := u.kubeClient.InstallPerconaCatalog(ctx, upgradeEverestTo); err != nil {
+	// We cannot use the latest version of catalog yet since
+	// at the time of writing, each catalog version supports only one Everest version.
+	u.l.Infof("Upgrading Percona Catalog to %s", recVer.Catalog)
+	if err := u.kubeClient.InstallPerconaCatalog(ctx, recVer.Catalog); err != nil {
 		return err
 	}
 
@@ -276,7 +277,7 @@ func (u *Upgrade) upgradeOLM(ctx context.Context, minimumVersion *goversion.Vers
 	}
 
 	u.l.Info("Upgrading OLM to version %s", minimumVersion)
-	// TODO: actually upgrade OLM operator instead of installation/skip.
+	// TODO: shall we actually upgrade OLM operator instead of installation/skip?
 	if err := u.kubeClient.InstallOLMOperator(ctx, true); err != nil {
 		return errors.Join(err, errors.New("could not upgrade OLM"))
 	}

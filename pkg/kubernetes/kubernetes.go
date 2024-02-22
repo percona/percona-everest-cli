@@ -1016,16 +1016,15 @@ func (k *Kubernetes) getManifestData(ctx context.Context, version *goversion.Ver
 }
 
 // DeleteEverest downloads the manifest file and deletes it from provisioned k8s cluster.
-// TODO: how do we need to change this after upgrade changes.
 func (k *Kubernetes) DeleteEverest(ctx context.Context, namespace string, version *goversion.Version) error {
 	data, err := k.getManifestData(ctx, version)
 	if err != nil {
-		return errors.Join(err, errors.New("failed downloading everest monitoring file"))
+		return errors.Join(err, errors.New("failed downloading Everest manifest file"))
 	}
 
 	err = k.client.DeleteManifestFile(data, namespace)
 	if err != nil {
-		return errors.Join(err, errors.New("failed deleting manifest file"))
+		return errors.Join(err, errors.New("failed deleting Everest based on a manifest file"))
 	}
 	return nil
 }

@@ -141,6 +141,10 @@ func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
 
 // Run runs the operators installation process.
 func (o *Install) Run(ctx context.Context) error {
+	// TODO: we shall probably split this into "install" and "add namespaces"
+	// Otherwise the logic is hard to maintain - we need to make sure not to,
+	// for example, install a different version of operators per namespace, if
+	// we are always installing the "latest" version.
 	if err := o.populateConfig(); err != nil {
 		return err
 	}
@@ -323,7 +327,6 @@ func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) er
 			return err
 		}
 	} else {
-		// TODO: revisit - we shall probably not restart but offer upgrade.
 		o.l.Info("Restarting Everest")
 		if err := o.kubeClient.RestartEverest(ctx, everestOperatorName, SystemNamespace); err != nil {
 			return err
@@ -333,7 +336,6 @@ func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) er
 		}
 	}
 
-	// TODO: get from Everest, not cli.
 	o.l.Info("Updating cluster role bindings for everest-admin")
 	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.NamespacesList()); err != nil {
 		return err
