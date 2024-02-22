@@ -71,7 +71,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/customresources"
-	"github.com/percona/percona-everest-cli/pkg/kubernetes/client/database"
 )
 
 const (
@@ -104,7 +103,6 @@ type Client struct {
 	customClientSet  *customresources.Client
 	apiextClientset  apiextv1clientset.Interface
 	dynamicClientset dynamic.Interface
-	dbClusterClient  *database.DBClusterClient
 	rcLock           *sync.Mutex
 	restConfig       *rest.Config
 	namespace        string

@@ -98,11 +98,14 @@ test.describe('Everest CLI install', async () => {
       );
 
       await out.assertSuccess();
-      // check that the deployment does not exist
-      out = await cli.exec('kubectl get deploy percona-everest -n everest-system');
+      // check that the namespace does not exist
+      out = await cli.exec('kubectl get ns everest-system everest-monitoring everest-olm everest-all');
 
       await out.outErrContainsNormalizedMany([
-        'Error from server (NotFound): deployments.apps "percona-everest" not found',
+		'Error from server (NotFound): namespaces "everest-system" not found',
+		'Error from server (NotFound): namespaces "everest-monitoring" not found',
+		'Error from server (NotFound): namespaces "everest-olm" not found',
+		'Error from server (NotFound): namespaces "everest-all" not found',
       ]);
 
     });

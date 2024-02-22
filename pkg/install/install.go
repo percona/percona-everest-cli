@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -88,11 +89,29 @@ const (
 	disableTelemetryEnvVar = "DISABLE_TELEMETRY"
 )
 
+//nolint:gochecknoglobals
+var (
+	// ErrNSEmpty appears when the provided list of the namespaces is considered empty.
+	ErrNSEmpty = errors.New("namespace list is empty. Specify at least one namespace")
+	// ErrNSReserved appears when some of the provided names are forbidden to use.
+	ErrNSReserved = func(ns string) error {
+		return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
+	}
+	// ErrNameNotRFC1035Compatible appears when some of the provided names are not RFC1035 compatible.
+	ErrNameNotRFC1035Compatible = func(fieldName string) error {
+		return fmt.Errorf(`'%s' is not RFC 1035 compatible. The name should contain only lowercase alphanumeric characters or '-', start with an alphabetic character, end with an alphanumeric character`,
+			fieldName,
+		)
+	}
+)
+
 type (
 	// Config stores configuration for the operators.
 	Config struct {
-		// Namespaces defines comma-separated list of namespaces that everest can operate in.
+		// Namespaces is a user-defined string represents raw non-validated comma-separated list of namespaces for everest to operate in.
 		Namespaces string `mapstructure:"namespaces"`
+		// NamespacesList validated list of namespaces that everest can operate in.
+		NamespacesList []string `mapstructure:"namespaces-map"`
 		// SkipWizard skips wizard during installation.
 		SkipWizard bool `mapstructure:"skip-wizard"`
 		// KubeconfigPath is a path to a kubeconfig
@@ -113,11 +132,6 @@ type (
 		PXC bool `mapstructure:"xtradb-cluster"`
 	}
 )
-
-// NamespacesList returns list of the namespaces that everest can operate in.
-func (c Config) NamespacesList() []string {
-	return strings.Split(c.Namespaces, ",")
-}
 
 // NewInstall returns a new Install struct.
 func NewInstall(c Config, l *zap.SugaredLogger) (*Install, error) {
@@ -205,15 +219,11 @@ func (o *Install) populateConfig() error {
 		}
 	}
 
-	if len(o.config.NamespacesList()) == 0 {
-		return errors.New("namespace list is empty. Specify the comma-separated list of namespaces using the --namespaces flag, at least one namespace is required")
+	l, err := ValidateNamespaces(o.config.Namespaces)
+	if err != nil {
+		return err
 	}
-
-	for _, ns := range o.config.NamespacesList() {
-		if ns == SystemNamespace || ns == MonitoringNamespace {
-			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
-		}
-	}
+	o.config.NamespacesList = l
 
 	return nil
 }
@@ -295,7 +305,7 @@ func (o *Install) provisionEverestOperator(ctx context.Context, recVer *version.
 	}
 
 	o.l.Info("Creating operator group for everest")
-	if err := o.kubeClient.CreateOperatorGroup(ctx, systemOperatorGroup, SystemNamespace, o.config.NamespacesList()); err != nil {
+	if err := o.kubeClient.CreateOperatorGroup(ctx, systemOperatorGroup, SystemNamespace, o.config.NamespacesList); err != nil {
 		return err
 	}
 
@@ -337,7 +347,7 @@ func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) er
 	}
 
 	o.l.Info("Updating cluster role bindings for everest-admin")
-	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.NamespacesList()); err != nil {
+	if err := o.kubeClient.UpdateClusterRoleBinding(ctx, everestServiceAccountClusterRoleBinding, o.config.NamespacesList); err != nil {
 		return err
 	}
 
@@ -345,7 +355,7 @@ func (o *Install) provisionEverest(ctx context.Context, v *goversion.Version) er
 }
 
 func (o *Install) provisionDBNamespaces(ctx context.Context, recVer *version.RecommendedVersion) error {
-	for _, namespace := range o.config.NamespacesList() {
+	for _, namespace := range o.config.NamespacesList {
 		namespace := namespace
 		if err := o.createNamespace(namespace); err != nil {
 			return err
@@ -399,27 +409,12 @@ func (o *Install) runEverestWizard() error {
 		return err
 	}
 
-	nsList := strings.Split(namespaces, ",")
-	for _, ns := range nsList {
-		ns = strings.TrimSpace(ns)
-		if ns == "" {
-			continue
-		}
-
-		if ns == SystemNamespace {
-			return fmt.Errorf("'%s' namespace is reserved for Everest internals. Please specify another namespace", ns)
-		}
-
-		if o.config.Namespaces != "" {
-			o.config.Namespaces += ","
-		}
-
-		o.config.Namespaces += ns
+	list, err := ValidateNamespaces(namespaces)
+	if err != nil {
+		return err
 	}
-
-	if len(o.config.NamespacesList()) == 0 {
-		return errors.New("namespace list is empty. Specify at least one namespace")
-	}
+	o.config.Namespaces = namespaces
+	o.config.NamespacesList = list
 
 	return nil
 }
@@ -577,7 +572,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 			},
 		}
 		if operatorName == everestOperatorName {
-			params.TargetNamespaces = o.config.NamespacesList()
+			params.TargetNamespaces = o.config.NamespacesList
 			params.SubscriptionConfig.Env = append(params.SubscriptionConfig.Env, []corev1.EnvVar{
 				{
 					Name:  EverestMonitoringNamespaceEnvVar,
@@ -585,7 +580,7 @@ func (o *Install) installOperator(ctx context.Context, channel, operatorName, na
 				},
 				{
 					Name:  kubernetes.EverestDBNamespacesEnvVar,
-					Value: o.config.Namespaces,
+					Value: strings.Join(o.config.NamespacesList, ","),
 				},
 			}...)
 		}
@@ -670,4 +665,47 @@ func (o *Install) generateToken(ctx context.Context) (*token.ResetResponse, erro
 	}
 
 	return res, nil
+}
+
+// ValidateNamespaces validates a comma-separated namespaces string.
+func ValidateNamespaces(str string) ([]string, error) {
+	nsList := strings.Split(str, ",")
+	m := make(map[string]struct{})
+	for _, ns := range nsList {
+		ns = strings.TrimSpace(ns)
+		if ns == "" {
+			continue
+		}
+
+		if ns == SystemNamespace || ns == MonitoringNamespace {
+			return nil, ErrNSReserved(ns)
+		}
+
+		if err := validateRFC1035(ns); err != nil {
+			return nil, err
+		}
+
+		m[ns] = struct{}{}
+	}
+
+	list := make([]string, 0, len(m))
+	for k := range m {
+		list = append(list, k)
+	}
+
+	if len(list) == 0 {
+		return nil, ErrNSEmpty
+	}
+	return list, nil
+}
+
+// validates names to be RFC-1035 compatible  https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#rfc-1035-label-names
+func validateRFC1035(s string) error {
+	rfc1035Regex := "^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$"
+	re := regexp.MustCompile(rfc1035Regex)
+	if !re.MatchString(s) {
+		return ErrNameNotRFC1035Compatible(s)
+	}
+
+	return nil
 }
