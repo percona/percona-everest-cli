@@ -27,6 +27,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
 	cliVersion "github.com/percona/percona-everest-cli/pkg/version"
 )
@@ -43,8 +44,6 @@ type (
 
 		// KubeconfigPath is a path to a kubeconfig
 		KubeconfigPath string `mapstructure:"kubeconfig"`
-		// Namespace holds namespace where Everest is installed.
-		Namespace string
 		// VersionMetadataURL stores hostname to retrieve version metadata information from.
 		VersionMetadataURL string `mapstructure:"version-metadata-url"`
 	}
@@ -112,8 +111,8 @@ func (u *Upgrade) Run(ctx context.Context) error {
 		return err
 	}
 
-	u.l.Infof("Upgrading Everest to %s in namespace %s", upgradeEverestTo, u.config.Namespace)
-	if err := u.kubeClient.InstallEverest(ctx, u.config.Namespace, upgradeEverestTo); err != nil {
+	u.l.Infof("Upgrading Everest to %s in namespace %s", upgradeEverestTo, install.SystemNamespace)
+	if err := u.kubeClient.InstallEverest(ctx, install.SystemNamespace, upgradeEverestTo); err != nil {
 		return err
 	}
 
