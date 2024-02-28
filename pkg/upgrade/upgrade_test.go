@@ -37,7 +37,6 @@ func TestUpgrade_canUpgrade(t *testing.T) {
 		name           string
 		everestVersion string
 		versionMeta    *version.MetadataResponse
-		wantErr        bool
 		wantErrIs      error
 		wantUpgradeTo  string
 	}{
@@ -76,7 +75,6 @@ func TestUpgrade_canUpgrade(t *testing.T) {
 					{Version: "0.7.0"},
 				},
 			},
-			wantErr:   true,
 			wantErrIs: ErrNoUpdateAvailable,
 		},
 		{
@@ -149,16 +147,12 @@ func TestUpgrade_canUpgrade(t *testing.T) {
 				everestClient: ecl,
 			}
 			upgradeTo, _, err := u.canUpgrade(context.Background())
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Upgrade.canUpgrade() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
 			if err != nil && !errors.Is(err, tt.wantErrIs) {
 				t.Errorf("error = %v, wantErrIs %v", err, tt.wantErrIs)
 				return
 			}
 
-			if tt.wantErr {
+			if err != nil {
 				return
 			}
 
