@@ -13,12 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package data provides access to embedded data.
-package data
+// Package client ...
+package client
 
-import "embed"
+import (
+	"context"
+	"errors"
+	"net/http"
 
-// OLMCRDs stores CRDs in an embedded filesystem.
-//
-//go:embed crds/*
-var OLMCRDs embed.FS
+	"github.com/percona/percona-everest-backend/client"
+)
+
+// Version retrieves Everest version informatoin.
+func (e *Everest) Version(ctx context.Context) (*client.Version, error) {
+	res := &client.Version{}
+	err := makeRequest(
+		ctx, func(
+			ctx context.Context,
+			_ struct{},
+			r ...client.RequestEditorFn,
+		) (*http.Response, error) {
+			return e.cl.VersionInfo(ctx, r...)
+		},
+		struct{}{}, &res, errors.New("cannot get version due to Everest error"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

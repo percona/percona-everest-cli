@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
+	goversion "github.com/hashicorp/go-version"
 	everestv1alpha1 "github.com/percona/everest-operator/api/v1alpha1"
 	"go.uber.org/zap"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/percona/percona-everest-cli/pkg/install"
 	"github.com/percona/percona-everest-cli/pkg/kubernetes"
+	"github.com/percona/percona-everest-cli/pkg/version"
 )
 
 // Uninstall implements logic for the cluster command.
@@ -110,6 +112,14 @@ This will uninstall Everest and all its components from the cluster.`
 		return err
 	}
 
+	v, err := goversion.NewVersion(version.Version)
+	if err != nil {
+		return err
+	}
+	// TODO: How do we ensure we delete all resources based on the correct Everest version?
+	if err := u.kubeClient.DeleteEverest(ctx, install.SystemNamespace, v); err != nil {
+		return err
+	}
 	if err := u.deleteDBNamespaces(ctx); err != nil {
 		return err
 	}
